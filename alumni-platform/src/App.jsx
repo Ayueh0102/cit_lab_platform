@@ -1,15 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
+const LOGIN_BACKGROUNDS = [
+  '/1pUKi5OAcIzv.jpg',
+  '/qkeRU7UuJgUz.jpg',
+  '/V5NuOmCGmG2t.jpg',
+  '/sRO91qLdH1e7.jpg',
+];
+
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [activeLoginSlide, setActiveLoginSlide] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (LOGIN_BACKGROUNDS.length <= 1) {
+      return undefined;
+    }
+
+    const slideshow = setInterval(() => {
+      setActiveLoginSlide((index) => (index + 1) % LOGIN_BACKGROUNDS.length);
+    }, 7000);
+
+    return () => clearInterval(slideshow);
+  }, []);
 
   // 狀態管理
   const [jobs, setJobs] = useState([
@@ -99,7 +119,7 @@ function App() {
     }
   ]);
 
-  const [alumni, setAlumni] = useState([
+  const [alumni, _setAlumni] = useState([
     {
       id: 1,
       name: '王小明',
@@ -180,7 +200,7 @@ function App() {
     }
   ]);
 
-  const [announcements, setAnnouncements] = useState([
+  const [announcements, _setAnnouncements] = useState([
     {
       id: 1,
       title: '🎉 系友會網站正式上線！',
@@ -440,7 +460,7 @@ function App() {
     showMessage('已成功從LinkedIn同步專業資料！');
   };
 
-  const addWorkExperience = (experience) => {
+  const _addWorkExperience = (experience) => {
     const newExperience = {
       ...experience,
       id: Date.now()
@@ -523,42 +543,55 @@ function App() {
   if (!isLoggedIn) {
     return (
       <div className="login-container">
-        <div className="login-card">
-          <h1 className="login-title">系友會平台</h1>
-          <p className="login-subtitle">色彩與照明科技研究所</p>
-          
-          <form onSubmit={handleLogin} className="login-form">
-            <div className="form-group">
-              <label>電子郵件</label>
-              <input
-                type="email"
-                value={loginForm.email}
-                onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
-                placeholder="請輸入您的電子郵件"
-                required
-              />
+        <div className="login-background" aria-hidden="true">
+          {LOGIN_BACKGROUNDS.map((src, index) => (
+            <div
+              key={src}
+              className={`login-slide ${index === activeLoginSlide ? 'is-active' : ''}`}
+              style={{ backgroundImage: `url(${src})` }}
+            />
+          ))}
+          <div className="login-overlay" />
+        </div>
+
+        <div className="login-content">
+          <div className="login-card">
+            <h1 className="login-title">系友會平台</h1>
+            <p className="login-subtitle">色彩與照明科技研究所</p>
+
+            <form onSubmit={handleLogin} className="login-form">
+              <div className="form-group">
+                <label>電子郵件</label>
+                <input
+                  type="email"
+                  value={loginForm.email}
+                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                  placeholder="請輸入您的電子郵件"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>密碼</label>
+                <input
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                  placeholder="請輸入您的密碼"
+                  required
+                />
+              </div>
+
+              <button type="submit" className="login-btn">
+                🚪 登入系友會
+              </button>
+            </form>
+
+            <div className="login-help">
+              <p>測試帳號：</p>
+              <p>管理員：admin@example.com / admin123</p>
+              <p>一般用戶：wang@example.com / password123</p>
             </div>
-            
-            <div className="form-group">
-              <label>密碼</label>
-              <input
-                type="password"
-                value={loginForm.password}
-                onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-                placeholder="請輸入您的密碼"
-                required
-              />
-            </div>
-            
-            <button type="submit" className="login-btn">
-              🚪 登入系友會
-            </button>
-          </form>
-          
-          <div className="login-help">
-            <p>測試帳號：</p>
-            <p>管理員：admin@example.com / admin123</p>
-            <p>一般用戶：wang@example.com / password123</p>
           </div>
         </div>
       </div>
