@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+alumni-platform/node_modules/
+alumni_platform_api/venv/
+alumni_platform_api/instance/
+
+# Production builds
+alumni-platform/dist/
+alumni-platform/build/
+alumni_platform_api/src/static/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database
+alumni_platform_api/src/database/*.db
+alumni_platform_api/src/database/*.db-shm
+alumni_platform_api/src/database/*.db-wal
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Package manager
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
