@@ -35,7 +35,10 @@ class GoogleSheetsMixin:
 class BaseModel(db.Model, TimestampMixin, GoogleSheetsMixin):
     """抽象基礎模型 - 所有模型的父類"""
     __abstract__ = True
-    
+
+    # 主鍵
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     def to_dict(self, include_private=False):
         """轉換為字典格式"""
         data = {}

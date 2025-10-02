@@ -372,7 +372,7 @@ class UserActivity(BaseModel):
     related_id = Column(Integer, comment='關聯資源ID')
 
     # 詳細資料
-    metadata = Column(JSON, comment='額外資料(JSON)')
+    extra_data = Column(JSON, comment='額外資料(JSON)')
 
     # 關聯
     user = relationship('User', backref='activities')
@@ -390,7 +390,7 @@ class UserActivity(BaseModel):
             'description': self.description,
             'related_type': self.related_type,
             'related_id': self.related_id,
-            'metadata': self.metadata,
+            'extra_data': self.extra_data,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
