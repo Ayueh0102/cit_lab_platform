@@ -12,6 +12,7 @@ from src.routes.jobs import jobs_bp
 from src.routes.events import events_bp
 from src.routes.bulletins import bulletins_bp
 from src.routes.messages import messages_bp
+from src.routes.csv_import_export import csv_bp
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
@@ -26,6 +27,7 @@ app.register_blueprint(jobs_bp, url_prefix='/api')
 app.register_blueprint(events_bp, url_prefix='/api')
 app.register_blueprint(bulletins_bp, url_prefix='/api')
 app.register_blueprint(messages_bp, url_prefix='/api')
+app.register_blueprint(csv_bp)  # CSV import/export routes
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"

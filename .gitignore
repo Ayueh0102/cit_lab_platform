@@ -58,3 +58,34 @@ Thumbs.db
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
+
+# ========================================
+# Google API Credentials (重要!)
+# ========================================
+credentials/
+service-account-key.json
+credentials.json
+token.json
+*.json.secret
+client_secret*.json
+
+# ========================================
+# Environment Variables
+# ========================================
+.env
+.env.local
+.env.production
+.env.*.local
+
+# ========================================
+# Logs
+# ========================================
+logs/
+*.log
+
+# ========================================
+# 備份檔案
+# ========================================
+*.backup
+*.bak
+backups/

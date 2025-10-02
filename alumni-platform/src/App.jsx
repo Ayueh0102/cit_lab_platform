@@ -526,8 +526,8 @@ function App() {
   const getPendingJobRequests = () => jobRequests.filter(r => r.status === 'pending');
 
   // 過濾函數
-  const filteredAlumni = searchTerm ? 
-    alumni.filter(a => 
+  const filteredAlumni = searchTerm ?
+    alumni.filter(a =>
       a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -538,6 +538,249 @@ function App() {
       a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.content.toLowerCase().includes(searchTerm.toLowerCase())
     ) : announcements;
+
+  // CSV 匯入/匯出功能 (僅管理員)
+  const API_BASE_URL = 'http://localhost:5001';
+
+  // 取得 Token (模擬,實際應從 localStorage 或 state 取得)
+  const getAuthToken = () => {
+    // 這裡應該從實際的登入狀態取得 token
+    // 暫時使用模擬 token
+    return localStorage.getItem('authToken') || '';
+  };
+
+  // CSV 匯出功能
+  const handleExportUsers = async () => {
+    if (currentUser.role !== 'admin') {
+      showMessage('⚠️ 此功能僅限管理員使用！');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/csv/export/users`, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `系友帳號清單_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        addNotification('系統', 'CSV 匯出成功', '系友帳號清單已成功匯出');
+        showMessage('✅ 系友帳號清單匯出成功！');
+      } else {
+        showMessage('❌ 匯出失敗，請稍後再試');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      showMessage('❌ 匯出失敗：' + error.message);
+    }
+  };
+
+  const handleExportJobs = async () => {
+    if (currentUser.role !== 'admin') {
+      showMessage('⚠️ 此功能僅限管理員使用！');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/csv/export/jobs`, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `職缺發布清單_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        addNotification('系統', 'CSV 匯出成功', '職缺發布清單已成功匯出');
+        showMessage('✅ 職缺發布清單匯出成功！');
+      } else {
+        showMessage('❌ 匯出失敗，請稍後再試');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      showMessage('❌ 匯出失敗：' + error.message);
+    }
+  };
+
+  const handleExportEvents = async () => {
+    if (currentUser.role !== 'admin') {
+      showMessage('⚠️ 此功能僅限管理員使用！');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/csv/export/events`, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `活動清單_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        addNotification('系統', 'CSV 匯出成功', '活動清單已成功匯出');
+        showMessage('✅ 活動清單匯出成功！');
+      } else {
+        showMessage('❌ 匯出失敗，請稍後再試');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      showMessage('❌ 匯出失敗：' + error.message);
+    }
+  };
+
+  const handleExportBulletins = async () => {
+    if (currentUser.role !== 'admin') {
+      showMessage('⚠️ 此功能僅限管理員使用！');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/csv/export/bulletins`, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `公告發布清單_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        addNotification('系統', 'CSV 匯出成功', '公告發布清單已成功匯出');
+        showMessage('✅ 公告發布清單匯出成功！');
+      } else {
+        showMessage('❌ 匯出失敗，請稍後再試');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      showMessage('❌ 匯出失敗：' + error.message);
+    }
+  };
+
+  const handleExportAll = async () => {
+    if (currentUser.role !== 'admin') {
+      showMessage('⚠️ 此功能僅限管理員使用！');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/csv/export/all`, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `系友會資料匯出_${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        addNotification('系統', 'CSV 批次匯出成功', '所有資料已成功匯出為 ZIP 檔');
+        showMessage('✅ 所有資料匯出成功！已下載 ZIP 檔');
+      } else {
+        showMessage('❌ 匯出失敗，請稍後再試');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      showMessage('❌ 匯出失敗：' + error.message);
+    }
+  };
+
+  // CSV 匯入功能
+  const handleImportCSV = async (type, file) => {
+    if (currentUser.role !== 'admin') {
+      showMessage('⚠️ 此功能僅限管理員使用！');
+      return;
+    }
+
+    if (!file) {
+      showMessage('❌ 請選擇檔案');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/csv/import/${type}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        const typeName = {
+          'users': '系友帳號',
+          'jobs': '職缺',
+          'bulletins': '公告'
+        }[type];
+
+        let message = `✅ ${typeName}匯入成功！\n\n`;
+        message += `新增: ${result.imported} 筆\n`;
+        message += `更新: ${result.updated} 筆\n`;
+        message += `總計: ${result.total} 筆`;
+
+        if (result.errors && result.errors.length > 0) {
+          message += `\n\n⚠️ 錯誤 (${result.errors.length} 筆):\n`;
+          message += result.errors.slice(0, 5).join('\n');
+          if (result.errors.length > 5) {
+            message += `\n... 還有 ${result.errors.length - 5} 個錯誤`;
+          }
+        }
+
+        addNotification('系統', `${typeName}匯入完成`, `匯入了 ${result.total} 筆資料`);
+        showMessage(message);
+
+        // 匯入成功後重新載入頁面以顯示新資料
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        showMessage('❌ 匯入失敗：' + (result.error || '未知錯誤'));
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      showMessage('❌ 匯入失敗：' + error.message);
+    }
+  };
 
   // 登入頁面
   if (!isLoggedIn) {
@@ -1196,17 +1439,85 @@ function App() {
       <div className="content-grid">
         <div className="content-section">
           <h2 className="section-title">
+            <span className="section-icon">📊</span>
+            資料管理 (CSV 匯入/匯出)
+          </h2>
+          <div className="admin-actions">
+            <button
+              className="admin-btn"
+              onClick={handleExportUsers}
+            >
+              📥 匯出系友帳號清單
+            </button>
+            <button
+              className="admin-btn"
+              onClick={handleExportJobs}
+            >
+              📥 匯出職缺清單
+            </button>
+            <button
+              className="admin-btn"
+              onClick={handleExportEvents}
+            >
+              📥 匯出活動清單
+            </button>
+            <button
+              className="admin-btn"
+              onClick={handleExportBulletins}
+            >
+              📥 匯出公告清單
+            </button>
+            <button
+              className="admin-btn"
+              onClick={handleExportAll}
+            >
+              📦 批次匯出所有資料 (ZIP)
+            </button>
+          </div>
+          <div className="admin-actions" style={{marginTop: '1rem'}}>
+            <label className="admin-btn" style={{cursor: 'pointer'}}>
+              📤 匯入系友帳號清單
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => handleImportCSV('users', e.target.files[0])}
+                style={{display: 'none'}}
+              />
+            </label>
+            <label className="admin-btn" style={{cursor: 'pointer'}}>
+              📤 匯入職缺清單
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => handleImportCSV('jobs', e.target.files[0])}
+                style={{display: 'none'}}
+              />
+            </label>
+            <label className="admin-btn" style={{cursor: 'pointer'}}>
+              📤 匯入公告清單
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => handleImportCSV('bulletins', e.target.files[0])}
+                style={{display: 'none'}}
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="content-section">
+          <h2 className="section-title">
             <span className="section-icon">🔧</span>
             系統設定
           </h2>
           <div className="admin-actions">
-            <button 
+            <button
               className="admin-btn"
               onClick={() => showMessage('網站設定功能：\n- 網站標題設定\n- 主題色彩配置\n- 功能模組開關\n- 系統參數調整')}
             >
               🌐 網站設定
             </button>
-            <button 
+            <button
               className="admin-btn"
               onClick={() => showMessage('資料備份功能：\n- 自動備份設定\n- 手動備份執行\n- 備份檔案管理\n- 資料還原功能')}
             >
@@ -1221,13 +1532,13 @@ function App() {
             用戶管理
           </h2>
           <div className="admin-actions">
-            <button 
+            <button
               className="admin-btn"
               onClick={() => showMessage(`用戶列表：\n${users.map(u => `- ${u.name} (${u.email}) - ${u.role}`).join('\n')}`)}
             >
               📋 用戶列表
             </button>
-            <button 
+            <button
               className="admin-btn"
               onClick={() => showMessage('權限設定功能：\n- 角色權限管理\n- 功能存取控制\n- 用戶狀態管理\n- 權限群組設定')}
             >
