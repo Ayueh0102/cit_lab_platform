@@ -8,9 +8,9 @@ from .user_auth import User, UserProfile, UserSession
 from .career import WorkExperience, Education, Skill, UserSkill
 from .jobs import Job, JobCategory, JobRequest
 from .messages import Conversation, Message
-from .events import Event, EventCategory, EventRegistration, EventCheckIn
-from .content import Bulletin, BulletinCategory, Tag, BulletinTag
-from .system import Notification, SystemLog, SystemSetting
+from .events import Event, EventCategory, EventRegistration
+from .content import Bulletin, BulletinCategory, BulletinComment, Article
+from .system import Notification, SystemLog, SystemSetting, UserActivity, FileUpload
 
 __all__ = [
     'db',
@@ -23,9 +23,9 @@ __all__ = [
     # Messages
     'Conversation', 'Message',
     # Events
-    'Event', 'EventCategory', 'EventRegistration', 'EventCheckIn',
+    'Event', 'EventCategory', 'EventRegistration',
     # Content
-    'Bulletin', 'BulletinCategory', 'Tag', 'BulletinTag',
+    'Bulletin', 'BulletinCategory', 'BulletinComment', 'Article',
     # System
-    'Notification', 'SystemLog', 'SystemSetting'
+    'Notification', 'SystemLog', 'SystemSetting', 'UserActivity', 'FileUpload'
 ]
