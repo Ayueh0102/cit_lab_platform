@@ -1,0 +1,72 @@
+---
+alwaysApply: true
+---
+
+# Conda 環境設定指南
+
+本專案後端使用 **Conda** 虛擬環境進行依賴管理。
+
+## Conda 環境資訊
+- **環境名稱**: `alumni-platform`
+- **Python 版本**: 3.10
+- **依賴清單**: [requirements.txt](mdc:alumni_platform_api/requirements.txt)
+
+## 環境管理指令
+
+### 啟動環境
+```bash
+conda activate alumni-platform
+```
+
+### 停用環境
+```bash
+conda deactivate
+```
+
+### 安裝/更新依賴
+```bash
+conda activate alumni-platform
+cd alumni_platform_api
+pip install -r requirements.txt
+```
+
+### 重新建立環境
+```bash
+# 刪除舊環境
+conda deactivate
+conda remove -n alumni-platform --all -y
+
+# 建立新環境並安裝依賴
+conda create -n alumni-platform python=3.10 -y
+conda activate alumni-platform
+pip install -r alumni_platform_api/requirements.txt
+```
+
+## 啟動後端服務
+
+### 方法 1：使用腳本
+```bash
+./scripts/start_backend_conda.sh
+```
+
+### 方法 2：手動啟動
+```bash
+cd alumni_platform_api
+conda activate alumni-platform
+python src/main_v2.py
+```
+
+## 檢查環境狀態
+```bash
+# 列出所有 conda 環境
+conda env list
+
+# 查看當前環境已安裝的套件
+conda activate alumni-platform
+pip list
+```
+
+## 注意事項
+- 每次開啟新終端機視窗都需要重新啟動 conda 環境
+- Python 版本必須 ≥ 3.10（因為某些依賴如 click 8.2.1 需要）
+- 不要混用 conda 和 venv，請統一使用 conda 環境

@@ -1,0 +1,120 @@
+---
+description: 測試策略與品質保證指南
+---
+
+# 測試與品質保證指南
+
+## 目前測試狀態
+本專案目前**尚未建立自動化測試套件**。最低要求為：
+- 前端：`pnpm lint` 必須通過
+- 手動測試核心流程：登入、職缺、活動功能
+
+## 手動測試檢查清單
+
+### 身份驗證流程
+- [ ] 使用測試帳號登入（參考 [README.md](mdc:README.md)）
+- [ ] 登出功能
+- [ ] 無效憑證的錯誤處理
+- [ ] Token 過期後的行為
+- [ ] 受保護路由的存取控制
+
+### 職缺功能
+- [ ] 瀏覽職缺列表
+- [ ] 搜尋與篩選職缺
+- [ ] 查看職缺詳情
+- [ ] 發布新職缺（需權限）
+- [ ] 編輯/刪除職缺
+- [ ] 申請職缺或發起交流請求
+
+### 活動功能
+- [ ] 瀏覽活動列表
+- [ ] 查看活動詳情
+- [ ] 報名活動
+- [ ] 取消報名
+- [ ] 發布新活動（管理員）
+
+### 公告功能
+- [ ] 瀏覽公告列表
+- [ ] 查看公告內容
+- [ ] 發布新公告（管理員）
+
+### 個人檔案
+- [ ] 查看個人資料
+- [ ] 編輯個人資料
+- [ ] 更新工作經歷
+- [ ] 上傳頭像
+
+## 資料完整性測試
+
+### 資料庫種子驗證
+變更 [main_v2.py](mdc:alumni_platform_api/src/main_v2.py) 的種子邏輯後：
+```bash
+# 重新初始化資料庫
+cd alumni_platform_api
+rm src/database/app_v2.db
+python src/main_v2.py  # 會自動建立並填充資料
+```
+確認測試帳號仍可正常登入。
+
+### CSV 匯入/匯出測試
+- [ ] 匯出各類資料為 CSV
+- [ ] 匯入 CSV 範例檔案（位於 `csv_samples/`）
+- [ ] 驗證資料完整性與關聯正確性
+- [ ] 錯誤格式的錯誤處理
+
+## API 端點測試
+
+### 使用 curl 測試
+```bash
+# 登入取得 token
+curl -X POST http://localhost:5001/api/v2/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+
+# 使用 token 查詢職缺
+curl http://localhost:5001/api/v2/jobs \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+### 測試要點
+- 正確的請求回應（200, 201）
+- 錯誤處理（400, 401, 404）
+- 回應格式正確（JSON 結構）
+- 分頁參數運作
+- 篩選與排序功能
+
+## 前端 Lint 檢查
+```bash
+cd alumni-platform
+pnpm lint
+```
+**所有 PR 前必須通過**，不應有錯誤或警告。
+
+## 效能測試考量
+- 大型列表載入速度（> 100 筆資料）
+- 圖片載入最佳化
+- API 回應時間
+- 資料庫查詢效率（避免 N+1 問題）
+
+## 瀏覽器相容性
+手動測試主流瀏覽器：
+- Chrome / Edge（Chromium）
+- Firefox
+- Safari（macOS/iOS）
+
+## 響應式設計測試
+測試不同裝置尺寸：
+- 手機（< 640px）
+- 平板（640px - 1024px）
+- 桌面（> 1024px）
+
+## 未來測試規劃
+考慮加入以下測試：
+- **單元測試**：Jest（前端）、pytest（後端）
+- **整合測試**：API 端點完整流程
+- **E2E 測試**：Playwright 或 Cypress
+- **效能測試**：Lighthouse CI
+- **安全掃描**：OWASP ZAP、npm audit
+
+## 測試文檔
+新增測試腳本或 curl 範例時，請更新 [project_documentation.md](mdc:project_documentation.md)。

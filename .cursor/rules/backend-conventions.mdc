@@ -1,0 +1,60 @@
+---
+globs: alumni_platform_api/**/*.py
+---
+
+# 後端開發規範
+
+## Python 程式碼風格（遵循 PEP 8）
+- 縮排：4 個空格
+- 函式與變數：snake_case（如 `fetch_user_data`, `user_id`）
+- 類別名稱：PascalCase（如 `UserAuth`, `JobPosting`）
+- 常數：UPPER_SNAKE_CASE（如 `MAX_FILE_SIZE`, `DEFAULT_TIMEOUT`）
+- 私有方法/屬性：前綴單底線（如 `_validate_token`）
+
+## Flask 應用程式結構
+- 主程式：[main_v2.py](mdc:alumni_platform_api/src/main_v2.py)
+- 路由使用 Blueprint 組織，命名格式：`<feature>_bp`（如 `jobs_bp`, `auth_bp`）
+- Blueprint 檔案位於 `src/routes/`，命名為 `<feature>_v2.py`
+
+## 資料庫模型規範
+- 所有模型繼承自 [base.py](mdc:alumni_platform_api/src/models_v2/base.py) 的 `db.Model`
+- 模型檔案位於 `src/models_v2/`，按功能分類
+- 必要欄位：`id`（主鍵）、`created_at`、`updated_at`
+- 關聯使用 SQLAlchemy 的 `relationship` 和 `backref`
+- 刪除行為使用軟刪除（`is_deleted` 欄位）或適當的 `cascade` 設定
+
+## API 端點規範
+- RESTful 設計原則：
+  - GET：查詢資料
+  - POST：建立新資源
+  - PUT/PATCH：更新資源
+  - DELETE：刪除資源
+- 路徑格式：`/api/v2/<resource>` 或 `/api/v2/<resource>/<id>`
+- 回應格式：JSON
+- HTTP 狀態碼：
+  - 200：成功
+  - 201：已建立
+  - 400：錯誤請求
+  - 401：未授權
+  - 403：禁止存取
+  - 404：找不到資源
+  - 500：伺服器錯誤
+
+## 錯誤處理
+- 使用適當的 HTTP 狀態碼
+- 回傳結構化的錯誤訊息：`{"error": "錯誤描述", "details": {...}}`
+- 記錄所有錯誤到日誌（使用 Python logging）
+- 敏感資訊不應出現在錯誤訊息中
+
+## 安全性考量
+- 敏感資料（如密碼）必須加密儲存
+- JWT token 用於身份驗證
+- 環境變數儲存機密資訊（如 `SECRET_KEY`）
+- 參考 `.env.example` 了解必要的環境變數
+- 所有使用者輸入必須驗證與清理
+
+## 資料庫操作
+- 使用 SQLAlchemy ORM 進行資料庫操作
+- 避免 N+1 查詢問題，使用 `joinedload` 或 `subqueryload`
+- 大量資料操作使用批次處理
+- 事務管理使用 `db.session.commit()` 和錯誤回滾

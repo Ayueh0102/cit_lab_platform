@@ -1,0 +1,45 @@
+---
+globs: alumni-platform/**/*.jsx,alumni-platform/**/*.js
+---
+
+# 前端開發規範
+
+## 程式碼風格
+- 使用 ES6+ 模組語法（import/export）
+- 縮排：2 個空格
+- 元件命名：PascalCase（如 `JobCard`, `EventList`）
+- 函式與變數：camelCase（如 `fetchJobs`, `userId`）
+- 檔案命名：與主要匯出的元件名稱一致
+
+## React 最佳實踐
+- 優先使用函式元件與 Hooks
+- 元件檔案結構：
+  1. Import 陳述式
+  2. 元件定義
+  3. 樣式或子元件
+  4. Export 陳述式
+- Props 使用解構語法
+- 事件處理器以 `handle` 開頭（如 `handleSubmit`, `handleClick`）
+
+## Tailwind CSS 使用規範
+- class 順序：版面配置 → 定位 → 字體排版 → 視覺效果 → 狀態修飾符
+- 範例：`className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-md hover:bg-primary/90"`
+- 避免使用 inline `style` 屬性，除非數值是動態計算的
+- 響應式設計使用 `sm:`, `md:`, `lg:` 前綴
+
+## API 整合
+- 所有 API 呼叫必須透過 [api.js](mdc:alumni-platform/src/services/api.js)
+- 使用 async/await 處理非同步操作
+- 錯誤處理使用 try-catch 區塊
+- 載入狀態應有適當的 UI 回饋
+
+## 元件庫使用
+- UI 原件位於 `src/components/ui/`，基於 shadcn/ui
+- 引入元件時使用相對路徑或設定的別名
+- 不要直接修改 UI 原件，若需客製化請建立包裝元件
+
+## 效能考量
+- 大型列表使用虛擬化或分頁
+- 適當使用 `React.memo`, `useMemo`, `useCallback`
+- 圖片使用適當的格式與尺寸
+- 避免在 render 中建立新的物件或陣列

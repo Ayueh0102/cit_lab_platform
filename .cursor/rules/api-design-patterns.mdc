@@ -1,0 +1,242 @@
+---
+description: API 設計模式與最佳實踐
+---
+
+# API 設計模式與最佳實踐
+
+## RESTful 路由設計
+
+### 標準 CRUD 端點
+```python
+# 列表與建立
+GET    /api/v2/<resource>           # 取得資源列表（支援分頁、篩選）
+POST   /api/v2/<resource>           # 建立新資源
+
+# 單一資源操作
+GET    /api/v2/<resource>/<id>      # 取得特定資源
+PUT    /api/v2/<resource>/<id>      # 完整更新資源
+PATCH  /api/v2/<resource>/<id>      # 部分更新資源
+DELETE /api/v2/<resource>/<id>      # 刪除資源
+```
+
+### 巢狀資源
+```python
+# 取得特定職缺的申請記錄
+GET /api/v2/jobs/<job_id>/applications
+
+# 取得特定活動的報名名單
+GET /api/v2/events/<event_id>/registrations
+```
+
+## 請求參數規範
+
+### 查詢參數（Query Parameters）
+用於篩選、排序、分頁：
+```
+GET /api/v2/jobs?page=1&per_page=20&status=active&sort=created_at&order=desc
+```
+
+常用參數：
+- `page`: 頁碼（預設 1）
+- `per_page` 或 `limit`: 每頁筆數（預設 20）
+- `sort`: 排序欄位
+- `order`: `asc` 或 `desc`
+- 其他為資源特定的篩選條件
+
+### 請求本體（Request Body）
+POST/PUT/PATCH 使用 JSON 格式：
+```json
+{
+  "title": "職缺標題",
+  "description": "職缺描述",
+  "company": "公司名稱",
+  "location": "台北市"
+}
+```
+
+## 回應格式規範
+
+### 成功回應
+```json
+{
+  "data": { ... },           // 單一資源
+  "message": "操作成功"       // 可選的訊息
+}
+```
+
+### 列表回應（包含分頁資訊）
+```json
+{
+  "data": [ ... ],
+  "pagination": {
+    "page": 1,
+    "per_page": 20,
+    "total": 100,
+    "pages": 5
+  }
+}
+```
+
+### 錯誤回應
+```json
+{
+  "error": "錯誤類型或簡短描述",
+  "message": "詳細錯誤訊息",
+  "details": {               // 可選的額外資訊
+    "field": "email",
+    "issue": "格式不正確"
+  }
+}
+```
+
+## HTTP 狀態碼使用
+
+### 成功狀態碼
+- `200 OK` - 成功處理請求（GET, PUT, PATCH, DELETE）
+- `201 Created` - 成功建立資源（POST）
+- `204 No Content` - 成功但無回應內容（DELETE）
+
+### 客戶端錯誤
+- `400 Bad Request` - 請求格式錯誤或參數無效
+- `401 Unauthorized` - 未提供或無效的驗證資訊
+- `403 Forbidden` - 已驗證但權限不足
+- `404 Not Found` - 資源不存在
+- `409 Conflict` - 資源衝突（如重複建立）
+- `422 Unprocessable Entity` - 驗證失敗
+
+### 伺服器錯誤
+- `500 Internal Server Error` - 伺服器內部錯誤
+- `503 Service Unavailable` - 服務暫時無法使用
+
+## 身份驗證模式
+
+### JWT Token 流程
+1. 登入取得 Token：
+```python
+POST /api/v2/auth/login
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+
+# 回應
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": { ... }
+}
+```
+
+2. 後續請求帶入 Header：
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### 受保護路由實作
+```python
+from functools import wraps
+from flask import request, jsonify
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'error': 'Token is missing'}), 401
+        
+        try:
+            # 驗證 token 並取得使用者資訊
+            current_user = verify_token(token)
+        except:
+            return jsonify({'error': 'Token is invalid'}), 401
+        
+        return f(current_user, *args, **kwargs)
+    return decorated
+
+@jobs_bp.route('/api/v2/jobs', methods=['POST'])
+@token_required
+def create_job(current_user):
+    # current_user 已驗證且可用
+    ...
+```
+
+## 資料驗證模式
+
+### 輸入驗證
+```python
+def validate_job_data(data):
+    errors = {}
+    
+    if not data.get('title'):
+        errors['title'] = '標題為必填欄位'
+    
+    if 'salary_min' in data and data['salary_min'] < 0:
+        errors['salary_min'] = '薪資不能為負數'
+    
+    if errors:
+        return False, errors
+    return True, None
+
+# 使用
+is_valid, errors = validate_job_data(request.json)
+if not is_valid:
+    return jsonify({'error': 'Validation failed', 'details': errors}), 422
+```
+
+## 分頁實作模式
+
+```python
+@jobs_bp.route('/api/v2/jobs', methods=['GET'])
+def get_jobs():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    # 限制 per_page 上限
+    per_page = min(per_page, 100)
+    
+    query = JobPosting.query.filter_by(is_deleted=False)
+    
+    # 套用篩選
+    if status := request.args.get('status'):
+        query = query.filter_by(status=status)
+    
+    # 分頁
+    pagination = query.paginate(page=page, per_page=per_page)
+    
+    return jsonify({
+        'data': [job.to_dict() for job in pagination.items],
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': pagination.total,
+            'pages': pagination.pages
+        }
+    })
+```
+
+## 錯誤處理最佳實踐
+
+```python
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Resource not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()  # 回滾未完成的交易
+    app.logger.error(f'Server Error: {error}')
+    return jsonify({'error': 'Internal server error'}), 500
+
+# 路由中的錯誤處理
+try:
+    # 資料庫操作
+    db.session.add(new_job)
+    db.session.commit()
+    return jsonify({'data': new_job.to_dict()}), 201
+except Exception as e:
+    db.session.rollback()
+    app.logger.error(f'Error creating job: {str(e)}')
+    return jsonify({'error': 'Failed to create job'}), 500
+```
+
+## 參考文檔
+完整 API 規格請參考 [API_V2_DOCUMENTATION.md](mdc:alumni_platform_api/API_V2_DOCUMENTATION.md)

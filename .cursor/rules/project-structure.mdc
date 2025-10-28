@@ -1,0 +1,34 @@
+---
+alwaysApply: true
+---
+
+# 校友平台專案結構指南
+
+本專案是一個全端應用程式，包含 React 前端與 Flask 後端。
+
+## 核心目錄架構
+
+### 前端 - alumni-platform/
+- **入口點**: [main.jsx](mdc:alumni-platform/src/main.jsx) 載入 [App.jsx](mdc:alumni-platform/src/App.jsx)
+- **元件庫**: `src/components/ui/` 存放可重用的 UI 元件（基於 shadcn/ui）
+- **業務邏輯**: `src/` 包含頁面元件和功能模組
+- **API 服務**: [api.js](mdc:alumni-platform/src/services/api.js) 處理所有後端通訊
+- **樣式**: 使用 Tailwind CSS，配置於 [index.css](mdc:alumni-platform/src/index.css)
+- **建置輸出**: `dist/` 目錄（請勿手動編輯）
+
+### 後端 - alumni_platform_api/
+- **主程式**: [main_v2.py](mdc:alumni_platform_api/src/main_v2.py) 是 API V2 的啟動點
+- **路由模組**: `src/routes/` 按功能分類（auth, jobs, events, bulletins, messages）
+- **資料模型**: `src/models_v2/` 包含所有資料庫模型定義
+- **資料庫**: `src/database/app_v2.db` 是 SQLite 資料庫檔案
+- **靜態檔案**: `static/` 存放前端建置後的產物（由部署流程自動更新）
+
+## 重要文檔參考
+- [README.md](mdc:README.md) - 快速開始與基本說明
+- [project_documentation.md](mdc:project_documentation.md) - 完整專案文檔
+- [API_V2_DOCUMENTATION.md](mdc:alumni_platform_api/API_V2_DOCUMENTATION.md) - API 規格說明
+- [DATABASE_MODELS_V2_COMPLETE.md](mdc:DATABASE_MODELS_V2_COMPLETE.md) - 資料庫模型文檔
+
+## CSV 資料處理
+- 範例 CSV 檔案位於 `csv_samples/` 目錄
+- CSV 匯入/匯出 API 位於 [csv_import_export.py](mdc:alumni_platform_api/src/routes/csv_import_export.py)
