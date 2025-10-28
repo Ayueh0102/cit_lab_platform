@@ -15,12 +15,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-TW">
+    <html lang="zh-TW" suppressHydrationWarning>
       <head>
         <ColorSchemeScript defaultColorScheme="light" />
         <meta name="viewport" content="minimum-scale=1, initial-scale=1, width=device-width, user-scalable=no" />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <MantineProvider>{children}</MantineProvider>
       </body>
     </html>
