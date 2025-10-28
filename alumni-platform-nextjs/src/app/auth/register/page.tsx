@@ -16,7 +16,7 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
-import api from '@/lib/api';
+import { api } from '@/lib/api';
 
 export default function RegisterPage() {
   const router = useRouter();

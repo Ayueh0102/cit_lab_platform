@@ -40,14 +40,14 @@ def token_required(f):
             if not current_user:
                 return jsonify({'message': 'User not found'}), 401
 
-            if not current_user.is_active:
+            if not current_user.status == "active":
                 return jsonify({'message': 'Account is inactive'}), 401
 
             # 檢查 Session 是否仍然有效
             session = UserSession.query.filter_by(
-                token=token,
+                session_token=token,
                 user_id=current_user.id,
-                is_active=True
+                status="active"
             ).first()
 
             if session and session.is_expired:
@@ -78,7 +78,7 @@ def admin_required(f):
 # ========================================
 # 註冊
 # ========================================
-@auth_v2_bp.route('/api/auth/v2/register', methods=['POST'])
+@auth_v2_bp.route('/api/v2/auth/register', methods=['POST'])
 def register():
     """使用者註冊"""
     try:
@@ -132,7 +132,7 @@ def register():
         # 建立登入會話
         session = UserSession(
             user_id=user.id,
-            token=token,
+            session_token=token,
             ip_address=request.remote_addr,
             user_agent=request.headers.get('User-Agent', '')[:500],
             expires_at=datetime.utcnow() + timedelta(days=7)
@@ -155,7 +155,7 @@ def register():
 # ========================================
 # 登入
 # ========================================
-@auth_v2_bp.route('/api/auth/v2/login', methods=['POST'])
+@auth_v2_bp.route('/api/v2/auth/login', methods=['POST'])
 def login():
     """使用者登入"""
     try:
@@ -172,7 +172,7 @@ def login():
         if not user.check_password(data['password']):
             return jsonify({'message': 'Invalid email or password'}), 401
 
-        if not user.is_active:
+        if not user.status == "active":
             return jsonify({'message': 'Account is inactive'}), 401
 
         # 產生 JWT Token
@@ -184,7 +184,7 @@ def login():
         # 建立登入會話
         session = UserSession(
             user_id=user.id,
-            token=token,
+            session_token=token,
             ip_address=request.remote_addr,
             user_agent=request.headers.get('User-Agent', '')[:500],
             device_info=data.get('device_info'),
@@ -210,7 +210,7 @@ def login():
 # ========================================
 # 登出
 # ========================================
-@auth_v2_bp.route('/api/auth/v2/logout', methods=['POST'])
+@auth_v2_bp.route('/api/v2/auth/logout', methods=['POST'])
 @token_required
 def logout(current_user):
     """使用者登出"""
@@ -219,9 +219,9 @@ def logout(current_user):
 
         # 將當前 Session 標記為登出
         session = UserSession.query.filter_by(
-            token=token,
+            session_token=token,
             user_id=current_user.id,
-            is_active=True
+            status="active"
         ).first()
 
         if session:
@@ -237,7 +237,7 @@ def logout(current_user):
 # ========================================
 # 取得當前使用者資訊
 # ========================================
-@auth_v2_bp.route('/api/auth/v2/me', methods=['GET'])
+@auth_v2_bp.route('/api/v2/auth/me', methods=['GET'])
 @token_required
 def get_current_user(current_user):
     """取得當前登入使用者的完整資訊"""
@@ -247,7 +247,7 @@ def get_current_user(current_user):
 # ========================================
 # 更新個人檔案
 # ========================================
-@auth_v2_bp.route('/api/auth/v2/profile', methods=['PUT'])
+@auth_v2_bp.route('/api/v2/auth/profile', methods=['PUT'])
 @token_required
 def update_profile(current_user):
     """更新使用者個人檔案"""
@@ -353,7 +353,7 @@ def get_sessions(current_user):
     """取得當前使用者的所有登入會話"""
     sessions = UserSession.query.filter_by(
         user_id=current_user.id,
-        is_active=True
+        status="active"
     ).order_by(UserSession.created_at.desc()).all()
 
     return jsonify({

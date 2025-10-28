@@ -77,7 +77,7 @@ class Notification(BaseModel):
     email_sent_at = Column(DateTime, comment='郵件發送時間')
 
     # 關聯
-    user = relationship('User', backref='notifications')
+    user = relationship('User', back_populates='notifications')
 
     def __repr__(self):
         return f'<Notification {self.id} to User {self.user_id}>'

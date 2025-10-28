@@ -14,7 +14,7 @@ import {
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
-import api from '@/lib/api';
+import { api } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 import { AppLayout } from '@/components/layout/AppLayout';
 

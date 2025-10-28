@@ -379,7 +379,7 @@ class EventRegistration(BaseModel):
 
     # 關聯
     event = relationship('Event', back_populates='registrations')
-    user = relationship('User', backref='event_registrations')
+    user = relationship('User', back_populates='event_registrations')
 
     def __repr__(self):
         return f'<EventRegistration {self.id} - Event {self.event_id} by User {self.user_id}>'

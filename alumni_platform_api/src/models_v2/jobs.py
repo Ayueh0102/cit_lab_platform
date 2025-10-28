@@ -309,7 +309,7 @@ class JobRequest(BaseModel):
     # 關聯
     job = relationship('Job', back_populates='job_requests')
     requester = relationship('User', foreign_keys=[requester_id],
-                            backref='sent_job_requests')
+                            back_populates='job_requests', overlaps='job_requests')
 
     def __repr__(self):
         return f'<JobRequest {self.id} for Job {self.job_id}>'

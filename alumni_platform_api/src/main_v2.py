@@ -21,16 +21,20 @@ from src.models_v2 import Notification, SystemSetting
 
 # Import routes_v2
 from src.routes.auth_v2 import auth_v2_bp
+from src.routes.jobs_v2 import jobs_v2_bp
+from src.routes.events_v2 import events_v2_bp
+from src.routes.bulletins_v2 import bulletins_v2_bp
+from src.routes.messages_v2 import messages_v2_bp
 from src.routes.career import career_bp
 from src.routes.notifications import notifications_bp
 from src.routes.csv_import_export import csv_bp
 
-# 保留相容舊版的 routes (暫時)
-from src.routes.user import user_bp
-from src.routes.jobs import jobs_bp
-from src.routes.events import events_bp
-from src.routes.bulletins import bulletins_bp
-from src.routes.messages import messages_bp
+# 保留相容舊版的 routes (暫時) - 已註釋以避免模型衝突
+# from src.routes.user import user_bp
+# from src.routes.jobs import jobs_bp
+# from src.routes.events import events_bp
+# from src.routes.bulletins import bulletins_bp
+# from src.routes.messages import messages_bp
 
 from datetime import datetime, timedelta
 
@@ -41,17 +45,21 @@ app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
 CORS(app)
 
 # Register blueprints - v2 routes
-app.register_blueprint(auth_v2_bp)          # /api/auth/v2/*
+app.register_blueprint(auth_v2_bp)          # /api/v2/auth/*
+app.register_blueprint(jobs_v2_bp)          # /api/v2/jobs/*
+app.register_blueprint(events_v2_bp)        # /api/v2/events/*
+app.register_blueprint(bulletins_v2_bp)     # /api/v2/bulletins/*
+app.register_blueprint(messages_v2_bp)      # /api/v2/messages/*
 app.register_blueprint(career_bp)           # /api/career/*
 app.register_blueprint(notifications_bp)    # /api/notifications/*, /api/system/*, /api/activities/*, /api/files/*
 app.register_blueprint(csv_bp)              # /api/csv/*
 
-# Register blueprints - v1 routes (backward compatibility)
-app.register_blueprint(user_bp, url_prefix='/api')
-app.register_blueprint(jobs_bp, url_prefix='/api')
-app.register_blueprint(events_bp, url_prefix='/api')
-app.register_blueprint(bulletins_bp, url_prefix='/api')
-app.register_blueprint(messages_bp, url_prefix='/api')
+# Register blueprints - v1 routes (backward compatibility) - 已註釋以避免模型衝突
+# app.register_blueprint(user_bp, url_prefix='/api')
+# app.register_blueprint(jobs_bp, url_prefix='/api')
+# app.register_blueprint(events_bp, url_prefix='/api')
+# app.register_blueprint(bulletins_bp, url_prefix='/api')
+# app.register_blueprint(messages_bp, url_prefix='/api')
 
 # Database configuration
 db_path = os.path.join(os.path.dirname(__file__), 'database', 'app_v2.db')
@@ -133,7 +141,6 @@ def seed_data():
         for user_data in users_data:
             user = User(
                 email=user_data['email'],
-                name=user_data['name'],
                 role=user_data['role']
             )
             user.set_password(user_data['password'])
@@ -144,11 +151,11 @@ def seed_data():
             profile_data = user_data['profile']
             profile = UserProfile(
                 user_id=user.id,
+                full_name=user_data['name'],  # name 從 user_data 移到 profile
+                display_name=user_data['name'].split()[0] if user_data['name'] else None,
                 graduation_year=profile_data.get('graduation_year'),
-                class_name=profile_data.get('class_name'),
                 current_company=profile_data.get('current_company'),
                 current_position=profile_data.get('current_position'),
-                industry=profile_data.get('industry'),
                 bio=profile_data.get('bio')
             )
             db.session.add(profile)

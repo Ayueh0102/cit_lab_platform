@@ -10,7 +10,7 @@ import csv
 import io
 import os
 from datetime import datetime
-from models.user import db, User, Profile, Job, Event, Bulletin, EventRegistration, JobRequest
+from src.models_v2 import db, User, UserProfile, Job, Event, Bulletin, EventRegistration, JobRequest
 from werkzeug.security import generate_password_hash
 
 csv_bp = Blueprint('csv', __name__)
@@ -277,7 +277,7 @@ def import_users(current_user):
                         user.profile.website = row.get('個人網站') or None
                     else:
                         # 建立 Profile
-                        profile = Profile(
+                        profile = UserProfile(
                             user_id=user.id,
                             current_company=row.get('目前公司') or None,
                             current_title=row.get('職位') or None,
@@ -301,7 +301,7 @@ def import_users(current_user):
                     db.session.flush()  # 取得 user.id
 
                     # 建立 Profile
-                    profile = Profile(
+                    profile = UserProfile(
                         user_id=user.id,
                         current_company=row.get('目前公司') or None,
                         current_title=row.get('職位') or None,

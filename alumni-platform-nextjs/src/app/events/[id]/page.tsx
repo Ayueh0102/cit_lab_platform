@@ -20,7 +20,7 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useRouter, useParams } from 'next/navigation';
-import api from '@/lib/api';
+import { api } from '@/lib/api';
 import { getToken, isAuthenticated } from '@/lib/auth';
 import { AppLayout } from '@/components/layout/AppLayout';
 

@@ -1,62 +1,43 @@
-/**
- * API 客戶端工具
- * 提供與後端 Flask API 通訊的方法
- */
+// API 客戶端配置
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-
-interface FetchOptions extends RequestInit {
+interface FetchOptions {
+  method?: string;
+  body?: string;
   token?: string;
 }
 
-/**
- * 通用 API 請求函式
- */
-async function fetchAPI<T = any>(
-  endpoint: string,
-  options: FetchOptions = {}
-): Promise<T> {
-  const { token, ...fetchOptions } = options;
+async function fetchAPI(endpoint: string, options: FetchOptions = {}) {
+  const { method = 'GET', body, token } = options;
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...fetchOptions.headers,
   };
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const url = `${API_URL}${endpoint}`;
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method,
+    headers,
+    body,
+  });
 
-  try {
-    const response = await fetch(url, {
-      ...fetchOptions,
-      headers,
-    });
+  const data = await response.json();
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: 'API 請求失敗',
-      }));
-      throw new Error(error.message || `HTTP ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('API Error:', error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(data.error || data.message || 'API 請求失敗');
   }
+
+  return data;
 }
 
-/**
- * API 客戶端
- */
 export const api = {
   // 認證相關
   auth: {
     login: (email: string, password: string) =>
-      fetchAPI('/api/auth/login', {
+      fetchAPI('/api/v2/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       }),
@@ -68,16 +49,16 @@ export const api = {
       student_id?: string;
       graduation_year?: number;
     }) =>
-      fetchAPI('/api/auth/register', {
+      fetchAPI('/api/v2/auth/register', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
     
     getCurrentUser: (token: string) =>
-      fetchAPI('/api/user/me', { token }),
+      fetchAPI('/api/v2/auth/me', { token }),
     
     logout: (token: string) =>
-      fetchAPI('/api/auth/logout', {
+      fetchAPI('/api/v2/auth/logout', {
         method: 'POST',
         token,
       }),
@@ -86,33 +67,33 @@ export const api = {
   // 職缺相關
   jobs: {
     getAll: (token?: string) =>
-      fetchAPI('/api/jobs', { token }),
+      fetchAPI('/api/v2/jobs', { token }),
     
     getById: (id: number, token?: string) =>
-      fetchAPI(`/api/jobs/${id}`, { token }),
+      fetchAPI(`/api/v2/jobs/${id}`, { token }),
     
     create: (data: any, token: string) =>
-      fetchAPI('/api/jobs', {
+      fetchAPI('/api/v2/jobs', {
         method: 'POST',
         body: JSON.stringify(data),
         token,
       }),
     
     update: (id: number, data: any, token: string) =>
-      fetchAPI(`/api/jobs/${id}`, {
+      fetchAPI(`/api/v2/jobs/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
         token,
       }),
     
     delete: (id: number, token: string) =>
-      fetchAPI(`/api/jobs/${id}`, {
+      fetchAPI(`/api/v2/jobs/${id}`, {
         method: 'DELETE',
         token,
       }),
     
     apply: (jobId: number, data: any, token: string) =>
-      fetchAPI(`/api/jobs/${jobId}/requests`, {
+      fetchAPI(`/api/v2/jobs/${jobId}/requests`, {
         method: 'POST',
         body: JSON.stringify(data),
         token,
@@ -122,20 +103,20 @@ export const api = {
   // 活動相關
   events: {
     getAll: (token?: string) =>
-      fetchAPI('/api/events', { token }),
+      fetchAPI('/api/v2/events', { token }),
     
     getById: (id: number, token?: string) =>
-      fetchAPI(`/api/events/${id}`, { token }),
+      fetchAPI(`/api/v2/events/${id}`, { token }),
     
     create: (data: any, token: string) =>
-      fetchAPI('/api/events', {
+      fetchAPI('/api/v2/events', {
         method: 'POST',
         body: JSON.stringify(data),
         token,
       }),
     
     register: (eventId: number, data: any, token: string) =>
-      fetchAPI(`/api/events/${eventId}/register`, {
+      fetchAPI(`/api/v2/events/${eventId}/register`, {
         method: 'POST',
         body: JSON.stringify(data),
         token,
@@ -145,13 +126,13 @@ export const api = {
   // 公告相關
   bulletins: {
     getAll: (token?: string) =>
-      fetchAPI('/api/bulletins', { token }),
+      fetchAPI('/api/v2/bulletins', { token }),
     
     getById: (id: number, token?: string) =>
-      fetchAPI(`/api/bulletins/${id}`, { token }),
+      fetchAPI(`/api/v2/bulletins/${id}`, { token }),
     
     create: (data: any, token: string) =>
-      fetchAPI('/api/bulletins', {
+      fetchAPI('/api/v2/bulletins', {
         method: 'POST',
         body: JSON.stringify(data),
         token,
@@ -161,19 +142,16 @@ export const api = {
   // 訊息相關
   messages: {
     getConversations: (token: string) =>
-      fetchAPI('/api/messages/conversations', { token }),
+      fetchAPI('/api/v2/conversations', { token }),
     
-    getMessages: (userId: number, token: string) =>
-      fetchAPI(`/api/messages/${userId}`, { token }),
+    getMessages: (conversationId: number, token: string) =>
+      fetchAPI(`/api/v2/conversations/${conversationId}/messages`, { token }),
     
-    send: (data: { recipient_id: number; content: string }, token: string) =>
-      fetchAPI('/api/messages', {
+    send: (conversationId: number, data: { content: string }, token: string) =>
+      fetchAPI(`/api/v2/conversations/${conversationId}/messages`, {
         method: 'POST',
         body: JSON.stringify(data),
         token,
       }),
   },
 };
-
-export default api;
-
