@@ -42,8 +42,9 @@ export default function LoginPage() {
     try {
       const response = await api.auth.login(values.email, values.password);
 
-      if (response.token && response.user) {
-        setAuth(response.token, response.user);
+      // V1 API 返回 access_token，不是 token
+      if (response.access_token && response.user) {
+        setAuth(response.access_token, response.user);
         
         notifications.show({
           title: '登入成功',

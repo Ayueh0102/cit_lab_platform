@@ -56,7 +56,7 @@ export const api = {
   // 認證相關
   auth: {
     login: (email: string, password: string) =>
-      fetchAPI('/api/v2/auth/login', {
+      fetchAPI('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       }),
@@ -68,16 +68,16 @@ export const api = {
       student_id?: string;
       graduation_year?: number;
     }) =>
-      fetchAPI('/api/v2/auth/register', {
+      fetchAPI('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
     
     getCurrentUser: (token: string) =>
-      fetchAPI('/api/v2/auth/me', { token }),
+      fetchAPI('/api/user/me', { token }),
     
     logout: (token: string) =>
-      fetchAPI('/api/v2/auth/logout', {
+      fetchAPI('/api/auth/logout', {
         method: 'POST',
         token,
       }),
@@ -86,33 +86,33 @@ export const api = {
   // 職缺相關
   jobs: {
     getAll: (token?: string) =>
-      fetchAPI('/api/v2/jobs', { token }),
+      fetchAPI('/api/jobs', { token }),
     
     getById: (id: number, token?: string) =>
-      fetchAPI(`/api/v2/jobs/${id}`, { token }),
+      fetchAPI(`/api/jobs/${id}`, { token }),
     
     create: (data: any, token: string) =>
-      fetchAPI('/api/v2/jobs', {
+      fetchAPI('/api/jobs', {
         method: 'POST',
         body: JSON.stringify(data),
         token,
       }),
     
     update: (id: number, data: any, token: string) =>
-      fetchAPI(`/api/v2/jobs/${id}`, {
+      fetchAPI(`/api/jobs/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
         token,
       }),
     
     delete: (id: number, token: string) =>
-      fetchAPI(`/api/v2/jobs/${id}`, {
+      fetchAPI(`/api/jobs/${id}`, {
         method: 'DELETE',
         token,
       }),
     
     apply: (jobId: number, data: any, token: string) =>
-      fetchAPI(`/api/v2/jobs/${jobId}/apply`, {
+      fetchAPI(`/api/jobs/${jobId}/requests`, {
         method: 'POST',
         body: JSON.stringify(data),
         token,
@@ -122,20 +122,20 @@ export const api = {
   // 活動相關
   events: {
     getAll: (token?: string) =>
-      fetchAPI('/api/v2/events', { token }),
+      fetchAPI('/api/events', { token }),
     
     getById: (id: number, token?: string) =>
-      fetchAPI(`/api/v2/events/${id}`, { token }),
+      fetchAPI(`/api/events/${id}`, { token }),
     
     create: (data: any, token: string) =>
-      fetchAPI('/api/v2/events', {
+      fetchAPI('/api/events', {
         method: 'POST',
         body: JSON.stringify(data),
         token,
       }),
     
     register: (eventId: number, data: any, token: string) =>
-      fetchAPI(`/api/v2/events/${eventId}/register`, {
+      fetchAPI(`/api/events/${eventId}/register`, {
         method: 'POST',
         body: JSON.stringify(data),
         token,
@@ -145,13 +145,13 @@ export const api = {
   // 公告相關
   bulletins: {
     getAll: (token?: string) =>
-      fetchAPI('/api/v2/bulletins', { token }),
+      fetchAPI('/api/bulletins', { token }),
     
     getById: (id: number, token?: string) =>
-      fetchAPI(`/api/v2/bulletins/${id}`, { token }),
+      fetchAPI(`/api/bulletins/${id}`, { token }),
     
     create: (data: any, token: string) =>
-      fetchAPI('/api/v2/bulletins', {
+      fetchAPI('/api/bulletins', {
         method: 'POST',
         body: JSON.stringify(data),
         token,
@@ -161,13 +161,13 @@ export const api = {
   // 訊息相關
   messages: {
     getConversations: (token: string) =>
-      fetchAPI('/api/v2/messages/conversations', { token }),
+      fetchAPI('/api/messages/conversations', { token }),
     
     getMessages: (userId: number, token: string) =>
-      fetchAPI(`/api/v2/messages/${userId}`, { token }),
+      fetchAPI(`/api/messages/${userId}`, { token }),
     
     send: (data: { recipient_id: number; content: string }, token: string) =>
-      fetchAPI('/api/v2/messages', {
+      fetchAPI('/api/messages', {
         method: 'POST',
         body: JSON.stringify(data),
         token,
