@@ -187,7 +187,7 @@ def login():
             session_token=token,
             ip_address=request.remote_addr,
             user_agent=request.headers.get('User-Agent', '')[:500],
-            device_info=data.get('device_info'),
+            user_agent=data.get('device_info'),
             expires_at=datetime.utcnow() + timedelta(days=7)
         )
         db.session.add(session)
