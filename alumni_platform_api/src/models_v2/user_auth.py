@@ -68,6 +68,13 @@ class User(BaseModel):
         self.last_login_at = datetime.utcnow()
         self.login_count += 1
     
+    @property
+    def name(self):
+        """取得使用者名稱（從 profile）"""
+        if self.profile:
+            return self.profile.display_name or self.profile.full_name
+        return self.email.split('@')[0]  # 預設使用 email 前綴
+    
     def to_dict(self, include_private=False):
         """轉換為字典"""
         data = {

@@ -11,31 +11,32 @@ import {
   Avatar,
   Loader,
   Center,
-  TextInput,
-  Button,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { getToken, getUser } from '@/lib/auth';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { getToken } from '@/lib/auth';
+import { SidebarLayout } from '@/components/layout/SidebarLayout';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface Conversation {
+  id: number;
   user_id: number;
   user_name: string;
   last_message: string;
   last_message_time: string;
   unread_count: number;
+  avatar_url?: string;
 }
 
 export default function MessagesPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const currentUser = getUser();
 
   useEffect(() => {
     loadConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadConversations = async () => {
@@ -48,10 +49,10 @@ export default function MessagesPage() {
       }
       const response = await api.messages.getConversations(token);
       setConversations(response.conversations || response);
-    } catch (error: any) {
+    } catch (error) {
       notifications.show({
         title: '載入失敗',
-        message: error.message || '無法載入對話列表',
+        message: error instanceof Error ? error.message : '無法載入對話列表',
         color: 'red',
       });
     } finally {
@@ -61,16 +62,16 @@ export default function MessagesPage() {
 
   if (loading) {
     return (
-      <AppLayout>
+      <ProtectedRoute><SidebarLayout>
         <Center style={{ minHeight: '60vh' }}>
           <Loader size="xl" />
         </Center>
-      </AppLayout>
+      </SidebarLayout></ProtectedRoute>
     );
   }
 
   return (
-    <AppLayout>
+    <ProtectedRoute><SidebarLayout>
       <Container size="lg" py="xl">
         <Stack gap="xl">
           <div>
@@ -93,16 +94,22 @@ export default function MessagesPage() {
             <Stack gap="md">
               {conversations.map((conv) => (
                 <Card
-                  key={conv.user_id}
+                  key={conv.id}
                   shadow="sm"
                   padding="lg"
                   radius="md"
                   withBorder
+                  className="hover-translate-y"
                   style={{ cursor: 'pointer' }}
-                  onClick={() => router.push(`/messages/${conv.user_id}`)}
+                  onClick={() => router.push(`/messages/${conv.id}`)}
                 >
                   <Group gap="md">
-                    <Avatar radius="xl" size="lg" color="blue">
+                    <Avatar
+                      src={conv.avatar_url}
+                      radius="xl"
+                      size="lg"
+                      color="blue"
+                    >
                       {conv.user_name.charAt(0)}
                     </Avatar>
 
@@ -137,7 +144,7 @@ export default function MessagesPage() {
           )}
         </Stack>
       </Container>
-    </AppLayout>
+    </SidebarLayout></ProtectedRoute>
   );
 }
 

@@ -2,33 +2,274 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* 全局漸變背景動畫 */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }
 
+@keyframes colorSlide {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 全局樣式覆蓋 */
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+/* 卡片動畫類別 */
+.animate-bounce-in {
+  animation: bounceIn 0.6s ease-out;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+.animate-slide-in {
+  animation: slideInUp 0.5s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* 漸變卡片邊框 */
+.gradient-border-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2, #ff6b6b, #feca57);
+  background-size: 300% 100%;
+  animation: colorSlide 3s linear infinite;
+}
+
+/* 漸變文字 */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea, #764ba2, #ff6b6b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 漸變按鈕效果 */
+.gradient-button {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  transition: all 0.3s ease;
+}
+
+.gradient-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+/* 卡片 Hover 效果 */
+.card-hover {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-hover:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* 背景模糊效果 */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 漸變卡片背景 */
+.gradient-card-purple {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.gradient-card-orange {
+  background: linear-gradient(135deg, #ff6b6b, #feca57);
+}
+
+.gradient-card-blue {
+  background: linear-gradient(135deg, #48dbfb, #0abde3);
+}
+
+.gradient-card-pink {
+  background: linear-gradient(135deg, #ff9a9e, #fecfef);
+}
+
+/* 脈衝動畫 */
+.animate-pulse-slow {
+  animation: pulse 2s infinite;
+}
+
+/* 側邊欄漸變背景 */
+.sidebar-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* 漸變統計卡片 */
+.stat-card-gradient-1 {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.stat-card-gradient-1:hover {
+  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.4);
+}
+
+.stat-card-gradient-2 {
+  background: linear-gradient(135deg, #ff6b6b, #feca57);
+  box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
+}
+
+.stat-card-gradient-2:hover {
+  box-shadow: 0 20px 40px rgba(255, 107, 107, 0.4);
+}
+
+.stat-card-gradient-3 {
+  background: linear-gradient(135deg, #48dbfb, #0abde3);
+  box-shadow: 0 10px 30px rgba(72, 219, 251, 0.3);
+}
+
+.stat-card-gradient-3:hover {
+  box-shadow: 0 20px 40px rgba(72, 219, 251, 0.4);
+}
+
+.stat-card-gradient-4 {
+  background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+  box-shadow: 0 10px 30px rgba(162, 155, 254, 0.3);
+}
+
+.stat-card-gradient-4:hover {
+  box-shadow: 0 20px 40px rgba(162, 155, 254, 0.4);
+}
+
+/* 柔和的過渡效果 */
+.smooth-transition {
+  transition: all 0.3s ease;
+}
+
+/* hover 時輕微平移 */
+.hover-translate-x:hover {
+  transform: translateX(5px);
+}
+
+.hover-translate-y:hover {
+  transform: translateY(-5px);
+}
+
+/* 標籤漸變效果 */
+.badge-gradient {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+/* 柔和陰影 */
+.shadow-soft {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-soft-hover:hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* 進度條動畫 */
+@keyframes progressFill {
+  from {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  to {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+.progress-animate {
+  animation: progressFill 1s ease-out;
+}
+
+/* 通知徽章脈衝 */
+.notification-badge {
+  animation: pulse 2s infinite;
+}
+
+/* Mantine 元件覆蓋 */
+.mantine-Card-root {
+  transition: all 0.3s ease;
+}
+
+/* 響應式媒體查詢輔助 */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .hide-desktop {
+    display: none;
+  }
 }

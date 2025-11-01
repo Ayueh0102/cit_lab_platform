@@ -389,3 +389,27 @@ def delete_user_skill(current_user, user_skill_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Failed to delete user skill: {str(e)}'}), 500
+
+
+# ========================================
+# 技能管理別名路由 (為了兼容 API 文檔)
+# ========================================
+@career_bp.route('/api/career/my-skills', methods=['GET'])
+@token_required
+def get_my_skills(current_user):
+    """取得我的技能列表 (別名路由)"""
+    return get_user_skills(current_user)
+
+
+@career_bp.route('/api/career/my-skills', methods=['POST'])
+@token_required
+def add_my_skill(current_user):
+    """新增技能 (別名路由)"""
+    return add_user_skill(current_user)
+
+
+@career_bp.route('/api/career/my-skills/<int:user_skill_id>', methods=['DELETE'])
+@token_required
+def delete_my_skill(current_user, user_skill_id):
+    """刪除技能 (別名路由)"""
+    return delete_user_skill(current_user, user_skill_id)

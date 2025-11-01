@@ -7,6 +7,64 @@ interface FetchOptions {
   token?: string;
 }
 
+// 類型定義
+interface JobData {
+  title: string;
+  company?: string;
+  location?: string;
+  description?: string;
+  requirements?: string;
+  salary_range?: string;
+  job_type?: string;
+  category_id?: number;
+}
+
+interface EventData {
+  title: string;
+  description?: string;
+  start_time?: string;
+  end_time?: string;
+  location?: string;
+  location_detail?: string;
+  category_id?: number;
+  event_type?: string;
+  max_participants?: number;
+  allow_waitlist?: boolean;
+  is_online?: boolean;
+  online_url?: string;
+  is_free?: boolean;
+  fee?: number;
+  fee_currency?: string;
+  registration_start?: string;
+  registration_end?: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  tags?: string[];
+  status?: string;
+  cover_image_url?: string;
+}
+
+interface BulletinData {
+  title: string;
+  content: string;
+  category_id?: number;
+  is_pinned?: boolean;
+}
+
+interface JobApplicationData {
+  message?: string;
+  resume_url?: string;
+}
+
+interface EventRegistrationData {
+  contact_name?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  participants_count?: number;
+  notes?: string;
+}
+
 async function fetchAPI(endpoint: string, options: FetchOptions = {}) {
   const { method = 'GET', body, token } = options;
 
@@ -66,20 +124,42 @@ export const api = {
 
   // 職缺相關
   jobs: {
-    getAll: (token?: string) =>
-      fetchAPI('/api/v2/jobs', { token }),
+    getAll: (token?: string, params?: {
+      search?: string;
+      job_type?: string;
+      location?: string;
+      category_id?: number;
+      status?: string;
+      page?: number;
+      per_page?: number;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.job_type) queryParams.append('job_type', params.job_type);
+      if (params?.location) queryParams.append('location', params.location);
+      if (params?.category_id) queryParams.append('category_id', params.category_id.toString());
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      
+      const url = queryParams.toString() 
+        ? `/api/v2/jobs?${queryParams.toString()}`
+        : '/api/v2/jobs';
+      
+      return fetchAPI(url, { token });
+    },
     
     getById: (id: number, token?: string) =>
       fetchAPI(`/api/v2/jobs/${id}`, { token }),
     
-    create: (data: any, token: string) =>
+    create: (data: JobData, token: string) =>
       fetchAPI('/api/v2/jobs', {
         method: 'POST',
         body: JSON.stringify(data),
         token,
       }),
     
-    update: (id: number, data: any, token: string) =>
+    update: (id: number, data: Partial<JobData>, token: string) =>
       fetchAPI(`/api/v2/jobs/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
@@ -92,57 +172,167 @@ export const api = {
         token,
       }),
     
-    apply: (jobId: number, data: any, token: string) =>
-      fetchAPI(`/api/v2/jobs/${jobId}/requests`, {
+    getMyJobs: (token: string, status?: string) => {
+      const url = status ? `/api/v2/my-jobs?status=${status}` : '/api/v2/my-jobs';
+      return fetchAPI(url, { token });
+    },
+    
+    apply: (jobId: number, data: JobApplicationData, token: string) =>
+      fetchAPI('/api/v2/job-requests', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify({ job_id: jobId, ...data }),
         token,
       }),
   },
 
   // 活動相關
   events: {
-    getAll: (token?: string) =>
-      fetchAPI('/api/v2/events', { token }),
+    getAll: (token?: string, params?: {
+      search?: string;
+      category_id?: number;
+      status?: string;
+      time_filter?: 'upcoming' | 'ongoing' | 'past';
+      location?: string;
+      page?: number;
+      per_page?: number;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.category_id) queryParams.append('category_id', params.category_id.toString());
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.time_filter) queryParams.append('time_filter', params.time_filter);
+      if (params?.location) queryParams.append('location', params.location);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+
+      const url = queryParams.toString()
+        ? `/api/v2/events?${queryParams.toString()}`
+        : '/api/v2/events';
+
+      return fetchAPI(url, { token });
+    },
+
+    getCategories: (token?: string) =>
+      fetchAPI('/api/v2/event-categories', { token }),
     
     getById: (id: number, token?: string) =>
       fetchAPI(`/api/v2/events/${id}`, { token }),
     
-    create: (data: any, token: string) =>
+    create: (data: EventData, token: string) =>
       fetchAPI('/api/v2/events', {
         method: 'POST',
         body: JSON.stringify(data),
         token,
       }),
     
-    register: (eventId: number, data: any, token: string) =>
+    update: (id: number, data: Partial<EventData>, token: string) =>
+      fetchAPI(`/api/v2/events/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    delete: (id: number, token: string) =>
+      fetchAPI(`/api/v2/events/${id}`, {
+        method: 'DELETE',
+        token,
+      }),
+    
+    cancel: (id: number, reason: string, token: string) =>
+      fetchAPI(`/api/v2/events/${id}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+        token,
+      }),
+    
+    getMyEvents: (token: string, status?: string) => {
+      const url = status ? `/api/v2/my-events?status=${status}` : '/api/v2/my-events';
+      return fetchAPI(url, { token });
+    },
+    
+    register: (eventId: number, data: EventRegistrationData, token: string) =>
       fetchAPI(`/api/v2/events/${eventId}/register`, {
         method: 'POST',
         body: JSON.stringify(data),
         token,
       }),
+    
+    unregister: (eventId: number, token: string) =>
+      fetchAPI(`/api/v2/events/${eventId}/unregister`, {
+        method: 'POST',
+        token,
+      }),
+    
+    getMyRegistrations: (token: string, status?: string) => {
+      const url = status ? `/api/v2/my-registrations?status=${status}` : '/api/v2/my-registrations';
+      return fetchAPI(url, { token });
+    },
   },
 
   // 公告相關
   bulletins: {
-    getAll: (token?: string) =>
-      fetchAPI('/api/v2/bulletins', { token }),
+    getAll: (token?: string, params?: {
+      search?: string;
+      type?: string;
+      category_id?: number;
+      status?: string;
+      page?: number;
+      per_page?: number;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.type) queryParams.append('type', params.type);
+      if (params?.category_id) queryParams.append('category_id', params.category_id.toString());
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      
+      const url = queryParams.toString() 
+        ? `/api/v2/bulletins?${queryParams.toString()}`
+        : '/api/v2/bulletins';
+      
+      return fetchAPI(url, { token });
+    },
+    
+    getCategories: (token?: string) =>
+      fetchAPI('/api/v2/bulletin-categories', { token }),
     
     getById: (id: number, token?: string) =>
       fetchAPI(`/api/v2/bulletins/${id}`, { token }),
     
-    create: (data: any, token: string) =>
+    create: (data: BulletinData, token: string) =>
       fetchAPI('/api/v2/bulletins', {
         method: 'POST',
         body: JSON.stringify(data),
         token,
       }),
+    
+    update: (id: number, data: Partial<BulletinData>, token: string) =>
+      fetchAPI(`/api/v2/bulletins/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    delete: (id: number, token: string) =>
+      fetchAPI(`/api/v2/bulletins/${id}`, {
+        method: 'DELETE',
+        token,
+      }),
+    
+    getMyBulletins: (token: string, status?: string) => {
+      const url = status ? `/api/v2/my-bulletins?status=${status}` : '/api/v2/my-bulletins';
+      return fetchAPI(url, { token });
+    },
   },
 
   // 訊息相關
   messages: {
     getConversations: (token: string) =>
       fetchAPI('/api/v2/conversations', { token }),
+    
+    getConversation: (conversationId: number, token: string) =>
+      fetchAPI(`/api/v2/conversations/${conversationId}`, { token }),
     
     getMessages: (conversationId: number, token: string) =>
       fetchAPI(`/api/v2/conversations/${conversationId}/messages`, { token }),
@@ -153,5 +343,371 @@ export const api = {
         body: JSON.stringify(data),
         token,
       }),
+    
+    createConversation: (userId: number, token: string) =>
+      fetchAPI(`/api/v2/conversations/with/${userId}`, {
+        method: 'POST',
+        token,
+      }),
+  },
+
+  // 個人資料相關
+  profile: {
+    update: (data: any, token: string) =>
+      fetchAPI('/api/v2/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    getUsers: (token?: string, params?: {
+      search?: string;
+      graduation_year?: number;
+      industry?: string;
+      page?: number;
+      per_page?: number;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.graduation_year) queryParams.append('graduation_year', params.graduation_year.toString());
+      if (params?.industry) queryParams.append('industry', params.industry);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      
+      const url = queryParams.toString() 
+        ? `/api/v2/users?${queryParams.toString()}`
+        : '/api/v2/users';
+      
+      return fetchAPI(url, { token });
+    },
+    
+    getUserById: (id: number, token?: string) =>
+      fetchAPI(`/api/v2/users/${id}`, { token }),
+  },
+
+  // 通知相關
+  notifications: {
+    getAll: (token: string, params?: {
+      status?: 'unread' | 'read' | 'archived';
+      type?: string;
+      page?: number;
+      per_page?: number;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.type) queryParams.append('type', params.type);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      
+      const url = queryParams.toString() 
+        ? `/api/notifications?${queryParams.toString()}`
+        : '/api/notifications';
+      
+      return fetchAPI(url, { token });
+    },
+    
+    getUnreadCount: (token: string) =>
+      fetchAPI('/api/notifications/unread-count', { token }),
+    
+    markAsRead: (id: number, token: string) =>
+      fetchAPI(`/api/notifications/${id}/read`, {
+        method: 'POST',
+        token,
+      }),
+    
+    markAllAsRead: (token: string) =>
+      fetchAPI('/api/notifications/mark-all-read', {
+        method: 'POST',
+        token,
+      }),
+    
+    archive: (id: number, token: string) =>
+      fetchAPI(`/api/notifications/${id}/archive`, {
+        method: 'POST',
+        token,
+      }),
+    
+    delete: (id: number, token: string) =>
+      fetchAPI(`/api/notifications/${id}`, {
+        method: 'DELETE',
+        token,
+      }),
+  },
+
+  // 職涯相關
+  career: {
+    getWorkExperiences: (token: string) =>
+      fetchAPI('/api/career/work-experiences', { token }),
+    
+    addWorkExperience: (data: any, token: string) =>
+      fetchAPI('/api/career/work-experiences', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    updateWorkExperience: (id: number, data: any, token: string) =>
+      fetchAPI(`/api/career/work-experiences/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    deleteWorkExperience: (id: number, token: string) =>
+      fetchAPI(`/api/career/work-experiences/${id}`, {
+        method: 'DELETE',
+        token,
+      }),
+    
+    getEducations: (token: string) =>
+      fetchAPI('/api/career/educations', { token }),
+    
+    addEducation: (data: any, token: string) =>
+      fetchAPI('/api/career/educations', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    updateEducation: (id: number, data: any, token: string) =>
+      fetchAPI(`/api/career/educations/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    deleteEducation: (id: number, token: string) =>
+      fetchAPI(`/api/career/educations/${id}`, {
+        method: 'DELETE',
+        token,
+      }),
+    
+    getSkills: (token?: string) =>
+      fetchAPI('/api/career/skills', { token }),
+    
+    getMySkills: (token: string) =>
+      fetchAPI('/api/career/my-skills', { token }),
+    
+    addSkill: (skillId: number, token: string) =>
+      fetchAPI('/api/career/my-skills', {
+        method: 'POST',
+        body: JSON.stringify({ skill_id: skillId }),
+        token,
+      }),
+    
+    deleteSkill: (id: number, token: string) =>
+      fetchAPI(`/api/career/my-skills/${id}`, {
+        method: 'DELETE',
+        token,
+      }),
+  },
+
+  // 設定相關
+  settings: {
+    changePassword: (data: {
+      current_password: string;
+      new_password: string;
+    }, token: string) =>
+      fetchAPI('/api/v2/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        token,
+      }),
+  },
+
+  // 管理後台相關
+  admin: {
+    getStatistics: (token: string) =>
+      fetchAPI('/api/v2/admin/statistics', { token }),
+    
+    getUsers: (token: string, params?: {
+      page?: number;
+      per_page?: number;
+      search?: string;
+      role?: string;
+      status?: string;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.role) queryParams.append('role', params.role);
+      if (params?.status) queryParams.append('status', params.status);
+      
+      const url = queryParams.toString()
+        ? `/api/v2/admin/users?${queryParams.toString()}`
+        : '/api/v2/admin/users';
+      
+      return fetchAPI(url, { token });
+    },
+    
+    updateUser: (userId: number, data: {
+      role?: string;
+      status?: string;
+    }, token: string) =>
+      fetchAPI(`/api/v2/admin/users/${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    deleteUser: (userId: number, token: string) =>
+      fetchAPI(`/api/v2/admin/users/${userId}`, {
+        method: 'DELETE',
+        token,
+      }),
+    
+    approveJob: (jobId: number, token: string) =>
+      fetchAPI(`/api/v2/admin/jobs/${jobId}/approve`, {
+        method: 'POST',
+        token,
+      }),
+    
+    approveEvent: (eventId: number, token: string) =>
+      fetchAPI(`/api/v2/admin/events/${eventId}/approve`, {
+        method: 'POST',
+        token,
+      }),
+    
+    approveBulletin: (bulletinId: number, token: string) =>
+      fetchAPI(`/api/v2/admin/bulletins/${bulletinId}/approve`, {
+        method: 'POST',
+        token,
+      }),
+  },
+
+  // CSV 匯入匯出相關
+  csv: {
+    exportUsers: (token: string): Promise<Blob> => {
+      return fetch(`${API_BASE_URL}/api/csv/export/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      }).then(async (res) => {
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || error.message || '匯出失敗');
+        }
+        return res.blob();
+      });
+    },
+    
+    exportJobs: (token: string): Promise<Blob> => {
+      return fetch(`${API_BASE_URL}/api/csv/export/jobs`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      }).then(async (res) => {
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || error.message || '匯出失敗');
+        }
+        return res.blob();
+      });
+    },
+    
+    exportEvents: (token: string): Promise<Blob> => {
+      return fetch(`${API_BASE_URL}/api/csv/export/events`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      }).then(async (res) => {
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || error.message || '匯出失敗');
+        }
+        return res.blob();
+      });
+    },
+    
+    exportBulletins: (token: string): Promise<Blob> => {
+      return fetch(`${API_BASE_URL}/api/csv/export/bulletins`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      }).then(async (res) => {
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || error.message || '匯出失敗');
+        }
+        return res.blob();
+      });
+    },
+    
+    importUsers: (file: File, token: string) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      return fetch(`${API_BASE_URL}/api/csv/import/users`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      }).then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || data.message || '匯入失敗');
+        }
+        return data;
+      });
+    },
+    
+    importJobs: (file: File, token: string) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      return fetch(`${API_BASE_URL}/api/csv/import/jobs`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      }).then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || data.message || '匯入失敗');
+        }
+        return data;
+      });
+    },
+    
+    importEvents: (file: File, token: string) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      return fetch(`${API_BASE_URL}/api/csv/import/events`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      }).then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || data.message || '匯入失敗');
+        }
+        return data;
+      });
+    },
+    
+    importBulletins: (file: File, token: string) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      return fetch(`${API_BASE_URL}/api/csv/import/bulletins`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      }).then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || data.message || '匯入失敗');
+        }
+        return data;
+      });
+    },
   },
 };

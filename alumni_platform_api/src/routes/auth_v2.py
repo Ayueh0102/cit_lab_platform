@@ -47,11 +47,12 @@ def token_required(f):
             session = UserSession.query.filter_by(
                 session_token=token,
                 user_id=current_user.id,
-                status="active"
+                is_active=True
             ).first()
 
-            if session and session.is_expired:
-                session.logout()
+            if session and session.is_expired():
+                session.invalidate()
+                db.session.commit()
                 return jsonify({'message': 'Session has expired'}), 401
 
         except jwt.ExpiredSignatureError:
@@ -144,7 +145,7 @@ def register():
             'message': 'User registered successfully',
             'access_token': token,
             'user_id': user.id,
-            'user': user.to_dict(include_profile=True)
+            'user': user.to_dict(include_private=True)
         }), 201
 
     except Exception as e:
@@ -187,7 +188,6 @@ def login():
             session_token=token,
             ip_address=request.remote_addr,
             user_agent=request.headers.get('User-Agent', '')[:500],
-            user_agent=data.get('device_info'),
             expires_at=datetime.utcnow() + timedelta(days=7)
         )
         db.session.add(session)
@@ -199,7 +199,7 @@ def login():
         return jsonify({
             'access_token': token,
             'user_id': user.id,
-            'user': user.to_dict(include_profile=True)
+            'user': user.to_dict(include_private=True)
         }), 200
 
     except Exception as e:
@@ -241,7 +241,7 @@ def logout(current_user):
 @token_required
 def get_current_user(current_user):
     """取得當前登入使用者的完整資訊"""
-    return jsonify(current_user.to_dict(include_profile=True, include_private=True)), 200
+    return jsonify(current_user.to_dict(include_private=True)), 200
 
 
 # ========================================
@@ -304,7 +304,7 @@ def update_profile(current_user):
 
         return jsonify({
             'message': 'Profile updated successfully',
-            'user': current_user.to_dict(include_profile=True)
+            'user': current_user.to_dict(include_private=True)
         }), 200
 
     except Exception as e:
@@ -405,3 +405,169 @@ def linkedin_callback():
     return jsonify({
         'message': 'LinkedIn callback not implemented'
     }), 200
+
+
+# ========================================
+# 系友通訊錄 API
+# ========================================
+@auth_v2_bp.route('/api/v2/users', methods=['GET'])
+def get_users():
+    """
+    獲取系友列表（支援搜尋和篩選）
+    
+    Query Parameters:
+    - search: 搜尋關鍵字（姓名、公司、職位）
+    - graduation_year: 畢業年份
+    - industry: 產業別
+    - page: 頁碼（默認 1）
+    - per_page: 每頁數量（默認 20）
+    """
+    try:
+        # 獲取查詢參數
+        search = request.args.get('search', '').strip()
+        graduation_year = request.args.get('graduation_year', type=int)
+        industry = request.args.get('industry', '').strip()
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        
+        # 限制每頁數量
+        if per_page > 100:
+            per_page = 100
+        
+        # 基本查詢：只返回活躍用戶
+        query = User.query.filter_by(status='active')
+        
+        # 搜尋功能（姓名、公司、職位）
+        if search:
+            query = query.join(UserProfile, User.id == UserProfile.user_id, isouter=True)
+            query = query.filter(
+                db.or_(
+                    UserProfile.full_name.ilike(f'%{search}%'),
+                    UserProfile.display_name.ilike(f'%{search}%'),
+                    UserProfile.current_company.ilike(f'%{search}%'),
+                    UserProfile.current_position.ilike(f'%{search}%')
+                )
+            )
+        else:
+            # 如果沒有搜尋，也需要 join 來使用篩選
+            if graduation_year or industry:
+                query = query.join(UserProfile, User.id == UserProfile.user_id, isouter=True)
+        
+        # 畢業年份篩選
+        if graduation_year:
+            query = query.filter(UserProfile.graduation_year == graduation_year)
+        
+        # 產業別篩選 (暫時不支援,因為 UserProfile 沒有 industry 欄位)
+        # if industry:
+        #     query = query.filter(UserProfile.industry == industry)
+        
+        # 排序：最近登入的在前
+        query = query.order_by(User.last_login_at.desc().nullslast())
+        
+        # 分頁
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        
+        # 組裝用戶列表
+        users = []
+        for user in pagination.items:
+            user_data = {
+                'id': user.id,
+                'email': user.email,
+                'role': user.role,
+                'status': user.status,
+                'created_at': user.created_at.isoformat() if user.created_at else None,
+                'last_login_at': user.last_login_at.isoformat() if user.last_login_at else None,
+            }
+            
+            # 加入個人資料（如果有）
+            if user.profile:
+                profile = user.profile
+                user_data['profile'] = {
+                    'full_name': profile.full_name,
+                    'display_name': profile.display_name,
+                    'avatar_url': profile.avatar_url,
+                    'graduation_year': profile.graduation_year,
+                    'major': profile.major,
+                    'degree': profile.degree,
+                    'current_company': profile.current_company,
+                    'current_position': profile.current_position,
+                    'location': profile.current_location,
+                    'bio': profile.bio,
+                    'linkedin_url': profile.linkedin_url,
+                    'github_url': profile.github_url,
+                    'personal_website': profile.personal_website,
+                    'show_email': profile.show_email,
+                    'show_phone': profile.show_phone,
+                }
+                
+                # 只在用戶允許的情況下顯示聯絡方式
+                if profile.show_email:
+                    user_data['profile']['email'] = user.email
+                if profile.show_phone:
+                    user_data['profile']['phone'] = profile.phone
+            
+            users.append(user_data)
+        
+        return jsonify({
+            'users': users,
+            'total': pagination.total,
+            'page': page,
+            'per_page': per_page,
+            'pages': pagination.pages
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'Get users failed: {str(e)}')
+        return jsonify({'message': f'Failed to get users: {str(e)}'}), 500
+
+
+@auth_v2_bp.route('/api/v2/users/<int:user_id>', methods=['GET'])
+def get_user_by_id(user_id):
+    """獲取指定用戶的詳細資料"""
+    try:
+        user = User.query.filter_by(id=user_id, status='active').first()
+        
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+        
+        user_data = {
+            'id': user.id,
+            'email': user.email,
+            'role': user.role,
+            'status': user.status,
+            'created_at': user.created_at.isoformat() if user.created_at else None,
+            'last_login_at': user.last_login_at.isoformat() if user.last_login_at else None,
+        }
+        
+        # 加入個人資料
+        if user.profile:
+            profile = user.profile
+            user_data['profile'] = {
+                'full_name': profile.full_name,
+                'display_name': profile.display_name,
+                'avatar_url': profile.avatar_url,
+                'graduation_year': profile.graduation_year,
+                'major': profile.major,
+                'degree': profile.degree,
+                'current_company': profile.current_company,
+                'current_position': profile.current_position,
+                'location': profile.current_location,
+                'bio': profile.bio,
+                'linkedin_url': profile.linkedin_url,
+                'github_url': profile.github_url,
+                'personal_website': profile.personal_website,
+                'show_email': profile.show_email,
+                'show_phone': profile.show_phone,
+            }
+            
+            # 只在用戶允許的情況下顯示聯絡方式
+            if profile.show_email:
+                user_data['profile']['email'] = user.email
+            if profile.show_phone:
+                user_data['profile']['phone'] = profile.phone
+        
+        return jsonify({'user': user_data}), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'Get user failed: {str(e)}')
+        return jsonify({'message': f'Failed to get user: {str(e)}'}), 500

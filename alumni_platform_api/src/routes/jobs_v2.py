@@ -5,6 +5,7 @@
 
 from flask import Blueprint, request, jsonify
 from src.models_v2 import db, Job, JobCategory, JobRequest, User
+from src.models_v2.jobs import JobType, JobStatus, RequestStatus
 from src.routes.auth_v2 import token_required, admin_required
 from datetime import datetime
 from sqlalchemy import or_, and_
@@ -65,7 +66,7 @@ def get_jobs():
     category_id = request.args.get('category_id', type=int)
     job_type = request.args.get('job_type')
     location = request.args.get('location')
-    status = request.args.get('status', 'active')
+    status = request.args.get('status', 'ACTIVE')
     search = request.args.get('search')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
@@ -76,11 +77,21 @@ def get_jobs():
     if category_id:
         query = query.filter_by(category_id=category_id)
     if job_type:
-        query = query.filter_by(job_type=job_type)
+        # 將小寫轉換為大寫 enum
+        try:
+            job_type_enum = JobType[job_type.upper().replace('-', '_')]
+            query = query.filter_by(job_type=job_type_enum)
+        except:
+            pass
     if location:
         query = query.filter(Job.location.like(f'%{location}%'))
     if status:
-        query = query.filter_by(status=status)
+        # 將小寫轉換為大寫 enum
+        try:
+            status_enum = JobStatus[status.upper()]
+            query = query.filter_by(status=status_enum)
+        except:
+            pass
     if search:
         query = query.filter(
             or_(
@@ -114,7 +125,7 @@ def get_job(job_id):
     # 增加瀏覽次數
     job.increment_views()
 
-    return jsonify(job.to_dict(include_user=True)), 200
+    return jsonify(job.to_dict()), 200
 
 
 @jobs_v2_bp.route('/api/v2/jobs', methods=['POST'])
@@ -141,19 +152,17 @@ def create_job(current_user):
             responsibilities=data.get('responsibilities'),
             benefits=data.get('benefits'),
             location=data.get('location'),
-            job_type=data.get('job_type', 'full_time'),
-            work_mode=data.get('work_mode'),
-            salary_text=data.get('salary'),
+            job_type=JobType[data.get('job_type', 'full_time').upper().replace('-', '_')] if data.get('job_type') else JobType.FULL_TIME,
+            is_remote=data.get('work_mode') == 'remote' if data.get('work_mode') else False,
             salary_min=data.get('salary_min'),
             salary_max=data.get('salary_max'),
             salary_negotiable=data.get('salary_negotiable', False),
-            experience_required=data.get('experience_required'),
-            education_required=data.get('education_required'),
-            contact_email=data.get('contact_email'),
-            contact_phone=data.get('contact_phone'),
+            experience_years_min=int(data.get('experience_required', '').split('年')[0]) if data.get('experience_required') and '年' in str(data.get('experience_required')) else None,
+            education_level=data.get('education_required') or data.get('education_level'),
+            application_email=data.get('contact_email') or data.get('application_email'),
             application_url=data.get('application_url'),
-            deadline=datetime.strptime(data['deadline'], '%Y-%m-%d') if data.get('deadline') else None,
-            status='active',
+            expires_at=datetime.strptime(data['deadline'], '%Y-%m-%d') if data.get('deadline') else None,
+            status=JobStatus.ACTIVE,
             published_at=datetime.utcnow()
         )
 
@@ -190,17 +199,39 @@ def update_job(current_user, job_id):
         updatable_fields = [
             'category_id', 'title', 'company', 'company_website', 'company_logo_url',
             'description', 'requirements', 'responsibilities', 'benefits',
-            'location', 'job_type', 'work_mode', 'salary_text', 'salary_min', 'salary_max',
-            'salary_negotiable', 'experience_required', 'education_required',
-            'contact_email', 'contact_phone', 'application_url', 'status'
+            'location', 'job_type', 'salary_min', 'salary_max',
+            'salary_negotiable', 'education_level',
+            'application_email', 'application_url', 'status'
         ]
 
         for field in updatable_fields:
             if field in data:
                 setattr(job, field, data[field])
-
+        
+        # 處理 work_mode -> is_remote 轉換
+        if 'work_mode' in data:
+            job.is_remote = data['work_mode'] == 'remote'
+        
+        # 處理 experience_required -> experience_years_min
+        if 'experience_required' in data and data['experience_required']:
+            exp_str = str(data['experience_required'])
+            if '年' in exp_str:
+                try:
+                    job.experience_years_min = int(exp_str.split('年')[0])
+                except:
+                    pass
+        
+        # 處理 education_required -> education_level
+        if 'education_required' in data:
+            job.education_level = data['education_required']
+        
+        # 處理 contact_email -> application_email
+        if 'contact_email' in data:
+            job.application_email = data['contact_email']
+        
+        # 處理 deadline -> expires_at
         if 'deadline' in data and data['deadline']:
-            job.deadline = datetime.strptime(data['deadline'], '%Y-%m-%d')
+            job.expires_at = datetime.strptime(data['deadline'], '%Y-%m-%d')
 
         db.session.commit()
 
@@ -274,7 +305,11 @@ def get_my_jobs(current_user):
     query = Job.query.filter_by(user_id=current_user.id)
 
     if status:
-        query = query.filter_by(status=status)
+        try:
+            status_enum = JobStatus[status.upper()]
+            query = query.filter(Job.status == status_enum)
+        except:
+            pass
 
     pagination = query.order_by(Job.created_at.desc())\
         .paginate(page=page, per_page=per_page, error_out=False)
@@ -317,9 +352,8 @@ def create_job_request(current_user):
         job_request = JobRequest(
             job_id=data['job_id'],
             requester_id=current_user.id,
-            recipient_id=job.user_id,
             message=data.get('message'),
-            status='pending'
+            status=RequestStatus.PENDING
         )
 
         db.session.add(job_request)
@@ -345,10 +379,15 @@ def get_received_requests(current_user):
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
 
-    query = JobRequest.query.filter_by(recipient_id=current_user.id)
+    # 通過 job.user_id 找到發送給當前用戶的請求
+    query = JobRequest.query.join(Job).filter(Job.user_id == current_user.id)
 
     if status:
-        query = query.filter_by(status=status)
+        try:
+            status_enum = RequestStatus[status.upper()]
+            query = query.filter(JobRequest.status == status_enum)
+        except:
+            pass
 
     pagination = query.order_by(JobRequest.created_at.desc())\
         .paginate(page=page, per_page=per_page, error_out=False)
@@ -397,10 +436,12 @@ def accept_job_request(current_user, request_id):
         if not job_request:
             return jsonify({'message': 'Request not found'}), 404
 
-        if job_request.recipient_id != current_user.id:
+        # 檢查職缺是否屬於當前用戶
+        job = Job.query.get(job_request.job_id)
+        if not job or job.user_id != current_user.id:
             return jsonify({'message': 'Permission denied'}), 403
 
-        job_request.accept()
+        job_request.approve()
 
         # TODO: 建立對話
         # TODO: 建立通知給請求者
@@ -425,11 +466,13 @@ def reject_job_request(current_user, request_id):
         if not job_request:
             return jsonify({'message': 'Request not found'}), 404
 
-        if job_request.recipient_id != current_user.id:
+        # 檢查職缺是否屬於當前用戶
+        job = Job.query.get(job_request.job_id)
+        if not job or job.user_id != current_user.id:
             return jsonify({'message': 'Permission denied'}), 403
 
         data = request.get_json()
-        job_request.reject(rejection_reason=data.get('reason'))
+        job_request.reject(response_message=data.get('reason'))
 
         # TODO: 建立通知給請求者
 

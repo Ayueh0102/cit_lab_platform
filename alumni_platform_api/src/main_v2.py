@@ -28,6 +28,7 @@ from src.routes.messages_v2 import messages_v2_bp
 from src.routes.career import career_bp
 from src.routes.notifications import notifications_bp
 from src.routes.csv_import_export import csv_bp
+from src.routes.admin_v2 import admin_v2_bp
 
 # 保留相容舊版的 routes (暫時) - 已註釋以避免模型衝突
 # from src.routes.user import user_bp
@@ -39,7 +40,9 @@ from src.routes.csv_import_export import csv_bp
 from datetime import datetime, timedelta
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
-app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
+
+# 安全性配置 - 從環境變數載入 SECRET_KEY
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-please-change-in-production')
 
 # Enable CORS for all routes
 CORS(app)
@@ -53,6 +56,7 @@ app.register_blueprint(messages_v2_bp)      # /api/v2/messages/*
 app.register_blueprint(career_bp)           # /api/career/*
 app.register_blueprint(notifications_bp)    # /api/notifications/*, /api/system/*, /api/activities/*, /api/files/*
 app.register_blueprint(csv_bp)              # /api/csv/*
+app.register_blueprint(admin_v2_bp)          # /api/v2/admin/*
 
 # Register blueprints - v1 routes (backward compatibility) - 已註釋以避免模型衝突
 # app.register_blueprint(user_bp, url_prefix='/api')

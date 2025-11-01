@@ -1,0 +1,378 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import {
+  Container,
+  Title,
+  Text,
+  Stack,
+  Card,
+  Group,
+  Badge,
+  ActionIcon,
+  Loader,
+  Center,
+  Button,
+  Tabs,
+} from '@mantine/core';
+import { notifications as mantineNotifications } from '@mantine/notifications';
+import {
+  IconBell,
+  IconBriefcase,
+  IconCalendarEvent,
+  IconUsers,
+  IconCheck,
+  IconTrash,
+  IconSettings,
+} from '@tabler/icons-react';
+import { SidebarLayout } from '@/components/layout/SidebarLayout';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { api } from '@/lib/api';
+import { getToken } from '@/lib/auth';
+import { useRouter } from 'next/navigation';
+
+interface Notification {
+  id: number;
+  notification_type: 'job' | 'event' | 'bulletin' | 'message' | 'system';
+  title: string;
+  content: string;
+  status: 'unread' | 'read' | 'archived';
+  created_at: string;
+  read_at?: string;
+  link_url?: string;
+}
+
+const getNotificationIcon = (type: string) => {
+  switch (type) {
+    case 'job':
+      return <IconBriefcase size={20} color="blue" />;
+    case 'event':
+      return <IconCalendarEvent size={20} color="green" />;
+    case 'bulletin':
+      return <IconBell size={20} color="orange" />;
+    case 'message':
+      return <IconUsers size={20} color="purple" />;
+    default:
+      return <IconSettings size={20} color="gray" />;
+  }
+};
+
+const getNotificationColor = (type: string) => {
+  switch (type) {
+    case 'job':
+      return 'blue';
+    case 'event':
+      return 'green';
+    case 'bulletin':
+      return 'orange';
+    case 'message':
+      return 'purple';
+    default:
+      return 'gray';
+  }
+};
+
+export default function NotificationsPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [activeTab, setActiveTab] = useState<string | null>('all');
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    loadNotifications();
+    loadUnreadCount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      const token = getToken();
+      if (!token) {
+        router.push('/auth/login');
+        return;
+      }
+
+      let status: 'unread' | 'read' | 'archived' | undefined;
+      if (activeTab === 'unread') {
+        status = 'unread';
+      } else if (activeTab === 'read') {
+        status = 'read';
+      } else if (activeTab === 'archived') {
+        status = 'archived';
+      }
+
+      const response = await api.notifications.getAll(token, {
+        status,
+        page: 1,
+        per_page: 50,
+      });
+
+      setNotifications(response.notifications || []);
+    } catch (error) {
+      mantineNotifications.show({
+        title: '載入失敗',
+        message: error instanceof Error ? error.message : '無法載入通知',
+        color: 'red',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUnreadCount = async () => {
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      const response = await api.notifications.getUnreadCount(token);
+      setUnreadCount(response.unread_count || 0);
+    } catch (error) {
+      // 靜默失敗
+    }
+  };
+
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      await api.notifications.markAsRead(id, token);
+      
+      setNotifications(
+        notifications.map((n) =>
+          n.id === id ? { ...n, status: 'read' as const } : n
+        )
+      );
+      loadUnreadCount();
+      
+      mantineNotifications.show({
+        title: '已標記為已讀',
+        message: '通知已標記為已讀',
+        color: 'green',
+      });
+    } catch (error) {
+      mantineNotifications.show({
+        title: '操作失敗',
+        message: error instanceof Error ? error.message : '無法標記通知',
+        color: 'red',
+      });
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      await api.notifications.delete(id, token);
+      
+      setNotifications(notifications.filter((n) => n.id !== id));
+      loadUnreadCount();
+      
+      mantineNotifications.show({
+        title: '已刪除',
+        message: '通知已刪除',
+        color: 'green',
+      });
+    } catch (error) {
+      mantineNotifications.show({
+        title: '刪除失敗',
+        message: error instanceof Error ? error.message : '無法刪除通知',
+        color: 'red',
+      });
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      await api.notifications.markAllAsRead(token);
+      
+      setNotifications(
+        notifications.map((n) => ({ ...n, status: 'read' as const }))
+      );
+      setUnreadCount(0);
+      
+      mantineNotifications.show({
+        title: '全部已讀',
+        message: '所有通知已標記為已讀',
+        color: 'green',
+      });
+    } catch (error) {
+      mantineNotifications.show({
+        title: '操作失敗',
+        message: error instanceof Error ? error.message : '無法標記通知',
+        color: 'red',
+      });
+    }
+  };
+
+  const filteredNotifications = notifications.filter((notification) => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'unread') return notification.status === 'unread';
+    if (activeTab === 'read') return notification.status === 'read';
+    if (activeTab === 'archived') return notification.status === 'archived';
+    return notification.notification_type === activeTab;
+  });
+
+  if (loading) {
+    return (
+      <ProtectedRoute>
+        <SidebarLayout>
+          <Center h={400}>
+            <Loader size="xl" />
+          </Center>
+        </SidebarLayout>
+      </ProtectedRoute>
+    );
+  }
+
+  return (
+    <ProtectedRoute>
+      <SidebarLayout>
+        <Container size="lg" py="xl">
+          <Stack gap="xl">
+            <Group justify="space-between">
+              <div>
+                <Title order={1} mb="xs">
+                  通知中心
+                </Title>
+                <Text c="dimmed">
+                  {unreadCount > 0 ? `您有 ${unreadCount} 則未讀通知` : '沒有未讀通知'}
+                </Text>
+              </div>
+              {unreadCount > 0 && (
+                <Button
+                  variant="light"
+                  leftSection={<IconCheck size={16} />}
+                  onClick={handleMarkAllAsRead}
+                >
+                  全部標示為已讀
+                </Button>
+              )}
+            </Group>
+
+            <Tabs value={activeTab} onChange={setActiveTab}>
+              <Tabs.List>
+                <Tabs.Tab value="all" leftSection={<IconBell size={16} />}>
+                  全部
+                  {notifications.length > 0 && (
+                    <Badge ml="xs" size="sm" variant="filled">
+                      {notifications.length}
+                    </Badge>
+                  )}
+                </Tabs.Tab>
+                <Tabs.Tab value="unread">
+                  未讀
+                  {unreadCount > 0 && (
+                    <Badge ml="xs" size="sm" variant="filled" color="red">
+                      {unreadCount}
+                    </Badge>
+                  )}
+                </Tabs.Tab>
+                <Tabs.Tab value="job" leftSection={<IconBriefcase size={16} />}>
+                  職缺
+                </Tabs.Tab>
+                <Tabs.Tab value="event" leftSection={<IconCalendarEvent size={16} />}>
+                  活動
+                </Tabs.Tab>
+                <Tabs.Tab value="bulletin" leftSection={<IconBell size={16} />}>
+                  公告
+                </Tabs.Tab>
+              </Tabs.List>
+            </Tabs>
+
+            <Stack gap="md">
+              {filteredNotifications.length > 0 ? (
+                filteredNotifications.map((notification) => (
+                  <Card
+                    key={notification.id}
+                    shadow="sm"
+                    padding="lg"
+                    radius="md"
+                    withBorder
+                    style={{
+                      backgroundColor: notification.status === 'unread' ? 'rgba(66, 153, 225, 0.05)' : undefined,
+                    }}
+                  >
+                    <Group justify="space-between" wrap="nowrap">
+                      <Group wrap="nowrap" style={{ flex: 1 }}>
+                        {getNotificationIcon(notification.notification_type)}
+                        <div style={{ flex: 1 }}>
+                          <Group gap="xs" mb="xs">
+                            <Text fw={500}>{notification.title}</Text>
+                            {notification.status === 'unread' && (
+                              <Badge size="sm" color="blue" variant="filled">
+                                新
+                              </Badge>
+                            )}
+                            <Badge
+                              size="sm"
+                              color={getNotificationColor(notification.notification_type)}
+                              variant="light"
+                            >
+                              {notification.notification_type === 'job' && '職缺'}
+                              {notification.notification_type === 'event' && '活動'}
+                              {notification.notification_type === 'bulletin' && '公告'}
+                              {notification.notification_type === 'message' && '訊息'}
+                              {notification.notification_type === 'system' && '系統'}
+                            </Badge>
+                          </Group>
+                          <Text size="sm" c="dimmed" mb="xs">
+                            {notification.content}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {new Date(notification.created_at).toLocaleString('zh-TW')}
+                          </Text>
+                        </div>
+                      </Group>
+                      <Group gap="xs" wrap="nowrap">
+                        {notification.status === 'unread' && (
+                          <ActionIcon
+                            variant="light"
+                            color="blue"
+                            onClick={() => handleMarkAsRead(notification.id)}
+                          >
+                            <IconCheck size={16} />
+                          </ActionIcon>
+                        )}
+                        <ActionIcon
+                          variant="light"
+                          color="red"
+                          onClick={() => handleDelete(notification.id)}
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Group>
+                    </Group>
+                  </Card>
+                ))
+              ) : (
+                <Card shadow="sm" padding="xl" radius="md" withBorder>
+                  <Stack align="center" gap="md">
+                    <IconBell size={48} color="gray" />
+                    <Text size="lg" c="dimmed" ta="center">
+                      沒有通知
+                    </Text>
+                    <Text size="sm" c="dimmed" ta="center">
+                      {activeTab === 'unread'
+                        ? '您已閱讀所有通知'
+                        : '目前沒有任何通知'}
+                    </Text>
+                  </Stack>
+                </Card>
+              )}
+            </Stack>
+          </Stack>
+        </Container>
+      </SidebarLayout>
+    </ProtectedRoute>
+  );
+}
+
+
+

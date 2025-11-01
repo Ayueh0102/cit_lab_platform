@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AppShell,
   Group,
@@ -8,22 +8,44 @@ import {
   Menu,
   Text,
   Avatar,
-  Burger,
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
 import { useRouter } from 'next/navigation';
 import { getUser, clearAuth, isAuthenticated } from '@/lib/auth';
 
 export function Header() {
   const router = useRouter();
-  const [opened, { toggle }] = useDisclosure();
-  const user = isAuthenticated() ? getUser() : null;
+  const [user, setUser] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
+  const userName = user?.profile?.display_name || user?.profile?.full_name || user?.email || 'User';
+
+  useEffect(() => {
+    setMounted(true);
+    if (isAuthenticated()) {
+      setUser(getUser());
+    }
+  }, []);
 
   const handleLogout = () => {
     clearAuth();
     router.push('/');
     router.refresh();
   };
+
+  // 避免 hydration 錯誤
+  if (!mounted) {
+    return (
+      <AppShell.Header>
+        <Group h="100%" px="md" justify="space-between">
+          <Group>
+            <Text size="xl" fw={700}>
+              🎓 校友平台
+            </Text>
+          </Group>
+          <Group />
+        </Group>
+      </AppShell.Header>
+    );
+  }
 
   return (
     <AppShell.Header>
@@ -74,12 +96,12 @@ export function Header() {
                     radius="xl"
                     color="blue"
                   >
-                    {user.name.charAt(0)}
+                    {userName.charAt(0)}
                   </Avatar>
                 </Menu.Target>
 
                 <Menu.Dropdown>
-                  <Menu.Label>{user.name}</Menu.Label>
+                  <Menu.Label>{userName}</Menu.Label>
                   <Menu.Item onClick={() => router.push('/profile')}>
                     個人資料
                   </Menu.Item>

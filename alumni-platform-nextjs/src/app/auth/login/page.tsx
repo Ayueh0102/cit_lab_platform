@@ -17,6 +17,7 @@ import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { setAuth } from '@/lib/auth';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,23 +43,28 @@ export default function LoginPage() {
     try {
       const response = await api.auth.login(values.email, values.password);
 
-      // V1 API 返回 access_token，不是 token
+      // V2 API 返回 access_token
       if (response.access_token && response.user) {
         setAuth(response.access_token, response.user);
         
+        const userName = response.user.profile?.display_name || 
+                        response.user.profile?.full_name || 
+                        response.user.email;
+        
         notifications.show({
           title: '登入成功',
-          message: `歡迎回來，${response.user.name}！`,
+          message: `歡迎回來，${userName}！`,
           color: 'green',
         });
 
-        router.push('/jobs');
+        // 跳轉到首頁
+        router.push('/');
         router.refresh();
       }
-    } catch (error: any) {
+    } catch (error) {
       notifications.show({
         title: '登入失敗',
-        message: error.message || '請檢查您的電子郵件和密碼',
+        message: error instanceof Error ? error.message : '請檢查您的電子郵件和密碼',
         color: 'red',
       });
     } finally {
@@ -67,7 +73,8 @@ export default function LoginPage() {
   };
 
   return (
-    <Container size={420} my={80}>
+    <ProtectedRoute requireAuth={false}>
+      <Container size={420} my={80}>
       <Title ta="center" fw={700} mb="md">
         歡迎回來！
       </Title>
@@ -113,6 +120,7 @@ export default function LoginPage() {
         </form>
       </Paper>
     </Container>
+    </ProtectedRoute>
   );
 }
 

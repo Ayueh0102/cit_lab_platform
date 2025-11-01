@@ -17,6 +17,8 @@ import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { setAuth } from '@/lib/auth';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -48,8 +50,9 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { confirmPassword, ...registerData } = values;
-      const response = await api.auth.register(registerData);
+      await api.auth.register(registerData);
 
       notifications.show({
         title: '註冊成功',
@@ -58,10 +61,10 @@ export default function RegisterPage() {
       });
 
       router.push('/auth/login');
-    } catch (error: any) {
+    } catch (error) {
       notifications.show({
         title: '註冊失敗',
-        message: error.message || '請稍後再試',
+        message: error instanceof Error ? error.message : '請稍後再試',
         color: 'red',
       });
     } finally {
@@ -70,6 +73,7 @@ export default function RegisterPage() {
   };
 
   return (
+    <ProtectedRoute requireAuth={false}>
     <Container size={420} my={80}>
       <Title ta="center" fw={700} mb="md">
         建立新帳號
@@ -148,6 +152,7 @@ export default function RegisterPage() {
         </form>
       </Paper>
     </Container>
+    </ProtectedRoute>
   );
 }
 
