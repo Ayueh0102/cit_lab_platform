@@ -100,6 +100,25 @@ class WorkExperience(BaseModel):
             '任職月數': self.duration_months(),
             '工作內容': self.description or '',
         }
+    
+    def to_dict(self):
+        """轉換為字典"""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'company': self.company_name,  # API 使用 company，模型使用 company_name
+            'company_name': self.company_name,
+            'position': self.position,
+            'department': self.department,
+            'location': self.location,
+            'employment_type': self.employment_type,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'is_current': self.is_current,
+            'description': self.description,
+            'achievements': self.get_achievements_list(),
+            'technologies': self.get_technologies_list(),
+        }
 
 
 class Education(BaseModel):
@@ -156,6 +175,31 @@ class Education(BaseModel):
             '畢業年份': self.end_year or '',
             '在學中': '是' if self.is_current else '否',
         }
+    
+    def to_dict(self):
+        """轉換為字典"""
+        # 將年份轉換為日期格式（使用 1月1日）
+        from datetime import date
+        start_date = date(self.start_year, 1, 1) if self.start_year else None
+        end_date = date(self.end_year, 1, 1) if self.end_year else None
+        
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'school': self.school_name,  # 兼容 API 的 school 欄位
+            'school_name': self.school_name,
+            'degree': self.degree,
+            'major': self.major,
+            'minor': self.minor,
+            'start_date': start_date.isoformat() if start_date else None,
+            'start_year': self.start_year,
+            'end_date': end_date.isoformat() if end_date else None,
+            'end_year': self.end_year,
+            'is_current': self.is_current,
+            'gpa': float(self.gpa) if self.gpa and self.gpa.replace('.', '').replace('-', '').isdigit() else None,
+            'honors': json.loads(self.honors) if self.honors else None,
+            'description': self.thesis_title,  # 使用 thesis_title 作為 description
+        }
 
 
 class Skill(BaseModel):
@@ -204,6 +248,17 @@ class Skill(BaseModel):
             '說明': self.description or '',
             '使用人數': self.usage_count,
         }
+    
+    def to_dict(self):
+        """轉換為字典"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'name_en': self.name_en,
+            'category': self.category,
+            'description': self.description,
+            'usage_count': self.usage_count,
+        }
 
 
 class UserSkill(BaseModel):
@@ -238,9 +293,12 @@ class UserSkill(BaseModel):
         """轉換為字典"""
         return {
             'id': self.id,
+            'skill_id': self.skill_id,
             'skill_name': self.skill.name if self.skill else None,
             'skill_category': self.skill.category if self.skill else None,
             'proficiency_level': self.proficiency_level,
             'years_of_experience': self.years_of_experience,
             'certification': self.certification,
+            'certification_url': self.certification_url,
+            'notes': self.notes,
         }

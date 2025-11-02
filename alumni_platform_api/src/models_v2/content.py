@@ -428,6 +428,52 @@ class BulletinComment(BaseModel):
 
 
 # ========================================
+# 文章分類
+# ========================================
+class ArticleCategory(BaseModel):
+    """文章分類"""
+    __tablename__ = 'article_categories_v2'
+
+    name = Column(String(100), nullable=False, unique=True, comment='分類名稱')
+    name_en = Column(String(100), comment='英文名稱')
+    description = Column(Text, comment='分類描述')
+    icon = Column(String(50), comment='圖示代碼')
+    color = Column(String(20), comment='顯示顏色')
+    sort_order = Column(Integer, default=0, comment='排序順序')
+    is_active = Column(Boolean, default=True, comment='是否啟用')
+
+    # 關聯
+    articles = relationship('Article', back_populates='category', lazy='dynamic')
+
+    def __repr__(self):
+        return f'<ArticleCategory {self.name}>'
+
+    def to_dict(self, include_private=False):
+        """轉換為字典"""
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'name_en': self.name_en,
+            'description': self.description,
+            'icon': self.icon,
+            'color': self.color,
+            'sort_order': self.sort_order,
+            'is_active': self.is_active,
+            'article_count': self.articles.count() if hasattr(self, 'articles') else 0,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+        if include_private:
+            data.update({
+                'sheet_row_id': self.sheet_row_id,
+                'last_synced_at': self.last_synced_at.isoformat() if self.last_synced_at else None
+            })
+
+        return data
+
+
+# ========================================
 # 文章/部落格 (可選功能)
 # ========================================
 class Article(BaseModel):
@@ -437,6 +483,8 @@ class Article(BaseModel):
     # 基本資訊
     author_id = Column(Integer, ForeignKey('users_v2.id', ondelete='CASCADE'),
                       nullable=False, comment='作者ID')
+    category_id = Column(Integer, ForeignKey('article_categories_v2.id', ondelete='SET NULL'),
+                        comment='分類ID')
 
     title = Column(String(200), nullable=False, comment='標題')
     subtitle = Column(String(200), comment='副標題')
@@ -460,6 +508,7 @@ class Article(BaseModel):
 
     # 關聯
     author = relationship('User', backref='articles')
+    category = relationship('ArticleCategory', back_populates='articles')
 
     def __repr__(self):
         return f'<Article {self.title}>'
@@ -486,6 +535,7 @@ class Article(BaseModel):
             'content': self.content,
             'summary': self.summary,
             'status': self.status.value if self.status else None,
+            'category_id': self.category_id,
             'cover_image_url': self.cover_image_url,
             'tags': self.tags,
             'views_count': self.views_count,
@@ -498,6 +548,10 @@ class Article(BaseModel):
         if hasattr(self, 'author') and self.author:
             data['author_name'] = self.author.name
             data['author_email'] = self.author.email
+
+        if hasattr(self, 'category') and self.category:
+            data['category_name'] = self.category.name
+            data['category_color'] = self.category.color
 
         if include_private:
             data.update({

@@ -1,0 +1,93 @@
+name: Code Quality Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  # ESLint 檢查
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        working-directory: ./alumni-platform-nextjs
+        run: pnpm install
+      
+      - name: Run ESLint
+        working-directory: ./alumni-platform-nextjs
+        run: pnpm lint
+
+  # TypeScript 類型檢查
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        working-directory: ./alumni-platform-nextjs
+        run: pnpm install
+      
+      - name: Run TypeScript check
+        working-directory: ./alumni-platform-nextjs
+        run: pnpm exec tsc --noEmit
+
+  # Python 代碼檢查（可選）
+  python-lint:
+    name: Python Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install linting tools
+        run: |
+          pip install flake8 black isort
+      
+      - name: Run flake8
+        working-directory: ./alumni_platform_api
+        run: |
+          flake8 src/ --max-line-length=120 --extend-ignore=E203,W503 || true
+      
+      - name: Check code formatting with black
+        working-directory: ./alumni_platform_api
+        run: |
+          black --check src/ || true
+

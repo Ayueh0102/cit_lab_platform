@@ -27,6 +27,7 @@ import {
   IconLogout,
   IconChevronDown,
   IconUserCircle,
+  IconFileText,
 } from '@tabler/icons-react';
 import { getUser, clearAuth, isAuthenticated, getToken } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -94,6 +95,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     { icon: <IconUserCircle size={20} />, label: '職涯管理', path: '/career' },
     { icon: <IconBell size={20} />, label: '通知', path: '/notifications', badge: unreadCount },
     { icon: <IconSettings size={20} />, label: '管理後台', path: '/admin', adminOnly: true },
+    { icon: <IconFileText size={20} />, label: '內容管理', path: '/cms', adminOnly: true },
   ];
 
   // 過濾掉僅管理員可見的項目

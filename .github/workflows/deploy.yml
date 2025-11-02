@@ -1,0 +1,77 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # 建置前端
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        working-directory: ./alumni-platform-nextjs
+        run: pnpm install
+      
+      - name: Build frontend
+        working-directory: ./alumni-platform-nextjs
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+      
+      # 建置後端（如果需要）
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install backend dependencies
+        working-directory: ./alumni_platform_api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      # 部署步驟（根據實際部署平台調整）
+      - name: Deploy to server
+        run: |
+          echo "Deployment steps would go here"
+          # 例如：
+          # - 複製檔案到伺服器
+          # - 重啟服務
+          # - 執行資料庫遷移
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+      
+      # 或者部署到 Docker
+      - name: Build Docker image
+        if: false  # 暫時禁用，等待 Docker 設置
+        run: |
+          docker build -t alumni-platform:latest .
+          docker tag alumni-platform:latest ${{ secrets.DOCKER_REGISTRY }}/alumni-platform:${{ github.sha }}
+      
+      - name: Push Docker image
+        if: false  # 暫時禁用
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          docker push ${{ secrets.DOCKER_REGISTRY }}/alumni-platform:${{ github.sha }}
+

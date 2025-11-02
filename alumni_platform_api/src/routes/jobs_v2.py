@@ -4,9 +4,15 @@
 """
 
 from flask import Blueprint, request, jsonify
-from src.models_v2 import db, Job, JobCategory, JobRequest, User
+from src.models_v2 import db, Job, JobCategory, JobRequest, User, UserProfile, Conversation
 from src.models_v2.jobs import JobType, JobStatus, RequestStatus
 from src.routes.auth_v2 import token_required, admin_required
+from src.routes.notification_helper import (
+    create_job_request_notification,
+    create_job_request_approved_notification,
+    create_job_request_rejected_notification,
+    create_conversation_notification
+)
 from datetime import datetime
 from sqlalchemy import or_, and_
 
@@ -359,7 +365,18 @@ def create_job_request(current_user):
         db.session.add(job_request)
         db.session.commit()
 
-        # TODO: 建立通知給職缺發布者
+        # 建立通知給職缺發布者
+        job = Job.query.get(data['job_id'])
+        requester_profile = UserProfile.query.filter_by(user_id=current_user.id).first()
+        requester_name = requester_profile.full_name if requester_profile else current_user.email
+        
+        create_job_request_notification(
+            job_owner_id=job.user_id,
+            requester_name=requester_name,
+            job_title=job.title,
+            job_id=job.id,
+            request_id=job_request.id
+        )
 
         return jsonify({
             'message': 'Job request sent successfully',
@@ -443,8 +460,38 @@ def accept_job_request(current_user, request_id):
 
         job_request.approve()
 
-        # TODO: 建立對話
-        # TODO: 建立通知給請求者
+        # 建立對話
+        job = Job.query.get(job_request.job_id)
+        conversation = Conversation.query.filter(
+            or_(
+                and_(Conversation.user1_id == job.user_id, Conversation.user2_id == job_request.requester_id),
+                and_(Conversation.user1_id == job_request.requester_id, Conversation.user2_id == job.user_id)
+            )
+        ).first()
+        
+        if not conversation:
+            conversation = Conversation(
+                user1_id=job.user_id,
+                user2_id=job_request.requester_id
+            )
+            db.session.add(conversation)
+            db.session.commit()
+        
+        # 建立通知給請求者
+        create_job_request_approved_notification(
+            requester_id=job_request.requester_id,
+            job_title=job.title,
+            job_id=job.id,
+            request_id=job_request.id
+        )
+        
+        # 建立對話建立通知給雙方
+        create_conversation_notification(
+            user_id=job_request.requester_id,
+            job_title=job.title,
+            job_id=job.id,
+            conversation_id=conversation.id
+        )
 
         return jsonify({
             'message': 'Request accepted successfully',
@@ -474,7 +521,14 @@ def reject_job_request(current_user, request_id):
         data = request.get_json()
         job_request.reject(response_message=data.get('reason'))
 
-        # TODO: 建立通知給請求者
+        # 建立通知給請求者
+        job = Job.query.get(job_request.job_id)
+        create_job_request_rejected_notification(
+            requester_id=job_request.requester_id,
+            job_title=job.title,
+            job_id=job.id,
+            request_id=job_request.id
+        )
 
         return jsonify({
             'message': 'Request rejected',

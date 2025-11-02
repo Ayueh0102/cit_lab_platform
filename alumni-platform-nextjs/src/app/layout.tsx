@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { ColorSchemeScript } from "@mantine/core";
+import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import { MantineProvider } from "@/components/providers/MantineProvider";
+import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
+import "@mantine/dates/styles.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-TW" suppressHydrationWarning>
+    <html lang="zh-TW" {...mantineHtmlProps} suppressHydrationWarning>
       <head>
         <ColorSchemeScript defaultColorScheme="light" />
         <meta name="viewport" content="minimum-scale=1, initial-scale=1, width=device-width, user-scalable=no" />

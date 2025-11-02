@@ -4,10 +4,11 @@
 """
 
 from flask import Blueprint, request, jsonify
-from src.models_v2 import db, Notification, SystemSetting, UserActivity, FileUpload
+from src.models_v2 import db, Notification, SystemSetting, UserActivity, FileUpload, UserProfile
 from src.routes.auth_v2 import token_required, admin_required
 from datetime import datetime
 from sqlalchemy import or_
+import json
 
 notifications_bp = Blueprint('notifications', __name__)
 
@@ -391,6 +392,167 @@ def delete_file_upload(current_user, file_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Failed to delete file: {str(e)}'}), 500
+
+
+# ========================================
+# 用戶通知偏好設定
+# ========================================
+@notifications_bp.route('/api/user/notification-preferences', methods=['GET'])
+@token_required
+def get_notification_preferences(current_user):
+    """取得用戶通知偏好設定"""
+    try:
+        profile = current_user.profile
+        if not profile:
+            # 返回默認設定
+            return jsonify({
+                'preferences': {
+                    'emailNotifications': True,
+                    'jobAlerts': True,
+                    'eventReminders': True,
+                    'messageNotifications': True,
+                }
+            }), 200
+        
+        # 解析 JSON 設定
+        if profile.notification_preferences:
+            try:
+                preferences = json.loads(profile.notification_preferences)
+            except:
+                preferences = {
+                    'emailNotifications': True,
+                    'jobAlerts': True,
+                    'eventReminders': True,
+                    'messageNotifications': True,
+                }
+        else:
+            preferences = {
+                'emailNotifications': True,
+                'jobAlerts': True,
+                'eventReminders': True,
+                'messageNotifications': True,
+            }
+        
+        return jsonify({'preferences': preferences}), 200
+        
+    except Exception as e:
+        return jsonify({'message': f'Failed to get preferences: {str(e)}'}), 500
+
+
+@notifications_bp.route('/api/user/notification-preferences', methods=['PUT'])
+@token_required
+def update_notification_preferences(current_user):
+    """更新用戶通知偏好設定"""
+    try:
+        data = request.get_json()
+        
+        if not current_user.profile:
+            return jsonify({'message': 'User profile not found'}), 404
+        
+        # 獲取現有設定
+        current_preferences = {}
+        if current_user.profile.notification_preferences:
+            try:
+                current_preferences = json.loads(current_user.profile.notification_preferences)
+            except:
+                pass
+        
+        # 更新設定
+        updated_preferences = {
+            'emailNotifications': data.get('emailNotifications', current_preferences.get('emailNotifications', True)),
+            'jobAlerts': data.get('jobAlerts', current_preferences.get('jobAlerts', True)),
+            'eventReminders': data.get('eventReminders', current_preferences.get('eventReminders', True)),
+            'messageNotifications': data.get('messageNotifications', current_preferences.get('messageNotifications', True)),
+        }
+        
+        # 保存到資料庫
+        current_user.profile.notification_preferences = json.dumps(updated_preferences)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Notification preferences updated successfully',
+            'preferences': updated_preferences
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Failed to update preferences: {str(e)}'}), 500
+
+
+# ========================================
+# 檔案上傳
+# ========================================
+@notifications_bp.route('/api/files/upload', methods=['POST'])
+@token_required
+def upload_file(current_user):
+    """上傳檔案"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'message': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'message': 'No file selected'}), 400
+        
+        # 檢查檔案類型
+        allowed_extensions = {'jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'}
+        file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        
+        if file_ext not in allowed_extensions:
+            return jsonify({'message': f'File type not allowed. Allowed: {", ".join(allowed_extensions)}'}), 400
+        
+        # 檢查檔案大小 (5MB)
+        file.seek(0, 2)  # 移動到檔案結尾
+        file_size = file.tell()
+        file.seek(0)  # 重置位置
+        
+        if file_size > 5 * 1024 * 1024:  # 5MB
+            return jsonify({'message': 'File size exceeds 5MB limit'}), 400
+        
+        # 生成唯一檔名
+        import os
+        import uuid
+        from werkzeug.utils import secure_filename
+        
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        
+        # 建立上傳目錄
+        upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'static', 'uploads')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # 保存檔案
+        file_path = os.path.join(upload_dir, unique_filename)
+        file.save(file_path)
+        
+        # 記錄到資料庫
+        file_type = 'image' if file_ext in {'jpg', 'jpeg', 'png', 'gif'} else 'document'
+        related_type = request.form.get('related_type')
+        related_id = request.form.get('related_id', type=int)
+        
+        file_upload = FileUpload(
+            user_id=current_user.id,
+            file_name=filename,
+            file_path=f'/static/uploads/{unique_filename}',
+            file_type=file_type,
+            file_size=file_size,
+            mime_type=file.content_type,
+            related_type=related_type,
+            related_id=related_id
+        )
+        
+        db.session.add(file_upload)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'File uploaded successfully',
+            'file': file_upload.to_dict(),
+            'url': f'/static/uploads/{unique_filename}'
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Failed to upload file: {str(e)}'}), 500
 
 
 # ========================================

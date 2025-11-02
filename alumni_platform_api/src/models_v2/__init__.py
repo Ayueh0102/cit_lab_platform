@@ -9,7 +9,7 @@ from .career import WorkExperience, Education, Skill, UserSkill
 from .jobs import Job, JobCategory, JobRequest
 from .messages import Conversation, Message
 from .events import Event, EventCategory, EventRegistration
-from .content import Bulletin, BulletinCategory, BulletinComment, Article
+from .content import Bulletin, BulletinCategory, BulletinComment, Article, ArticleCategory
 from .system import Notification, SystemLog, SystemSetting, UserActivity, FileUpload
 
 __all__ = [
@@ -25,7 +25,7 @@ __all__ = [
     # Events
     'Event', 'EventCategory', 'EventRegistration',
     # Content
-    'Bulletin', 'BulletinCategory', 'BulletinComment', 'Article',
+    'Bulletin', 'BulletinCategory', 'BulletinComment', 'Article', 'ArticleCategory',
     # System
     'Notification', 'SystemLog', 'SystemSetting', 'UserActivity', 'FileUpload'
 ]

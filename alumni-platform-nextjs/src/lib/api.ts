@@ -3,8 +3,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
 interface FetchOptions {
   method?: string;
-  body?: string;
+  body?: BodyInit | any;
   token?: string;
+  headers?: HeadersInit;
 }
 
 // 類型定義
@@ -66,29 +67,55 @@ interface EventRegistrationData {
 }
 
 async function fetchAPI(endpoint: string, options: FetchOptions = {}) {
-  const { method = 'GET', body, token } = options;
+  const { method = 'GET', body, token, headers: customHeaders } = options;
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
+  const headers: HeadersInit = {};
+  
+  // 如果不是 FormData，設置 Content-Type
+  if (!(body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method,
-    headers,
-    body,
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || data.message || 'API 請求失敗');
+  // 合併自定義標頭
+  if (customHeaders) {
+    Object.assign(headers, customHeaders);
   }
 
-  return data;
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method,
+      headers,
+      body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined),
+    });
+
+    // 檢查響應是否為 JSON
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+
+    let data;
+    if (isJson) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || `API 請求失敗: ${response.status}`);
+    }
+
+    return data;
+  } catch (error) {
+    // 處理網路錯誤
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error('無法連接到伺服器，請檢查網路連線或伺服器狀態');
+    }
+    throw error;
+  }
 }
 
 export const api = {
@@ -344,11 +371,41 @@ export const api = {
         token,
       }),
     
+    markAsRead: (conversationId: number, token: string) =>
+      fetchAPI(`/api/v2/conversations/${conversationId}/mark-read`, {
+        method: 'POST',
+        token,
+      }),
+    
+    deleteConversation: (conversationId: number, token: string) =>
+      fetchAPI(`/api/v2/conversations/${conversationId}`, {
+        method: 'DELETE',
+        token,
+      }),
+    
+    search: (params: {
+      q: string;
+      conversation_id?: number;
+      page?: number;
+      per_page?: number;
+    }, token: string) => {
+      const queryParams = new URLSearchParams();
+      queryParams.append('q', params.q);
+      if (params.conversation_id) queryParams.append('conversation_id', params.conversation_id.toString());
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.per_page) queryParams.append('per_page', params.per_page.toString());
+      
+      return fetchAPI(`/api/v2/messages/search?${queryParams.toString()}`, { token });
+    },
+    
     createConversation: (userId: number, token: string) =>
       fetchAPI(`/api/v2/conversations/with/${userId}`, {
         method: 'POST',
         token,
       }),
+    
+    getUnreadCount: (token: string) =>
+      fetchAPI('/api/v2/messages/unread-count', { token }),
   },
 
   // 個人資料相關
@@ -502,6 +559,48 @@ export const api = {
       }),
   },
 
+  // 檔案上傳相關
+  files: {
+    upload: (file: File, relatedType?: string, relatedId?: number, token?: string) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (relatedType) formData.append('related_type', relatedType);
+      if (relatedId) formData.append('related_id', relatedId.toString());
+      
+      return fetchAPI('/api/files/upload', {
+        method: 'POST',
+        body: formData,
+        token,
+        headers: {}, // 不要設置 Content-Type，讓瀏覽器自動設置
+      });
+    },
+    
+    getFiles: (token?: string, params?: {
+      user_id?: number;
+      related_type?: string;
+      page?: number;
+      per_page?: number;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.user_id) queryParams.append('user_id', params.user_id.toString());
+      if (params?.related_type) queryParams.append('related_type', params.related_type);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      
+      const url = queryParams.toString() 
+        ? `/api/files?${queryParams.toString()}`
+        : '/api/files';
+      
+      return fetchAPI(url, { token });
+    },
+    
+    deleteFile: (fileId: number, token: string) =>
+      fetchAPI(`/api/files/${fileId}`, {
+        method: 'DELETE',
+        token,
+      }),
+  },
+
   // 設定相關
   settings: {
     changePassword: (data: {
@@ -510,6 +609,21 @@ export const api = {
     }, token: string) =>
       fetchAPI('/api/v2/auth/change-password', {
         method: 'POST',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    getNotificationPreferences: (token: string) =>
+      fetchAPI('/api/user/notification-preferences', { token }),
+    
+    updateNotificationPreferences: (data: {
+      emailNotifications?: boolean;
+      jobAlerts?: boolean;
+      eventReminders?: boolean;
+      messageNotifications?: boolean;
+    }, token: string) =>
+      fetchAPI('/api/user/notification-preferences', {
+        method: 'PUT',
         body: JSON.stringify(data),
         token,
       }),
@@ -571,6 +685,127 @@ export const api = {
     
     approveBulletin: (bulletinId: number, token: string) =>
       fetchAPI(`/api/v2/admin/bulletins/${bulletinId}/approve`, {
+        method: 'POST',
+        token,
+      }),
+  },
+
+  // CMS 內容管理系統
+  cms: {
+    getCategories: (token?: string) =>
+      fetchAPI('/api/v2/cms/article-categories', { token }),
+    
+    createCategory: (data: {
+      name: string;
+      name_en?: string;
+      description?: string;
+      icon?: string;
+      color?: string;
+      sort_order?: number;
+    }, token: string) =>
+      fetchAPI('/api/v2/cms/article-categories', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    updateCategory: (id: number, data: {
+      name?: string;
+      name_en?: string;
+      description?: string;
+      icon?: string;
+      color?: string;
+      sort_order?: number;
+      is_active?: boolean;
+    }, token: string) =>
+      fetchAPI(`/api/v2/cms/article-categories/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    deleteCategory: (id: number, token: string) =>
+      fetchAPI(`/api/v2/cms/article-categories/${id}`, {
+        method: 'DELETE',
+        token,
+      }),
+    
+    getArticles: (token?: string, params?: {
+      status?: 'published' | 'draft' | 'archived';
+      category_id?: number;
+      search?: string;
+      page?: number;
+      per_page?: number;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.category_id) queryParams.append('category_id', params.category_id.toString());
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      
+      const url = queryParams.toString() 
+        ? `/api/v2/cms/articles?${queryParams.toString()}`
+        : '/api/v2/cms/articles';
+      
+      return fetchAPI(url, { token });
+    },
+    
+    getArticle: (id: number, token?: string) =>
+      fetchAPI(`/api/v2/cms/articles/${id}`, { token }),
+    
+    create: (data: {
+      title: string;
+      subtitle?: string;
+      content: string;
+      summary?: string;
+      category_id?: number;
+      status?: 'published' | 'draft' | 'archived';
+      cover_image_url?: string;
+      tags?: string;
+    }, token: string) =>
+      fetchAPI('/api/v2/cms/articles', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    update: (id: number, data: {
+      title?: string;
+      subtitle?: string;
+      content?: string;
+      summary?: string;
+      category_id?: number;
+      status?: 'published' | 'draft' | 'archived';
+      cover_image_url?: string;
+      tags?: string;
+    }, token: string) =>
+      fetchAPI(`/api/v2/cms/articles/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        token,
+      }),
+    
+    delete: (id: number, token: string) =>
+      fetchAPI(`/api/v2/cms/articles/${id}`, {
+        method: 'DELETE',
+        token,
+      }),
+    
+    publish: (id: number, token: string) =>
+      fetchAPI(`/api/v2/cms/articles/${id}/publish`, {
+        method: 'POST',
+        token,
+      }),
+    
+    archive: (id: number, token: string) =>
+      fetchAPI(`/api/v2/cms/articles/${id}/archive`, {
+        method: 'POST',
+        token,
+      }),
+    
+    like: (id: number, token: string) =>
+      fetchAPI(`/api/v2/cms/articles/${id}/like`, {
         method: 'POST',
         token,
       }),

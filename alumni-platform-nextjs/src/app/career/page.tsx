@@ -41,7 +41,8 @@ import { getToken } from '@/lib/auth';
 
 interface WorkExperience {
   id: number;
-  company: string;
+  company?: string;  // API 返回的欄位
+  company_name?: string;  // 模型欄位
   position: string;
   start_date: string;
   end_date?: string;
@@ -52,11 +53,14 @@ interface WorkExperience {
 
 interface Education {
   id: number;
-  school: string;
+  school?: string;  // API 返回的欄位
+  school_name?: string;  // 模型欄位
   degree: string;
   major?: string;
-  start_date: string;
-  end_date?: string;
+  start_date?: string;  // API 返回的日期格式
+  start_year?: number;  // 模型欄位
+  end_date?: string;  // API 返回的日期格式
+  end_year?: number;  // 模型欄位
   is_current: boolean;
   gpa?: number;
 }
@@ -160,9 +164,9 @@ export default function CareerPage() {
         api.career.getMySkills(token),
       ]);
 
-      setWorkExperiences(workRes.work_experiences || workRes || []);
-      setEducations(eduRes.educations || eduRes || []);
-      setMySkills(skillsRes.skills || skillsRes || []);
+      setWorkExperiences(workRes.work_experiences || []);
+      setEducations(eduRes.educations || []);
+      setMySkills(skillsRes.skills || []);
     } catch (error) {
       notifications.show({
         title: '載入失敗',
@@ -193,7 +197,7 @@ export default function CareerPage() {
   const handleEditWork = (work: WorkExperience) => {
     setEditingWork(work);
     workForm.setValues({
-      company: work.company || '',
+      company: work.company || work.company_name || '',  // 兼容兩種欄位名稱
       position: work.position || '',
       start_date: work.start_date || '',
       end_date: work.end_date || '',
@@ -210,7 +214,7 @@ export default function CareerPage() {
       if (!token) return;
 
       const payload = {
-        company: values.company,
+        company: values.company,  // 使用 company 而不是 company_name
         position: values.position,
         start_date: values.start_date,
         end_date: values.end_date || null,
@@ -278,11 +282,11 @@ export default function CareerPage() {
   const handleEditEdu = (edu: Education) => {
     setEditingEdu(edu);
     eduForm.setValues({
-      school: edu.school || '',
+      school: edu.school || edu.school_name || '',  // 兼容兩種欄位名稱
       degree: edu.degree || '',
       major: edu.major || '',
-      start_date: edu.start_date || '',
-      end_date: edu.end_date || '',
+      start_date: edu.start_date || (edu.start_year ? `${edu.start_year}-01-01` : ''),  // 從年份轉換為日期
+      end_date: edu.end_date || (edu.end_year ? `${edu.end_year}-01-01` : ''),  // 從年份轉換為日期
       is_current: edu.is_current || false,
       gpa: edu.gpa?.toString() || '',
     });
@@ -477,7 +481,7 @@ export default function CareerPage() {
                               )}
                             </Group>
                             <Group gap="sm">
-                              <Text fw={500}>{work.company}</Text>
+                              <Text fw={500}>{work.company || work.company_name || '未知公司'}</Text>
                               {work.location && (
                                 <>
                                   <Text c="dimmed">•</Text>
@@ -571,7 +575,7 @@ export default function CareerPage() {
                                 </Badge>
                               )}
                             </Group>
-                            <Text fw={500}>{edu.school}</Text>
+                            <Text fw={500}>{edu.school || edu.school_name || '未知學校'}</Text>
                             <Group gap="sm">
                               <IconCalendar size={14} />
                               <Text size="sm" c="dimmed">

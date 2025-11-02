@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Container,
   Title,
@@ -55,6 +55,24 @@ export default function SettingsPage() {
     messageNotifications: true,
   });
 
+  useEffect(() => {
+    loadNotificationPreferences();
+  }, []);
+
+  const loadNotificationPreferences = async () => {
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      const response = await api.settings.getNotificationPreferences(token);
+      if (response?.preferences) {
+        setNotificationSettings(response.preferences);
+      }
+    } catch (error) {
+      console.error('Failed to load notification preferences:', error);
+    }
+  };
+
   const handlePasswordChange = async (values: typeof passwordForm.values) => {
     setLoading(true);
     
@@ -90,13 +108,20 @@ export default function SettingsPage() {
 
   const handleNotificationChange = async (key: string, value: boolean) => {
     try {
-      // TODO: 實作 API 呼叫
-      // await api.settings.updateNotifications({ [key]: value });
-      
-      setNotificationSettings({
+      const token = getToken();
+      if (!token) {
+        router.push('/auth/login');
+        return;
+      }
+
+      const updatedSettings = {
         ...notificationSettings,
         [key]: value,
-      });
+      };
+      
+      await api.settings.updateNotificationPreferences(updatedSettings, token);
+      
+      setNotificationSettings(updatedSettings);
       
       notifications.show({
         title: '設定已更新',

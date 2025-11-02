@@ -15,7 +15,7 @@ from flask_cors import CORS
 from src.models_v2 import db, User, UserProfile, WorkExperience, Education, Skill, UserSkill
 from src.models_v2 import Job, JobCategory, JobRequest
 from src.models_v2 import Event, EventCategory, EventRegistration
-from src.models_v2 import Bulletin, BulletinCategory, BulletinComment
+from src.models_v2 import Bulletin, BulletinCategory, BulletinComment, Article
 from src.models_v2 import Conversation, Message
 from src.models_v2 import Notification, SystemSetting
 
@@ -29,6 +29,7 @@ from src.routes.career import career_bp
 from src.routes.notifications import notifications_bp
 from src.routes.csv_import_export import csv_bp
 from src.routes.admin_v2 import admin_v2_bp
+from src.routes.cms_v2 import cms_v2_bp
 
 # 保留相容舊版的 routes (暫時) - 已註釋以避免模型衝突
 # from src.routes.user import user_bp
@@ -39,10 +40,14 @@ from src.routes.admin_v2 import admin_v2_bp
 
 from datetime import datetime, timedelta
 
+# Import database configuration
+from src.config.database import get_database_config
+
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
 # 安全性配置 - 從環境變數載入 SECRET_KEY
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-please-change-in-production')
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-key-please-change-in-production')
 
 # Enable CORS for all routes
 CORS(app)
@@ -57,6 +62,7 @@ app.register_blueprint(career_bp)           # /api/career/*
 app.register_blueprint(notifications_bp)    # /api/notifications/*, /api/system/*, /api/activities/*, /api/files/*
 app.register_blueprint(csv_bp)              # /api/csv/*
 app.register_blueprint(admin_v2_bp)          # /api/v2/admin/*
+app.register_blueprint(cms_v2_bp)           # /api/v2/cms/*
 
 # Register blueprints - v1 routes (backward compatibility) - 已註釋以避免模型衝突
 # app.register_blueprint(user_bp, url_prefix='/api')
@@ -65,10 +71,9 @@ app.register_blueprint(admin_v2_bp)          # /api/v2/admin/*
 # app.register_blueprint(bulletins_bp, url_prefix='/api')
 # app.register_blueprint(messages_bp, url_prefix='/api')
 
-# Database configuration
-db_path = os.path.join(os.path.dirname(__file__), 'database', 'app_v2.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Database configuration - 支援 SQLite (開發) 和 PostgreSQL (生產)
+database_config = get_database_config()
+app.config.update(database_config)
 db.init_app(app)
 
 

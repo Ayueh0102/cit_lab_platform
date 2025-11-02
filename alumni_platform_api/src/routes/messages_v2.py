@@ -4,8 +4,9 @@
 """
 
 from flask import Blueprint, request, jsonify
-from src.models_v2 import db, Conversation, Message, User
+from src.models_v2 import db, Conversation, Message, User, UserProfile
 from src.routes.auth_v2 import token_required
+from src.routes.notification_helper import create_new_message_notification
 from datetime import datetime
 from sqlalchemy import or_, and_
 
@@ -178,7 +179,17 @@ def send_message(current_user, conversation_id):
 
         db.session.commit()
 
-        # TODO: 建立通知給接收者
+        # 建立通知給接收者
+        receiver_id = conversation.user2_id if current_user.id == conversation.user1_id else conversation.user1_id
+        sender_profile = UserProfile.query.filter_by(user_id=current_user.id).first()
+        sender_name = sender_profile.full_name if sender_profile else current_user.email
+        
+        create_new_message_notification(
+            receiver_id=receiver_id,
+            sender_name=sender_name,
+            conversation_id=conversation_id,
+            message_preview=data['content']
+        )
 
         return jsonify({
             'message': 'Message sent successfully',
@@ -269,3 +280,86 @@ def get_unread_count(current_user):
             total_unread += conv.unread_count_user2
 
     return jsonify({'unread_count': total_unread}), 200
+
+
+@messages_v2_bp.route('/api/v2/conversations/<int:conversation_id>', methods=['DELETE'])
+@token_required
+def delete_conversation(current_user, conversation_id):
+    """刪除對話（軟刪除）"""
+    try:
+        conversation = Conversation.query.get(conversation_id)
+
+        if not conversation:
+            return jsonify({'message': 'Conversation not found'}), 404
+
+        # 檢查權限
+        if conversation.user1_id != current_user.id and conversation.user2_id != current_user.id:
+            return jsonify({'message': 'Permission denied'}), 403
+
+        # 軟刪除：標記對話為已刪除
+        if conversation.user1_id == current_user.id:
+            conversation.user1_deleted = True
+        else:
+            conversation.user2_deleted = True
+
+        db.session.commit()
+
+        return jsonify({'message': 'Conversation deleted successfully'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Failed to delete conversation: {str(e)}'}), 500
+
+
+@messages_v2_bp.route('/api/v2/messages/search', methods=['GET'])
+@token_required
+def search_messages(current_user):
+    """搜尋訊息"""
+    try:
+        search_term = request.args.get('q', '').strip()
+        conversation_id = request.args.get('conversation_id', type=int)
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+
+        if not search_term:
+            return jsonify({'message': 'Search term is required'}), 400
+
+        # 建立查詢
+        query = Message.query.filter(Message.content.ilike(f'%{search_term}%'))
+
+        # 如果有指定對話，只搜尋該對話的訊息
+        if conversation_id:
+            conversation = Conversation.query.get(conversation_id)
+            if not conversation:
+                return jsonify({'message': 'Conversation not found'}), 404
+            
+            # 檢查權限
+            if conversation.user1_id != current_user.id and conversation.user2_id != current_user.id:
+                return jsonify({'message': 'Permission denied'}), 403
+            
+            query = query.filter(Message.conversation_id == conversation_id)
+        else:
+            # 只搜尋用戶參與的對話
+            conversations = Conversation.query.filter(
+                or_(
+                    Conversation.user1_id == current_user.id,
+                    Conversation.user2_id == current_user.id
+                )
+            ).all()
+            conversation_ids = [conv.id for conv in conversations]
+            query = query.filter(Message.conversation_id.in_(conversation_ids))
+
+        # 分頁
+        pagination = query.order_by(Message.created_at.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+
+        return jsonify({
+            'messages': [msg.to_dict() for msg in pagination.items],
+            'total': pagination.total,
+            'page': page,
+            'per_page': per_page,
+            'pages': pagination.pages
+        }), 200
+
+    except Exception as e:
+        return jsonify({'message': f'Failed to search messages: {str(e)}'}), 500

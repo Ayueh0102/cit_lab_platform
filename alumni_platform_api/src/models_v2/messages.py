@@ -56,6 +56,8 @@ class Conversation(BaseModel):
     is_active = Column(Boolean, default=True, comment='是否啟用')
     is_archived_by_user1 = Column(Boolean, default=False, comment='使用者1是否封存')
     is_archived_by_user2 = Column(Boolean, default=False, comment='使用者2是否封存')
+    user1_deleted = Column(Boolean, default=False, comment='使用者1是否刪除')
+    user2_deleted = Column(Boolean, default=False, comment='使用者2是否刪除')
 
     # 最後訊息
     last_message_at = Column(DateTime, comment='最後訊息時間')

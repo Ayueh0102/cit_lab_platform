@@ -4,8 +4,14 @@
 """
 
 from flask import Blueprint, request, jsonify
-from src.models_v2 import db, Event, EventCategory, EventRegistration, User
+from src.models_v2 import db, Event, EventCategory, EventRegistration, User, UserProfile
 from src.routes.auth_v2 import token_required, admin_required
+from src.routes.notification_helper import (
+    create_event_registration_notification,
+    create_event_cancelled_notification,
+    notify_all_event_participants,
+    NotificationType
+)
 from datetime import datetime
 from sqlalchemy import or_
 
@@ -253,7 +259,13 @@ def cancel_event(current_user, event_id):
         data = request.get_json()
         event.cancel(cancellation_reason=data.get('reason'))
 
-        # TODO: 通知所有報名者
+        # 通知所有報名者
+        notify_all_event_participants(
+            event_id=event_id,
+            notification_type=NotificationType.EVENT_CANCELLED,
+            title="活動已取消",
+            message=f"活動「{event.title}」已被取消" + (f"，原因：{data.get('reason')}" if data.get('reason') else "")
+        )
 
         return jsonify({
             'message': 'Event cancelled successfully',
@@ -343,7 +355,16 @@ def register_event(current_user, event_id):
 
         db.session.commit()
 
-        # TODO: 建立通知給主辦者
+        # 建立通知給活動主辦者
+        participant_profile = UserProfile.query.filter_by(user_id=current_user.id).first()
+        participant_name = participant_profile.full_name if participant_profile else current_user.email
+        
+        create_event_registration_notification(
+            organizer_id=event.organizer_id,
+            participant_name=participant_name,
+            event_title=event.title,
+            event_id=event_id
+        )
 
         return jsonify({
             'message': 'Registration successful' if not is_waitlist else 'Added to waitlist',

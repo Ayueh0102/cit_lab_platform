@@ -17,6 +17,8 @@ import {
   Paper,
   ActionIcon,
   Badge,
+  Menu,
+  Modal,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useRouter, useParams } from 'next/navigation';
@@ -25,9 +27,13 @@ import {
   IconArrowLeft,
   IconUser,
   IconClock,
+  IconCheck,
+  IconTrash,
+  IconSearch,
 } from '@tabler/icons-react';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { api } from '@/lib/api';
 import { getToken, getUser } from '@/lib/auth';
 
@@ -64,12 +70,29 @@ export default function MessageDetailPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [messageContent, setMessageContent] = useState('');
+  const [richContent, setRichContent] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchModalOpened, setSearchModalOpened] = useState(false);
+  const [searchResults, setSearchResults] = useState<Message[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadConversation();
     loadMessages();
+    
+    // 標記對話為已讀
+    markAsRead();
+    
+    // 設置自動刷新（每30秒）
+    const interval = setInterval(() => {
+      loadMessages();
+      loadConversation();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [conversationId]);
 
   useEffect(() => {
@@ -80,6 +103,76 @@ export default function MessageDetailPage() {
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const markAsRead = async () => {
+    try {
+      const token = getToken();
+      if (!token) return;
+      
+      await api.messages.markAsRead(conversationId, token);
+      await loadConversation();
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
+    }
+  };
+
+  const handleDeleteConversation = async () => {
+    try {
+      const token = getToken();
+      if (!token) {
+        router.push('/auth/login');
+        return;
+      }
+
+      await api.messages.deleteConversation(conversationId, token);
+      
+      notifications.show({
+        title: '對話已刪除',
+        message: '對話已成功刪除',
+        color: 'green',
+      });
+      
+      setDeleteModalOpened(false);
+      router.push('/messages');
+    } catch (error) {
+      notifications.show({
+        title: '刪除失敗',
+        message: error instanceof Error ? error.message : '無法刪除對話',
+        color: 'red',
+      });
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setSearching(true);
+      const token = getToken();
+      if (!token) {
+        router.push('/auth/login');
+        return;
+      }
+
+      const response = await api.messages.search({
+        q: searchQuery,
+        conversation_id: conversationId,
+      }, token);
+
+      setSearchResults(response.messages || []);
+    } catch (error) {
+      notifications.show({
+        title: '搜尋失敗',
+        message: error instanceof Error ? error.message : '無法搜尋訊息',
+        color: 'red',
+      });
+    } finally {
+      setSearching(false);
     }
   };
 
@@ -151,7 +244,8 @@ export default function MessageDetailPage() {
   };
 
   const handleSendMessage = async () => {
-    if (!messageContent.trim()) {
+    const contentToSend = richContent || messageContent.trim();
+    if (!contentToSend) {
       return;
     }
 
@@ -164,14 +258,18 @@ export default function MessageDetailPage() {
       }
 
       await api.messages.send(conversationId, {
-        content: messageContent.trim(),
+        content: contentToSend,
       }, token);
 
       setMessageContent('');
+      setRichContent('');
       
       // 重新載入訊息
       await loadMessages();
       await loadConversation();
+      
+      // 標記為已讀
+      await markAsRead();
       
       // 重新載入對話列表（通知父頁面）
       router.refresh();
@@ -255,6 +353,27 @@ export default function MessageDetailPage() {
                   </Group>
                 )}
               </Group>
+              <Group gap="xs">
+                <ActionIcon variant="subtle" onClick={() => setSearchModalOpened(true)}>
+                  <IconSearch size={18} />
+                </ActionIcon>
+                <Menu shadow="md" width={200}>
+                  <Menu.Target>
+                    <ActionIcon variant="subtle">
+                      <IconTrash size={18} />
+                    </ActionIcon>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Item
+                      color="red"
+                      leftSection={<IconTrash size={14} />}
+                      onClick={() => setDeleteModalOpened(true)}
+                    >
+                      刪除對話
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
+              </Group>
             </Group>
 
             {/* 訊息列表 */}
@@ -303,20 +422,25 @@ export default function MessageDetailPage() {
                                 {message.sender_name}
                               </Text>
                             )}
-                            <Card
-                              padding="sm"
-                              radius="md"
-                              style={{
-                                backgroundColor: isMine
-                                  ? 'var(--mantine-color-blue-6)'
-                                  : 'var(--mantine-color-gray-1)',
-                                color: isMine ? 'white' : 'inherit',
-                              }}
-                            >
-                              <Text size="sm" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                {message.content}
-                              </Text>
-                            </Card>
+                              <Card
+                                padding="sm"
+                                radius="md"
+                                style={{
+                                  backgroundColor: isMine
+                                    ? 'var(--mantine-color-blue-6)'
+                                    : 'var(--mantine-color-gray-1)',
+                                  color: isMine ? 'white' : 'inherit',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    fontSize: 'var(--mantine-font-size-sm)',
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                  }}
+                                  dangerouslySetInnerHTML={{ __html: message.content }}
+                                />
+                              </Card>
                             <Group gap={4}>
                               <IconClock size={12} />
                               <Text size="xs" c="dimmed">
@@ -343,31 +467,115 @@ export default function MessageDetailPage() {
             </Paper>
 
             {/* 輸入框 */}
-            <Group gap="sm">
-              <TextInput
-                placeholder="輸入訊息..."
-                value={messageContent}
-                onChange={(e) => setMessageContent(e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                style={{ flex: 1 }}
-                size="md"
+            <Stack gap="sm">
+              <RichTextEditor
+                content={richContent}
+                onChange={setRichContent}
+                placeholder="輸入訊息...（支援富文本格式）"
               />
-              <Button
-                onClick={handleSendMessage}
-                loading={sending}
-                disabled={!messageContent.trim()}
-                leftSection={<IconSend size={16} />}
-                size="md"
-              >
-                發送
-              </Button>
-            </Group>
+              <Group gap="sm">
+                <TextInput
+                  placeholder="或輸入純文字訊息..."
+                  value={messageContent}
+                  onChange={(e) => setMessageContent(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  style={{ flex: 1 }}
+                  size="md"
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  loading={sending}
+                  disabled={!messageContent.trim() && !richContent.trim()}
+                  leftSection={<IconSend size={16} />}
+                  size="md"
+                >
+                  發送
+                </Button>
+              </Group>
+            </Stack>
           </Stack>
+          
+          {/* 搜尋對話框 */}
+          <Modal
+            opened={searchModalOpened}
+            onClose={() => {
+              setSearchModalOpened(false);
+              setSearchQuery('');
+              setSearchResults([]);
+            }}
+            title="搜尋訊息"
+            size="lg"
+          >
+            <Stack gap="md">
+              <Group>
+                <TextInput
+                  placeholder="輸入關鍵字..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch();
+                    }
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <Button onClick={handleSearch} loading={searching}>
+                  搜尋
+                </Button>
+              </Group>
+              
+              {searchResults.length > 0 && (
+                <ScrollArea style={{ height: 300 }}>
+                  <Stack gap="sm">
+                    {searchResults.map((message) => (
+                      <Card key={message.id} padding="sm" withBorder>
+                        <Text size="sm" fw={500}>
+                          {message.sender_name}
+                        </Text>
+                        <Text size="sm" mt="xs">
+                          {message.content}
+                        </Text>
+                        <Text size="xs" c="dimmed" mt="xs">
+                          {formatTime(message.created_at)}
+                        </Text>
+                      </Card>
+                    ))}
+                  </Stack>
+                </ScrollArea>
+              )}
+              
+              {searchQuery && searchResults.length === 0 && !searching && (
+                <Center py="xl">
+                  <Text c="dimmed">沒有找到相關訊息</Text>
+                </Center>
+              )}
+            </Stack>
+          </Modal>
+          
+          {/* 刪除確認對話框 */}
+          <Modal
+            opened={deleteModalOpened}
+            onClose={() => setDeleteModalOpened(false)}
+            title="確認刪除"
+            centered
+          >
+            <Stack gap="md">
+              <Text>您確定要刪除此對話嗎？此操作無法復原。</Text>
+              <Group justify="flex-end">
+                <Button variant="subtle" onClick={() => setDeleteModalOpened(false)}>
+                  取消
+                </Button>
+                <Button color="red" onClick={handleDeleteConversation}>
+                  刪除
+                </Button>
+              </Group>
+            </Stack>
+          </Modal>
         </Container>
       </SidebarLayout>
     </ProtectedRoute>

@@ -4,10 +4,10 @@ import { MantineProvider as BaseMantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { theme } from '@/theme';
 
-// 匯入 Mantine 核心樣式
-import '@mantine/core/styles.css';
-import '@mantine/notifications/styles.css';
-import '@mantine/dates/styles.css';
+// 樣式已在 layout.tsx 中導入，這裡不需要重複導入
+// import '@mantine/core/styles.css';
+// import '@mantine/notifications/styles.css';
+// import '@mantine/dates/styles.css';
 
 export function MantineProvider({ children }: { children: React.ReactNode }) {
   return (

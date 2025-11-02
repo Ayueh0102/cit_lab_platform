@@ -149,6 +149,9 @@ class UserProfile(BaseModel):
     show_email = db.Column(Boolean, default=True, nullable=False)
     show_phone = db.Column(Boolean, default=False, nullable=False)
     
+    # 通知偏好設定（JSON 格式存儲）
+    notification_preferences = db.Column(Text, nullable=True)  # JSON string: {"emailNotifications": true, "jobAlerts": true, ...}
+    
     # 關聯
     user = relationship('User', back_populates='profile')
     

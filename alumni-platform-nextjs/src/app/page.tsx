@@ -140,19 +140,24 @@ export default function HomePage() {
         {/* 歡迎標題 */}
         <Stack gap="lg" mb="xl">
           <div>
-            <Title
-              order={1}
-              size="h1"
-              fw={700}
-              style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              歡迎回到系友大家庭！🎓
-            </Title>
+            <Group gap="md" align="center">
+              <ThemeIcon size={48} radius="md" variant="light" color="violet">
+                <IconUsers size={28} />
+              </ThemeIcon>
+              <Title
+                order={1}
+                size="h1"
+                fw={700}
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                歡迎回到系友大家庭！
+              </Title>
+            </Group>
             <Text size="lg" c="dimmed" mt="sm">
               歡迎各位系友使用全新的系友會社群平台，一起建立更緊密的連結
             </Text>
@@ -173,21 +178,31 @@ export default function HomePage() {
               cursor: 'pointer',
               animationDelay: '0.1s',
               boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
+              position: 'relative',
+              minHeight: '120px',
             }}
           >
-            <Group justify="apart">
-              <div>
-                <Text size="xs" c="white" style={{ opacity: 0.9 }}>
-                  本週新職缺
-                </Text>
-                <Text size="2xl" fw={700} c="white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
-                  {stats.totalJobs}
-                </Text>
-              </div>
-              <ThemeIcon size={50} radius="md" variant="light" color="white">
-                <IconBriefcase size={28} />
-              </ThemeIcon>
-            </Group>
+            <div>
+              <Text size="xs" c="white" style={{ opacity: 0.9 }}>
+                本週新職缺
+              </Text>
+              <Text size="2xl" fw={700} c="white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+                {stats.totalJobs}
+              </Text>
+            </div>
+            <ThemeIcon 
+              size={50} 
+              radius="md" 
+              variant="light" 
+              color="white" 
+              style={{ 
+                position: 'absolute',
+                bottom: '16px',
+                right: '16px',
+              }}
+            >
+              <IconBriefcase size={28} />
+            </ThemeIcon>
           </Paper>
 
           <Paper
@@ -202,21 +217,31 @@ export default function HomePage() {
               cursor: 'pointer',
               animationDelay: '0.2s',
               boxShadow: '0 10px 30px rgba(240, 147, 251, 0.3)',
+              position: 'relative',
+              minHeight: '120px',
             }}
           >
-            <Group justify="apart">
-              <div>
-                <Text size="xs" c="white" style={{ opacity: 0.9 }}>
-                  即將到來的活動
-                </Text>
-                <Text size="2xl" fw={700} c="white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
-                  {stats.totalEvents}
-                </Text>
-              </div>
-              <ThemeIcon size={50} radius="md" variant="light" color="white">
-                <IconCalendar size={28} />
-              </ThemeIcon>
-            </Group>
+            <div>
+              <Text size="xs" c="white" style={{ opacity: 0.9 }}>
+                即將到來的活動
+              </Text>
+              <Text size="2xl" fw={700} c="white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+                {stats.totalEvents}
+              </Text>
+            </div>
+            <ThemeIcon 
+              size={50} 
+              radius="md" 
+              variant="light" 
+              color="white" 
+              style={{ 
+                position: 'absolute',
+                bottom: '16px',
+                right: '16px',
+              }}
+            >
+              <IconCalendar size={28} />
+            </ThemeIcon>
           </Paper>
 
           <Paper
@@ -231,21 +256,31 @@ export default function HomePage() {
               cursor: 'pointer',
               animationDelay: '0.3s',
               boxShadow: '0 10px 30px rgba(79, 172, 254, 0.3)',
+              position: 'relative',
+              minHeight: '120px',
             }}
           >
-            <Group justify="apart">
-              <div>
-                <Text size="xs" c="white" style={{ opacity: 0.9 }}>
-                  活躍系友
-                </Text>
-                <Text size="2xl" fw={700} c="white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
-                  {stats.totalAlumni}
-                </Text>
-              </div>
-              <ThemeIcon size={50} radius="md" variant="light" color="white">
-                <IconUsers size={28} />
-              </ThemeIcon>
-            </Group>
+            <div>
+              <Text size="xs" c="white" style={{ opacity: 0.9 }}>
+                活躍系友
+              </Text>
+              <Text size="2xl" fw={700} c="white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+                {stats.totalAlumni}
+              </Text>
+            </div>
+            <ThemeIcon 
+              size={50} 
+              radius="md" 
+              variant="light" 
+              color="white" 
+              style={{ 
+                position: 'absolute',
+                bottom: '16px',
+                right: '16px',
+              }}
+            >
+              <IconUsers size={28} />
+            </ThemeIcon>
           </Paper>
 
           <Paper
@@ -260,21 +295,31 @@ export default function HomePage() {
               cursor: 'pointer',
               animationDelay: '0.4s',
               boxShadow: '0 10px 30px rgba(250, 112, 154, 0.3)',
+              position: 'relative',
+              minHeight: '120px',
             }}
           >
-            <Group justify="apart">
-              <div>
-                <Text size="xs" c="white" style={{ opacity: 0.9 }}>
-                  本週新增
-                </Text>
-                <Text size="2xl" fw={700} c="white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
-                  {stats.newThisWeek}
-                </Text>
-              </div>
-              <ThemeIcon size={50} radius="md" variant="light" color="white">
-                <IconTrendingUp size={28} />
-              </ThemeIcon>
-            </Group>
+            <div>
+              <Text size="xs" c="white" style={{ opacity: 0.9 }}>
+                本週新增
+              </Text>
+              <Text size="2xl" fw={700} c="white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+                {stats.newThisWeek}
+              </Text>
+            </div>
+            <ThemeIcon 
+              size={50} 
+              radius="md" 
+              variant="light" 
+              color="white" 
+              style={{ 
+                position: 'absolute',
+                bottom: '16px',
+                right: '16px',
+              }}
+            >
+              <IconTrendingUp size={28} />
+            </ThemeIcon>
           </Paper>
         </SimpleGrid>
 
@@ -287,7 +332,7 @@ export default function HomePage() {
                 <Group gap="xs">
                   <IconBell size={24} color="#667eea" />
                   <Text size="lg" fw={600}>
-                    📢 最新公告
+                    最新公告
                   </Text>
                 </Group>
                 <Button
@@ -355,7 +400,7 @@ export default function HomePage() {
                 <Group gap="xs">
                   <IconCalendar size={24} color="#f5576c" />
                   <Text size="lg" fw={600}>
-                    🎉 近期活動
+                    近期活動
                   </Text>
                 </Group>
                 <Button
@@ -388,23 +433,26 @@ export default function HomePage() {
                       }}
                       onClick={() => router.push(`/events/${event.id}`)}
                     >
-                      <Text fw={600} size="sm" mb="xs">
-                        📅 {event.title}
-                      </Text>
                       <Group gap="xs" mb="xs">
+                        <IconCalendar size={16} color="#f5576c" />
+                        <Text fw={600} size="sm" style={{ flex: 1 }}>
+                          {event.title}
+                        </Text>
+                      </Group>
+                      <Stack gap="xs">
                         <Group gap={4}>
-                          <IconClock size={14} />
+                          <IconClock size={14} color="var(--mantine-color-gray-6)" />
                           <Text size="xs" c="dimmed">
                             {new Date(event.start_time).toLocaleDateString('zh-TW')}
                           </Text>
                         </Group>
                         <Group gap={4}>
-                          <IconMapPin size={14} />
+                          <IconMapPin size={14} color="var(--mantine-color-gray-6)" />
                           <Text size="xs" c="dimmed">
                             {event.location}
                           </Text>
                         </Group>
-                      </Group>
+                      </Stack>
                       <Progress
                         value={(event.current_participants / event.max_participants) * 100}
                         size="sm"
@@ -428,7 +476,7 @@ export default function HomePage() {
                 <Group gap="xs">
                   <IconBriefcase size={24} color="#764ba2" />
                   <Text size="lg" fw={600}>
-                    💼 熱門職缺
+                    熱門職缺
                   </Text>
                 </Group>
                 <Button
@@ -463,26 +511,33 @@ export default function HomePage() {
                     ><div className="gradient-border-top" />
                       <Group gap="sm" mb="xs">
                         <Avatar color="violet" radius="sm" size="md">
-                          {job.company_name?.charAt(0) || job.company?.charAt(0) || 'C'}
+                          {job.company_name?.charAt(0) || 'C'}
                         </Avatar>
                         <div style={{ flex: 1 }}>
                           <Text fw={600} size="sm" lineClamp={1}>
                             {job.title}
                           </Text>
                           <Text size="xs" c="dimmed">
-                            {job.company_name || job.company || '未提供公司'}
+                            {job.company_name || '未提供公司'}
                           </Text>
                         </div>
                       </Group>
-                      <Group gap={4} mt="xs">
-                        <IconMapPin size={14} />
-                        <Text size="xs" c="dimmed">
-                          {job.location}
-                        </Text>
-                      </Group>
-                      <Badge size="xs" color="violet" mt="xs">
-                        {new Date(job.created_at).toLocaleDateString('zh-TW')}
-                      </Badge>
+                      <Stack gap="xs" mt="xs">
+                        {job.location && (
+                          <Group gap={4}>
+                            <IconMapPin size={14} color="var(--mantine-color-gray-6)" />
+                            <Text size="xs" c="dimmed">
+                              {job.location}
+                            </Text>
+                          </Group>
+                        )}
+                        <Group gap={4}>
+                          <IconClock size={14} color="var(--mantine-color-gray-6)" />
+                          <Text size="xs" c="dimmed">
+                            {new Date(job.created_at).toLocaleDateString('zh-TW')}
+                          </Text>
+                        </Group>
+                      </Stack>
                     </Paper>
                   ))
                 )}

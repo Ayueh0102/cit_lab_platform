@@ -47,7 +47,7 @@ def create_work_experience(current_user):
 
         experience = WorkExperience(
             user_id=current_user.id,
-            company=data['company'],
+            company_name=data['company'],  # API 使用 company，模型使用 company_name
             position=data['position'],
             department=data.get('department'),
             location=data.get('location'),
@@ -91,7 +91,7 @@ def update_work_experience(current_user, exp_id):
 
         # 更新欄位
         if 'company' in data:
-            experience.company = data['company']
+            experience.company_name = data['company']  # API 使用 company，模型使用 company_name
         if 'position' in data:
             experience.position = data['position']
         if 'department' in data:
@@ -169,17 +169,33 @@ def create_education(current_user):
         if not data.get('school') or not data.get('degree'):
             return jsonify({'message': 'School and degree are required'}), 400
 
+        # 從 start_date 提取年份，或使用 start_year
+        start_year = None
+        if data.get('start_date'):
+            start_date_obj = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
+            start_year = start_date_obj.year
+        elif data.get('start_year'):
+            start_year = data['start_year']
+        
+        end_year = None
+        if data.get('end_date'):
+            end_date_obj = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+            end_year = end_date_obj.year
+        elif data.get('end_year'):
+            end_year = data['end_year']
+
         education = Education(
             user_id=current_user.id,
-            school=data['school'],
+            school_name=data['school'],  # API 使用 school，模型使用 school_name
             degree=data['degree'],
             major=data.get('major'),
             minor=data.get('minor'),
-            start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data.get('start_date') else None,
-            end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None,
-            gpa=float(data['gpa']) if data.get('gpa') else None,
+            start_year=start_year,
+            end_year=end_year,
+            is_current=data.get('is_current', False),
+            gpa=str(data['gpa']) if data.get('gpa') else None,
             honors=data.get('honors'),
-            description=data.get('description')
+            thesis_title=data.get('description')  # 使用 description 作為 thesis_title
         )
 
         db.session.add(education)
@@ -208,7 +224,7 @@ def update_education(current_user, edu_id):
         data = request.get_json()
 
         if 'school' in data:
-            education.school = data['school']
+            education.school_name = data['school']  # API 使用 school，模型使用 school_name
         if 'degree' in data:
             education.degree = data['degree']
         if 'major' in data:
@@ -216,15 +232,23 @@ def update_education(current_user, edu_id):
         if 'minor' in data:
             education.minor = data['minor']
         if 'start_date' in data:
-            education.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data['start_date'] else None
+            start_date_obj = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
+            education.start_year = start_date_obj.year
+        elif 'start_year' in data:
+            education.start_year = data['start_year']
         if 'end_date' in data:
-            education.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data['end_date'] else None
+            end_date_obj = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+            education.end_year = end_date_obj.year
+        elif 'end_year' in data:
+            education.end_year = data['end_year']
         if 'gpa' in data:
-            education.gpa = float(data['gpa']) if data['gpa'] else None
+            education.gpa = str(data['gpa']) if data['gpa'] else None
         if 'honors' in data:
             education.honors = data['honors']
         if 'description' in data:
-            education.description = data['description']
+            education.thesis_title = data['description']
+        if 'is_current' in data:
+            education.is_current = data['is_current']
 
         db.session.commit()
 
@@ -266,7 +290,7 @@ def get_all_skills():
     """取得所有技能項目(公開)"""
     category = request.args.get('category')
 
-    query = Skill.query.filter_by(is_active=True)
+    query = Skill.query  # 移除 is_active 過濾，因為模型沒有這個欄位
     if category:
         query = query.filter_by(category=category)
 
@@ -288,7 +312,7 @@ def get_user_skills(current_user):
         .all()
 
     return jsonify({
-        'user_skills': [us.to_dict() for us in user_skills]
+        'skills': [us.to_dict() for us in user_skills]  # 前端期望 'skills' 而不是 'user_skills'
     }), 200
 
 
