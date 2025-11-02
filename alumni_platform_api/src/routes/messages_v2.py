@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify
 from src.models_v2 import db, Conversation, Message, User, UserProfile
 from src.routes.auth_v2 import token_required
 from src.routes.notification_helper import create_new_message_notification
+from src.routes.websocket import emit_message, emit_conversation_update
 from datetime import datetime
 from sqlalchemy import or_, and_
 
@@ -190,6 +191,11 @@ def send_message(current_user, conversation_id):
             conversation_id=conversation_id,
             message_preview=data['content']
         )
+
+        # 發送 WebSocket 事件
+        emit_message(conversation_id, message.to_dict())
+        emit_conversation_update(conversation.user1_id, conversation.to_dict(current_user_id=conversation.user1_id))
+        emit_conversation_update(conversation.user2_id, conversation.to_dict(current_user_id=conversation.user2_id))
 
         return jsonify({
             'message': 'Message sent successfully',

@@ -945,4 +945,24 @@ export const api = {
       });
     },
   },
+
+  search: {
+    global: (query: string, type: string = 'all', page: number = 1, perPage: number = 20, token: string) => {
+      return fetchAPI(`/api/v2/search?q=${encodeURIComponent(query)}&type=${type}&page=${page}&per_page=${perPage}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+    },
+
+    suggestions: (query: string, token: string) => {
+      return fetchAPI(`/api/v2/search/suggestions?q=${encodeURIComponent(query)}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+    },
+  },
 };

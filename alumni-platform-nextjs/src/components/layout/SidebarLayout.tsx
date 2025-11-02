@@ -31,6 +31,7 @@ import {
 } from '@tabler/icons-react';
 import { getUser, clearAuth, isAuthenticated, getToken } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { useWebSocket } from '@/hooks/use-websocket';
 
 interface NavItem {
   icon: React.ReactNode;
@@ -68,16 +69,16 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // 定期更新未讀數量
-  useEffect(() => {
-    if (!isAuthenticated()) return;
-
-    const interval = setInterval(() => {
+  // 使用 WebSocket 即時更新通知數量
+  useWebSocket({
+    onNotificationCountUpdate: (count) => {
+      setUnreadCount(count);
+    },
+    onNotification: () => {
+      // 有新通知時更新數量
       loadUnreadCount();
-    }, 30000); // 每 30 秒更新一次
-
-    return () => clearInterval(interval);
-  }, []);
+    },
+  });
 
   const handleLogout = () => {
     clearAuth();

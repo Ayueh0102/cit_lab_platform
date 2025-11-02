@@ -36,6 +36,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { api } from '@/lib/api';
 import { getToken, getUser } from '@/lib/auth';
+import { useWebSocket } from '@/hooks/use-websocket';
 
 interface Message {
   id: number;
@@ -79,6 +80,27 @@ export default function MessageDetailPage() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // 使用 WebSocket 即時接收訊息
+  const { subscribeToConversation } = useWebSocket({
+    onNewMessage: (messageData) => {
+      if (messageData.conversation_id === conversationId) {
+        setMessages((prev) => {
+          // 避免重複添加
+          if (prev.some((m) => m.id === messageData.id)) {
+            return prev;
+          }
+          return [...prev, messageData];
+        });
+        loadConversation(); // 更新對話信息
+      }
+    },
+    onConversationUpdate: (conversationData) => {
+      if (conversationData.id === conversationId) {
+        setConversation(conversationData);
+      }
+    },
+  });
+
   useEffect(() => {
     loadConversation();
     loadMessages();
@@ -86,13 +108,10 @@ export default function MessageDetailPage() {
     // 標記對話為已讀
     markAsRead();
     
-    // 設置自動刷新（每30秒）
-    const interval = setInterval(() => {
-      loadMessages();
-      loadConversation();
-    }, 30000);
-    
-    return () => clearInterval(interval);
+    // 訂閱當前對話的訊息更新
+    if (conversationId) {
+      subscribeToConversation(conversationId);
+    }
   }, [conversationId]);
 
   useEffect(() => {

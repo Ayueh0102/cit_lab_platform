@@ -3,6 +3,7 @@
 用於在各個路由中統一的建立通知
 """
 from src.models_v2 import db, Notification, NotificationType, NotificationStatus
+from src.routes.websocket import emit_notification
 from datetime import datetime
 
 
@@ -41,6 +42,19 @@ def create_notification(
         
         db.session.add(notification)
         db.session.commit()
+        
+        # 發送 WebSocket 通知
+        from src.models_v2 import Notification as NotificationModel
+        unread_count = NotificationModel.query.filter_by(
+            user_id=user_id,
+            status=NotificationStatus.UNREAD
+        ).count()
+        
+        emit_notification(user_id, {
+            **notification.to_dict(),
+            'unread_count': unread_count
+        })
+        
         return notification
     except Exception as e:
         db.session.rollback()

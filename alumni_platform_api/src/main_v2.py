@@ -30,6 +30,7 @@ from src.routes.notifications import notifications_bp
 from src.routes.csv_import_export import csv_bp
 from src.routes.admin_v2 import admin_v2_bp
 from src.routes.cms_v2 import cms_v2_bp
+from src.routes.search_v2 import search_bp
 
 # 保留相容舊版的 routes (暫時) - 已註釋以避免模型衝突
 # from src.routes.user import user_bp
@@ -42,6 +43,9 @@ from datetime import datetime, timedelta
 
 # Import database configuration
 from src.config.database import get_database_config
+
+# Import WebSocket
+from src.routes.websocket import socketio
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
@@ -63,6 +67,7 @@ app.register_blueprint(notifications_bp)    # /api/notifications/*, /api/system/
 app.register_blueprint(csv_bp)              # /api/csv/*
 app.register_blueprint(admin_v2_bp)          # /api/v2/admin/*
 app.register_blueprint(cms_v2_bp)           # /api/v2/cms/*
+app.register_blueprint(search_bp)            # /api/v2/search/*
 
 # Register blueprints - v1 routes (backward compatibility) - 已註釋以避免模型衝突
 # app.register_blueprint(user_bp, url_prefix='/api')
@@ -75,6 +80,9 @@ app.register_blueprint(cms_v2_bp)           # /api/v2/cms/*
 database_config = get_database_config()
 app.config.update(database_config)
 db.init_app(app)
+
+# 初始化 WebSocket
+socketio.init_app(app, cors_allowed_origins="*")
 
 
 # ========================================
@@ -401,4 +409,4 @@ if __name__ == '__main__':
     print(f"📚 API Docs: http://localhost:5001/")
     print("="*50 + "\n")
 
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5001, debug=True, allow_unsafe_werkzeug=True)
