@@ -10,7 +10,7 @@ from .jobs import Job, JobCategory, JobRequest
 from .messages import Conversation, Message
 from .events import Event, EventCategory, EventRegistration
 from .content import Bulletin, BulletinCategory, BulletinComment, Article, ArticleCategory
-from .system import Notification, SystemLog, SystemSetting, UserActivity, FileUpload
+from .system import Notification, SystemLog, SystemSetting, UserActivity, FileUpload, NotificationType, NotificationStatus
 
 __all__ = [
     'db',
@@ -27,5 +27,5 @@ __all__ = [
     # Content
     'Bulletin', 'BulletinCategory', 'BulletinComment', 'Article', 'ArticleCategory',
     # System
-    'Notification', 'SystemLog', 'SystemSetting', 'UserActivity', 'FileUpload'
+    'Notification', 'NotificationType', 'NotificationStatus', 'SystemLog', 'SystemSetting', 'UserActivity', 'FileUpload'
 ]

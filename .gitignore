@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-alumni-platform/node_modules/
+alumni-platform/
 alumni_platform_api/venv/
 alumni_platform_api/instance/
 

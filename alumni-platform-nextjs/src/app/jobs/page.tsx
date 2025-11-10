@@ -214,80 +214,70 @@ export default function JobsPage() {
                     padding="lg"
                     radius="md"
                     withBorder
-                    className="hover-translate-y"
-                    style={{ cursor: 'pointer' }}
+                    className="hover-translate-y gradient-border-top"
+                    style={{ 
+                      cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
                     onClick={() => router.push(`/jobs/${job.id}`)}
                   >
-                    <Group justify="space-between" mb="xs">
-                      <Text fw={500} size="lg">
-                        {job.title}
+                    <Stack gap="md">
+                      <div>
+                        <Text fw={700} size="lg" mb="xs">
+                          {job.title}
+                        </Text>
+                        <Text c="blue" fw={600} mb="md">
+                          🏢 {companyName}
+                        </Text>
+                      </div>
+
+                      <Group gap="md" wrap="wrap">
+                        <Group gap={4}>
+                          <IconMapPin size={16} color="var(--mantine-color-gray-6)" />
+                          <Text size="sm" c="dimmed">{job.location}</Text>
+                        </Group>
+                        {salaryText && (
+                          <Group gap={4}>
+                            <Text size="sm" c="dimmed">💰</Text>
+                            <Text size="sm" c="dimmed">{salaryText}</Text>
+                          </Group>
+                        )}
+                        <Group gap={4}>
+                          <IconCalendar size={16} color="var(--mantine-color-gray-6)" />
+                          <Text size="sm" c="dimmed">
+                            {new Date(job.created_at).toLocaleDateString('zh-TW')}
+                          </Text>
+                        </Group>
+                      </Group>
+
+                      <Text size="sm" c="dimmed" lineClamp={3}>
+                        {job.description}
                       </Text>
-                      <Group gap="xs">
+
+                      <Group gap="xs" wrap="wrap">
                         {job.category && (
                           <Badge variant="light" color="blue">
                             {job.category.name}
                           </Badge>
                         )}
-                        <Badge color="blue">{jobTypeLabel}</Badge>
+                        <Badge variant="light" color="teal">
+                          {jobTypeLabel}
+                        </Badge>
                       </Group>
-                    </Group>
 
-                    <Group gap="xs" mb="sm">
-                      <Text size="sm" fw={500}>
-                        {companyName}
-                      </Text>
-                      {job.location && (
-                        <>
-                          <Text size="sm" c="dimmed">
-                            •
-                          </Text>
-                          <Text size="sm" c="dimmed">
-                            {job.location}
-                          </Text>
-                        </>
-                      )}
-                    </Group>
-
-                    {salaryText && (
-                      <Text size="sm" c="green" mb="sm" fw={500}>
-                        💰 {salaryText}
-                      </Text>
-                    )}
-
-                    <Text size="sm" lineClamp={2} c="dimmed" mb="sm">
-                      {job.description}
-                    </Text>
-
-                    <Group justify="space-between" mt="md">
-                      <Group gap="xs">
-                        {posterName && (
-                          <Text size="xs" c="dimmed">
-                            發布者: {posterName}
-                          </Text>
-                        )}
-                        {job.created_at && (
-                          <>
-                            <Text size="xs" c="dimmed">•</Text>
-                            <Tooltip label={new Date(job.created_at).toLocaleString('zh-TW')}>
-                              <Group gap={4}>
-                                <IconCalendar size={12} />
-                                <Text size="xs" c="dimmed">
-                                  {new Date(job.created_at).toLocaleDateString('zh-TW')}
-                                </Text>
-                              </Group>
-                            </Tooltip>
-                          </>
+                      <Group justify="space-between" align="center">
+                        <Text size="xs" c="dimmed">
+                          👤 發布者：{posterName || '未提供'}
+                        </Text>
+                        {job.views !== undefined && (
+                          <Group gap={4}>
+                            <IconEye size={14} />
+                            <Text size="xs" c="dimmed">{job.views}</Text>
+                          </Group>
                         )}
                       </Group>
-                      {job.views !== undefined && (
-                        <Group gap={4}>
-                          <IconEye size={14} />
-                          <Text size="xs" c="dimmed">
-                            {job.views} 次瀏覽
-                          </Text>
-                        </Group>
-                      )}
-                    </Group>
+                    </Stack>
                   </Card>
                 );
               })}

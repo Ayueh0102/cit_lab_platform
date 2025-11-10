@@ -98,14 +98,24 @@ async function fetchAPI(endpoint: string, options: FetchOptions = {}) {
 
     let data;
     if (isJson) {
-      data = await response.json();
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        // JSON 解析失敗，可能是空響應或格式錯誤
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}: ${response.statusText}`);
+      }
     } else {
       const text = await response.text();
       throw new Error(text || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     if (!response.ok) {
-      throw new Error(data.error || data.message || `API 請求失敗: ${response.status}`);
+      // 確保 data 是對象，如果不是則轉換為對象
+      const errorMessage = typeof data === 'string' 
+        ? data 
+        : (data?.error || data?.message || `API 請求失敗: ${response.status}`);
+      throw new Error(errorMessage);
     }
 
     return data;
@@ -114,7 +124,12 @@ async function fetchAPI(endpoint: string, options: FetchOptions = {}) {
     if (error instanceof TypeError && error.message.includes('fetch')) {
       throw new Error('無法連接到伺服器，請檢查網路連線或伺服器狀態');
     }
-    throw error;
+    // 如果已經是 Error 對象，直接拋出
+    if (error instanceof Error) {
+      throw error;
+    }
+    // 其他情況轉換為 Error
+    throw new Error(String(error));
   }
 }
 
@@ -124,7 +139,7 @@ export const api = {
     login: (email: string, password: string) =>
       fetchAPI('/api/v2/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: { email, password }, // 傳遞對象，讓 fetchAPI 處理 JSON.stringify
       }),
     
     register: (data: {
@@ -136,7 +151,7 @@ export const api = {
     }) =>
       fetchAPI('/api/v2/auth/register', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: data, // 傳遞對象，讓 fetchAPI 處理 JSON.stringify
       }),
     
     getCurrentUser: (token: string) =>
@@ -182,14 +197,14 @@ export const api = {
     create: (data: JobData, token: string) =>
       fetchAPI('/api/v2/jobs', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
     update: (id: number, data: Partial<JobData>, token: string) =>
       fetchAPI(`/api/v2/jobs/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -207,7 +222,7 @@ export const api = {
     apply: (jobId: number, data: JobApplicationData, token: string) =>
       fetchAPI('/api/v2/job-requests', {
         method: 'POST',
-        body: JSON.stringify({ job_id: jobId, ...data }),
+        body: { job_id: jobId, ...data },
         token,
       }),
   },
@@ -248,14 +263,14 @@ export const api = {
     create: (data: EventData, token: string) =>
       fetchAPI('/api/v2/events', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
     update: (id: number, data: Partial<EventData>, token: string) =>
       fetchAPI(`/api/v2/events/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -268,7 +283,7 @@ export const api = {
     cancel: (id: number, reason: string, token: string) =>
       fetchAPI(`/api/v2/events/${id}/cancel`, {
         method: 'POST',
-        body: JSON.stringify({ reason }),
+        body: { reason },
         token,
       }),
     
@@ -280,7 +295,7 @@ export const api = {
     register: (eventId: number, data: EventRegistrationData, token: string) =>
       fetchAPI(`/api/v2/events/${eventId}/register`, {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -330,14 +345,14 @@ export const api = {
     create: (data: BulletinData, token: string) =>
       fetchAPI('/api/v2/bulletins', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
     update: (id: number, data: Partial<BulletinData>, token: string) =>
       fetchAPI(`/api/v2/bulletins/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -367,7 +382,7 @@ export const api = {
     send: (conversationId: number, data: { content: string }, token: string) =>
       fetchAPI(`/api/v2/conversations/${conversationId}/messages`, {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -413,7 +428,7 @@ export const api = {
     update: (data: any, token: string) =>
       fetchAPI('/api/v2/auth/profile', {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -499,14 +514,14 @@ export const api = {
     addWorkExperience: (data: any, token: string) =>
       fetchAPI('/api/career/work-experiences', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
     updateWorkExperience: (id: number, data: any, token: string) =>
       fetchAPI(`/api/career/work-experiences/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -522,14 +537,14 @@ export const api = {
     addEducation: (data: any, token: string) =>
       fetchAPI('/api/career/educations', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
     updateEducation: (id: number, data: any, token: string) =>
       fetchAPI(`/api/career/educations/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -548,7 +563,7 @@ export const api = {
     addSkill: (skillId: number, token: string) =>
       fetchAPI('/api/career/my-skills', {
         method: 'POST',
-        body: JSON.stringify({ skill_id: skillId }),
+        body: { skill_id: skillId },
         token,
       }),
     
@@ -609,7 +624,7 @@ export const api = {
     }, token: string) =>
       fetchAPI('/api/v2/auth/change-password', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -624,7 +639,7 @@ export const api = {
     }, token: string) =>
       fetchAPI('/api/user/notification-preferences', {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
   },
@@ -661,7 +676,7 @@ export const api = {
     }, token: string) =>
       fetchAPI(`/api/v2/admin/users/${userId}`, {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -705,7 +720,7 @@ export const api = {
     }, token: string) =>
       fetchAPI('/api/v2/cms/article-categories', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -720,7 +735,7 @@ export const api = {
     }, token: string) =>
       fetchAPI(`/api/v2/cms/article-categories/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -766,7 +781,7 @@ export const api = {
     }, token: string) =>
       fetchAPI('/api/v2/cms/articles', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     
@@ -782,7 +797,7 @@ export const api = {
     }, token: string) =>
       fetchAPI(`/api/v2/cms/articles/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: data,
         token,
       }),
     

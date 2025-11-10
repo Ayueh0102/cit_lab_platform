@@ -161,6 +161,10 @@ def login():
     """使用者登入"""
     try:
         data = request.get_json()
+        
+        # 確保 data 是字典
+        if not isinstance(data, dict):
+            return jsonify({'message': 'Invalid request format'}), 400
 
         if not data.get('email') or not data.get('password'):
             return jsonify({'message': 'Email and password are required'}), 400
@@ -176,11 +180,16 @@ def login():
         if not user.status == "active":
             return jsonify({'message': 'Account is inactive'}), 401
 
+        # 確保 SECRET_KEY 存在
+        secret_key = current_app.config.get('SECRET_KEY') or current_app.config.get('JWT_SECRET_KEY')
+        if not secret_key:
+            return jsonify({'message': 'Server configuration error'}), 500
+
         # 產生 JWT Token
         token = jwt.encode({
             'user_id': user.id,
             'exp': datetime.utcnow() + timedelta(days=7)
-        }, current_app.config['SECRET_KEY'], algorithm='HS256')
+        }, secret_key, algorithm='HS256')
 
         # 建立登入會話
         session = UserSession(
@@ -204,6 +213,9 @@ def login():
 
     except Exception as e:
         db.session.rollback()
+        import traceback
+        print(f"Login error: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({'message': f'Login failed: {str(e)}'}), 500
 
 

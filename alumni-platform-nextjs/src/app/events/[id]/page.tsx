@@ -73,6 +73,7 @@ interface Event {
   published_at?: string;
   created_at?: string;
   updated_at?: string;
+  image_url?: string;
 }
 
 const eventTypeLabels: Record<string, string> = {
@@ -372,8 +373,28 @@ export default function EventDetailPage() {
               ← 返回活動列表
             </Button>
 
-            <Card shadow="sm" padding="xl" radius="md" withBorder>
+            <Card shadow="sm" padding="xl" radius="md" withBorder className="gradient-border-top">
               <Stack gap="lg">
+                {/* 活動圖片 */}
+                {event.image_url && (
+                  <div style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: '300px',
+                    borderRadius: '15px',
+                    marginBottom: '1rem',
+                    overflow: 'hidden'
+                  }}>
+                    <Image
+                      src={event.image_url}
+                      alt={event.title}
+                      fill
+                      style={{ objectFit: 'cover' }}
+                      unoptimized={event.image_url.startsWith('http://localhost')}
+                    />
+                  </div>
+                )}
+
                 <div>
                   <Group justify="space-between" align="flex-start" mb="sm">
                     <Stack gap={8} style={{ flex: 1 }}>
@@ -476,6 +497,28 @@ export default function EventDetailPage() {
                     </Text>
                   )}
                 </Stack>
+
+                {/* 進度條 */}
+                {event.max_participants && (
+                  <div style={{
+                    width: '100%',
+                    height: '10px',
+                    background: 'rgba(0, 0, 0, 0.05)',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    marginTop: '1rem'
+                  }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${Math.min(100, ((event.current_participants ?? 0) / event.max_participants) * 100)}%`,
+                        background: 'linear-gradient(90deg, #48dbfb, #0abde3)',
+                        borderRadius: '10px',
+                        transition: 'width 0.3s ease'
+                      }}
+                    />
+                  </div>
+                )}
 
                 {event.description && (
                   <>

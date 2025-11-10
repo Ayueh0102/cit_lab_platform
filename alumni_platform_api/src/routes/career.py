@@ -151,7 +151,7 @@ def get_educations(current_user):
     user_id = request.args.get('user_id', current_user.id, type=int)
 
     educations = Education.query.filter_by(user_id=user_id)\
-        .order_by(Education.start_date.desc())\
+        .order_by(Education.start_year.desc())\
         .all()
 
     return jsonify({
@@ -308,7 +308,7 @@ def get_user_skills(current_user):
     user_id = request.args.get('user_id', current_user.id, type=int)
 
     user_skills = UserSkill.query.filter_by(user_id=user_id)\
-        .order_by(UserSkill.is_primary.desc(), UserSkill.proficiency_level.desc())\
+        .order_by(UserSkill.proficiency_level.desc())\
         .all()
 
     return jsonify({
@@ -345,7 +345,6 @@ def add_user_skill(current_user):
             skill_id=data['skill_id'],
             proficiency_level=data.get('proficiency_level', 'intermediate'),
             years_of_experience=data.get('years_of_experience'),
-            is_primary=data.get('is_primary', False),
             certification=data.get('certification')
         )
 
@@ -378,8 +377,6 @@ def update_user_skill(current_user, user_skill_id):
             user_skill.proficiency_level = data['proficiency_level']
         if 'years_of_experience' in data:
             user_skill.years_of_experience = data['years_of_experience']
-        if 'is_primary' in data:
-            user_skill.is_primary = data['is_primary']
         if 'certification' in data:
             user_skill.certification = data['certification']
 
@@ -422,18 +419,86 @@ def delete_user_skill(current_user, user_skill_id):
 @token_required
 def get_my_skills(current_user):
     """取得我的技能列表 (別名路由)"""
-    return get_user_skills(current_user)
+    user_id = request.args.get('user_id', current_user.id, type=int)
+
+    user_skills = UserSkill.query.filter_by(user_id=user_id)\
+        .order_by(UserSkill.proficiency_level.desc())\
+        .all()
+
+    return jsonify({
+        'skills': [us.to_dict() for us in user_skills]  # 前端期望 'skills' 而不是 'user_skills'
+    }), 200
 
 
 @career_bp.route('/api/career/my-skills', methods=['POST'])
 @token_required
 def add_my_skill(current_user):
     """新增技能 (別名路由)"""
-    return add_user_skill(current_user)
+    try:
+        data = request.get_json()
+
+        if not data.get('skill_id'):
+            return jsonify({'message': 'Skill ID is required'}), 400
+
+        # 檢查技能是否存在
+        skill = Skill.query.get(data['skill_id'])
+        if not skill:
+            return jsonify({'message': 'Skill not found'}), 404
+
+        # 檢查是否已新增
+        existing = UserSkill.query.filter_by(
+            user_id=current_user.id,
+            skill_id=data['skill_id']
+        ).first()
+
+        if existing:
+            return jsonify({'message': 'Skill already added'}), 400
+
+        user_skill = UserSkill(
+            user_id=current_user.id,
+            skill_id=data['skill_id'],
+            proficiency_level=data.get('proficiency_level', 'intermediate'),
+            years_of_experience=data.get('years_of_experience'),
+            certification=data.get('certification'),
+            certification_url=data.get('certification_url'),
+            notes=data.get('notes')
+        )
+
+        db.session.add(user_skill)
+        skill.increment_usage()
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Skill added successfully',
+            'skill': user_skill.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Failed to add skill: {str(e)}'}), 500
 
 
 @career_bp.route('/api/career/my-skills/<int:user_skill_id>', methods=['DELETE'])
 @token_required
 def delete_my_skill(current_user, user_skill_id):
     """刪除技能 (別名路由)"""
-    return delete_user_skill(current_user, user_skill_id)
+    try:
+        user_skill = UserSkill.query.filter_by(
+            id=user_skill_id,
+            user_id=current_user.id
+        ).first()
+
+        if not user_skill:
+            return jsonify({'message': 'Skill not found'}), 404
+
+        skill = user_skill.skill
+        db.session.delete(user_skill)
+        if skill:
+            skill.decrement_usage()
+        db.session.commit()
+
+        return jsonify({'message': 'Skill deleted successfully'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Failed to delete skill: {str(e)}'}), 500

@@ -20,6 +20,7 @@ import {
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
 import { IconCalendar, IconClock, IconMapPin, IconUsers, IconTicket, IconSearch } from '@tabler/icons-react';
+import Image from 'next/image';
 import { api } from '@/lib/api';
 import { getToken, isAuthenticated } from '@/lib/auth';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
@@ -58,6 +59,7 @@ interface Event {
   organizer_name?: string;
   views_count?: number;
   is_full?: boolean;
+  image_url?: string;
 }
 
 const PAGE_SIZE = 6;
@@ -357,11 +359,31 @@ export default function EventsPage() {
                           padding="lg"
                           radius="md"
                           withBorder
-                          className="hover-translate-y"
-                          style={{ cursor: 'pointer', height: '100%' }}
+                          className="hover-translate-y gradient-border-top"
+                          style={{ cursor: 'pointer', height: '100%', position: 'relative', overflow: 'hidden' }}
                           onClick={() => router.push(`/events/${event.id}`)}
                         >
                           <Stack gap="md">
+                            {/* 活動圖片 */}
+                            {event.image_url && (
+                              <div style={{
+                                position: 'relative',
+                                width: '100%',
+                                height: '200px',
+                                borderRadius: '15px',
+                                marginBottom: '1rem',
+                                overflow: 'hidden'
+                              }}>
+                                <Image
+                                  src={event.image_url}
+                                  alt={event.title}
+                                  fill
+                                  style={{ objectFit: 'cover' }}
+                                  unoptimized={event.image_url.startsWith('http://localhost')}
+                                />
+                              </div>
+                            )}
+
                             <Group justify="space-between" align="flex-start">
                               <Stack gap={6} style={{ flex: 1 }}>
                                 <Group gap={6} wrap="wrap">
@@ -382,7 +404,7 @@ export default function EventsPage() {
                                   )}
                                 </Group>
                                 <Text fw={600} size="lg" lineClamp={2}>
-                                  {event.title}
+                                  📅 {event.title}
                                 </Text>
                               </Stack>
                               <Badge color={status.color}>{status.label}</Badge>
@@ -428,6 +450,28 @@ export default function EventsPage() {
                                 <Text size="sm">{formatFee(event)}</Text>
                               </Group>
                             </Stack>
+
+                            {/* 進度條 */}
+                            {event.max_participants && (
+                              <div style={{
+                                width: '100%',
+                                height: '8px',
+                                background: 'rgba(0, 0, 0, 0.05)',
+                                borderRadius: '10px',
+                                overflow: 'hidden',
+                                marginTop: '0.5rem'
+                              }}>
+                                <div
+                                  style={{
+                                    height: '100%',
+                                    width: `${Math.min(100, ((event.current_participants ?? 0) / event.max_participants) * 100)}%`,
+                                    background: 'linear-gradient(90deg, #48dbfb, #0abde3)',
+                                    borderRadius: '10px',
+                                    transition: 'width 0.3s ease'
+                                  }}
+                                />
+                              </div>
+                            )}
 
                             {event.description && (
                               <Text size="sm" c="dimmed" lineClamp={2}>

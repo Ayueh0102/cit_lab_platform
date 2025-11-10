@@ -19,6 +19,7 @@ import {
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { 
   IconSearch, 
   IconPinned, 
@@ -229,33 +230,69 @@ export default function BulletinsPage() {
                     padding="lg"
                     radius="md"
                     withBorder
-                    className="hover-translate-y"
-                    style={{ cursor: 'pointer' }}
+                    className={`hover-translate-y gradient-border-top ${bulletin.is_pinned ? 'pinned-bulletin' : ''}`}
+                    style={{ 
+                      cursor: 'pointer',
+                      borderLeft: bulletin.is_pinned ? '5px solid #ff6b6b' : undefined,
+                      background: bulletin.is_pinned ? 'linear-gradient(135deg, rgba(255, 154, 158, 0.05), rgba(254, 207, 239, 0.05))' : undefined
+                    }}
                     onClick={() => router.push(`/bulletins/${bulletin.id}`)}
                   >
                     <Stack gap="sm">
+                      {/* 封面圖片 */}
+                      {bulletin.cover_image_url && (
+                        <div style={{
+                          position: 'relative',
+                          width: '100%',
+                          height: '200px',
+                          borderRadius: '15px',
+                          marginBottom: '1rem',
+                          overflow: 'hidden'
+                        }}>
+                          <Image
+                            src={bulletin.cover_image_url}
+                            alt={bulletin.title}
+                            fill
+                            style={{ objectFit: 'cover' }}
+                            unoptimized={bulletin.cover_image_url.startsWith('http://localhost')}
+                          />
+                        </div>
+                      )}
+
                       <Group justify="space-between" align="flex-start">
-                        <Group gap="xs">
-                          {bulletin.is_pinned && (
-                            <IconPinned size={18} color="red" />
-                          )}
-                          {bulletin.is_featured && (
-                            <IconStar size={18} color="gold" />
-                          )}
-                          <Text fw={500} size="lg">
+                        <Stack gap={4} style={{ flex: 1 }}>
+                          <Group gap="xs" wrap="wrap">
+                            {bulletin.is_pinned && (
+                              <Badge 
+                                variant="filled" 
+                                color="red"
+                                leftSection={<IconPinned size={14} />}
+                              >
+                                置頂公告
+                              </Badge>
+                            )}
+                            {bulletin.is_featured && (
+                              <Badge 
+                                variant="light" 
+                                color="yellow"
+                                leftSection={<IconStar size={14} />}
+                              >
+                                精選
+                              </Badge>
+                            )}
+                            {bulletin.category_name && (
+                              <Badge variant="light" color="teal">
+                                {bulletin.category_name}
+                              </Badge>
+                            )}
+                          </Group>
+                          <Text fw={600} size="lg">
                             {bulletin.title}
                           </Text>
-                        </Group>
-                        <Group gap="xs">
-                          <Badge variant="light" color="blue">
-                            {getTypeLabel(bulletin.bulletin_type)}
-                          </Badge>
-                          {bulletin.category_name && (
-                            <Badge variant="light" color="teal">
-                              {bulletin.category_name}
-                            </Badge>
-                          )}
-                        </Group>
+                        </Stack>
+                        <Badge variant="light" color="blue">
+                          {getTypeLabel(bulletin.bulletin_type)}
+                        </Badge>
                       </Group>
 
                       <Text size="sm" lineClamp={2} c="dimmed">
@@ -265,9 +302,12 @@ export default function BulletinsPage() {
                       <Group justify="space-between">
                         <Group gap="xs">
                           {bulletin.author_name && (
-                            <Text size="xs" c="dimmed">
-                              發布者: {bulletin.author_name}
-                            </Text>
+                            <Group gap={4}>
+                              <IconCalendar size={14} />
+                              <Text size="xs" c="dimmed">
+                                {bulletin.author_name}
+                              </Text>
+                            </Group>
                           )}
                           {bulletin.published_at && (
                             <>
