@@ -5,6 +5,7 @@
 
 from flask import Blueprint, request, jsonify
 from src.models_v2 import db, Bulletin, BulletinCategory, BulletinComment, User
+from src.models_v2.content import ContentStatus, BulletinType
 from src.routes.auth_v2 import token_required, admin_required
 from datetime import datetime
 from sqlalchemy import or_
@@ -92,7 +93,17 @@ def get_bulletin(bulletin_id):
         return jsonify({'message': 'Bulletin not found'}), 404
 
     bulletin.increment_views()
-    return jsonify(bulletin.to_dict(include_author=True, include_comments=True)), 200
+    
+    # 獲取公告詳情，to_dict 方法已經包含作者資訊
+    bulletin_dict = bulletin.to_dict()
+    
+    # 如果需要包含留言，手動添加
+    if bulletin.allow_comments:
+        from src.models_v2.content import CommentStatus
+        comments = bulletin.comments.filter_by(status=CommentStatus.APPROVED).all()
+        bulletin_dict['comments'] = [comment.to_dict() for comment in comments]
+    
+    return jsonify(bulletin_dict), 200
 
 
 @bulletins_v2_bp.route('/api/v2/bulletins', methods=['POST'])
@@ -101,18 +112,32 @@ def create_bulletin(current_user):
     """建立公告"""
     try:
         data = request.get_json()
+        # 處理狀態值：前端可能傳入小寫，需要轉換為枚舉
+        status_str = data.get('status', 'published').upper()
+        try:
+            status = ContentStatus[status_str]
+        except KeyError:
+            status = ContentStatus.PUBLISHED  # 預設為已發布
+        
+        # 處理公告類型：前端可能傳入字串，需要轉換為枚舉
+        bulletin_type_str = data.get('bulletin_type', 'announcement').upper()
+        try:
+            bulletin_type = BulletinType[bulletin_type_str]
+        except KeyError:
+            bulletin_type = BulletinType.ANNOUNCEMENT  # 預設為一般公告
+        
         bulletin = Bulletin(
             author_id=current_user.id,
-            category_id=data['category_id'],
+            category_id=data.get('category_id'),
             title=data['title'],
             content=data['content'],
-            bulletin_type=data.get('bulletin_type', 'announcement'),
+            bulletin_type=bulletin_type,
             cover_image_url=data.get('cover_image_url'),
             is_pinned=data.get('is_pinned', False),
             is_featured=data.get('is_featured', False),
             allow_comments=data.get('allow_comments', True),
-            status='published',
-            published_at=datetime.utcnow()
+            status=status,
+            published_at=datetime.utcnow() if status == ContentStatus.PUBLISHED else None
         )
         db.session.add(bulletin)
         db.session.commit()
@@ -134,9 +159,42 @@ def update_bulletin(current_user, bulletin_id):
             return jsonify({'message': 'Permission denied'}), 403
 
         data = request.get_json()
-        for field in ['category_id', 'title', 'content', 'bulletin_type', 'cover_image_url', 'is_pinned', 'is_featured', 'allow_comments', 'status']:
-            if field in data:
-                setattr(bulletin, field, data[field])
+        
+        # 更新基本欄位
+        if 'category_id' in data:
+            bulletin.category_id = data['category_id']
+        if 'title' in data:
+            bulletin.title = data['title']
+        if 'content' in data:
+            bulletin.content = data['content']
+        if 'cover_image_url' in data:
+            bulletin.cover_image_url = data['cover_image_url']
+        if 'is_pinned' in data:
+            bulletin.is_pinned = data['is_pinned']
+        if 'is_featured' in data:
+            bulletin.is_featured = data['is_featured']
+        if 'allow_comments' in data:
+            bulletin.allow_comments = data['allow_comments']
+        
+        # 處理公告類型：前端可能傳入字串，需要轉換為枚舉
+        if 'bulletin_type' in data:
+            bulletin_type_str = str(data['bulletin_type']).upper()
+            try:
+                bulletin.bulletin_type = BulletinType[bulletin_type_str]
+            except KeyError:
+                bulletin.bulletin_type = BulletinType.ANNOUNCEMENT
+        
+        # 處理狀態值：前端可能傳入小寫，需要轉換為枚舉
+        if 'status' in data:
+            status_str = str(data['status']).upper()
+            try:
+                bulletin.status = ContentStatus[status_str]
+                # 如果狀態改為 PUBLISHED，設定發布時間
+                if bulletin.status == ContentStatus.PUBLISHED and not bulletin.published_at:
+                    bulletin.published_at = datetime.utcnow()
+            except KeyError:
+                # 如果狀態值無效，保持原狀態
+                pass
 
         db.session.commit()
         return jsonify({'message': 'Updated', 'bulletin': bulletin.to_dict()}), 200

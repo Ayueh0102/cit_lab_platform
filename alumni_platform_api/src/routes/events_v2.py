@@ -5,6 +5,7 @@
 
 from flask import Blueprint, request, jsonify
 from src.models_v2 import db, Event, EventCategory, EventRegistration, User, UserProfile
+from src.models_v2.events import EventStatus, EventType
 from src.routes.auth_v2 import token_required, admin_required
 from src.routes.notification_helper import (
     create_event_registration_notification,
@@ -81,7 +82,15 @@ def get_events():
     if category_id:
         query = query.filter_by(category_id=category_id)
     if status:
-        query = query.filter_by(status=status)
+        # 如果指定了狀態，則使用指定的狀態過濾
+        try:
+            status_enum = EventStatus[status.upper()]
+            query = query.filter_by(status=status_enum)
+        except (KeyError, AttributeError):
+            pass
+    else:
+        # 如果沒有指定狀態，只顯示已發布的活動（排除草稿和已取消）
+        query = query.filter(Event.status != EventStatus.DRAFT, Event.status != EventStatus.CANCELLED)
     if search:
         query = query.filter(
             or_(
@@ -124,7 +133,10 @@ def get_event(event_id):
     # 增加瀏覽次數
     event.increment_views()
 
-    return jsonify(event.to_dict(include_organizer=True)), 200
+    # 獲取活動詳情，to_dict 方法已經包含主辦者資訊
+    event_dict = event.to_dict()
+    
+    return jsonify(event_dict), 200
 
 
 @events_v2_bp.route('/api/v2/events', methods=['POST'])
@@ -134,29 +146,61 @@ def create_event(current_user):
     try:
         data = request.get_json()
 
-        required_fields = ['title', 'category_id', 'start_time', 'end_time']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'message': f'{field} is required'}), 400
+        # 驗證必填欄位
+        if not data.get('title'):
+            return jsonify({'message': 'title is required'}), 400
+        if not data.get('start_time'):
+            return jsonify({'message': 'start_time is required'}), 400
+        if not data.get('end_time'):
+            return jsonify({'message': 'end_time is required'}), 400
 
+        # 解析時間格式（支援 ISO 格式和自定義格式）
+        def parse_datetime(time_str):
+            if not time_str:
+                return None
+            try:
+                # 嘗試 ISO 格式
+                return datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+            except ValueError:
+                try:
+                    # 嘗試自定義格式
+                    return datetime.strptime(time_str, '%Y-%m-%d %H:%M')
+                except ValueError:
+                    # 嘗試其他常見格式
+                    return datetime.strptime(time_str, '%Y-%m-%dT%H:%M:%S')
+
+        # 處理 event_type 字符串轉換為枚舉
+        event_type_value = data.get('event_type', 'other')
+        try:
+            if isinstance(event_type_value, str):
+                event_type_enum = EventType[event_type_value.upper()]
+            else:
+                event_type_enum = event_type_value
+        except (KeyError, AttributeError):
+            event_type_enum = EventType.OTHER
+        
         event = Event(
             organizer_id=current_user.id,
-            category_id=data['category_id'],
+            category_id=data.get('category_id') if data.get('category_id') else None,
             title=data['title'],
             description=data.get('description'),
-            start_time=datetime.strptime(data['start_time'], '%Y-%m-%d %H:%M'),
-            end_time=datetime.strptime(data['end_time'], '%Y-%m-%d %H:%M'),
+            start_time=parse_datetime(data['start_time']),
+            end_time=parse_datetime(data['end_time']),
             location=data.get('location'),
-            location_url=data.get('location_url'),
+            location_detail=data.get('location_detail'),
+            online_url=data.get('online_url'),
+            is_online=data.get('is_online', False),
             cover_image_url=data.get('cover_image_url'),
             max_participants=data.get('max_participants'),
             is_free=data.get('is_free', True),
-            price=data.get('price'),
-            registration_deadline=datetime.strptime(data['registration_deadline'], '%Y-%m-%d') if data.get('registration_deadline') else None,
+            fee=data.get('fee') or data.get('price', 0),
+            fee_currency=data.get('fee_currency', 'TWD'),
+            event_type=event_type_enum,
+            registration_start=parse_datetime(data.get('registration_start')),
+            registration_end=parse_datetime(data.get('registration_end')) or parse_datetime(data.get('registration_deadline')),
             allow_waitlist=data.get('allow_waitlist', True),
-            contact_email=data.get('contact_email'),
-            contact_phone=data.get('contact_phone'),
-            status='published',
+            require_approval=data.get('require_approval', False),
+            status=EventStatus.UPCOMING,
             published_at=datetime.utcnow()
         )
 

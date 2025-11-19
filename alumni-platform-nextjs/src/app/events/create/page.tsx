@@ -16,13 +16,17 @@ import {
   NumberInput,
   Checkbox,
   Switch,
+  Paper,
 } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { IconX } from '@tabler/icons-react';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { FileUpload } from '@/components/ui/file-upload';
 import { api } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 
@@ -35,6 +39,7 @@ export default function CreateEventPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<EventCategory[]>([]);
   const [creating, setCreating] = useState(false);
+  const [coverImageUrl, setCoverImageUrl] = useState<string>('');
 
   const form = useForm({
     initialValues: {
@@ -55,9 +60,6 @@ export default function CreateEventPage() {
       require_approval: false,
       fee: 0,
       is_free: true,
-      contact_name: '',
-      contact_email: '',
-      contact_phone: '',
     },
     validate: {
       title: (value) => (value.trim().length > 0 ? null : '活動標題不能為空'),
@@ -130,9 +132,7 @@ export default function CreateEventPage() {
         fee: values.is_free ? 0 : values.fee,
         is_free: values.is_free,
         fee_currency: 'TWD',
-        contact_name: values.contact_name.trim() || undefined,
-        contact_email: values.contact_email.trim() || undefined,
-        contact_phone: values.contact_phone.trim() || undefined,
+        cover_image_url: coverImageUrl || undefined,
       };
 
       const result = await api.events.create(eventData, token);
@@ -206,6 +206,46 @@ export default function CreateEventPage() {
                           required
                           {...form.getInputProps('description')}
                         />
+                      </Grid.Col>
+                      <Grid.Col span={12}>
+                        <Paper shadow="xs" p="md" radius="md" withBorder>
+                          <Stack gap="md">
+                            <Title order={4}>封面圖片（選填）</Title>
+                            {coverImageUrl ? (
+                              <div style={{ position: 'relative', width: '100%', height: 200 }}>
+                                <img
+                                  src={coverImageUrl}
+                                  alt="活動封面"
+                                  style={{ 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    objectFit: 'cover', 
+                                    borderRadius: 'var(--mantine-radius-md)' 
+                                  }}
+                                />
+                                <Button
+                                  color="red"
+                                  variant="filled"
+                                  size="xs"
+                                  style={{ position: 'absolute', top: 8, right: 8 }}
+                                  onClick={() => setCoverImageUrl('')}
+                                >
+                                  <IconX size={16} />
+                                </Button>
+                              </div>
+                            ) : (
+                              <FileUpload
+                                label="上傳封面圖片"
+                                accept="image/*"
+                                onUploadComplete={(url) => setCoverImageUrl(url)}
+                                relatedType="event_cover"
+                              />
+                            )}
+                            <Text size="xs" c="dimmed">
+                              建議尺寸：1200x600px。如果不上傳封面圖片，活動將不顯示封面。
+                            </Text>
+                          </Stack>
+                        </Paper>
                       </Grid.Col>
                       <Grid.Col span={{ base: 12, md: 6 }}>
                         <Select
@@ -348,36 +388,6 @@ export default function CreateEventPage() {
                           />
                         </Grid.Col>
                       )}
-                    </Grid>
-                  </div>
-
-                  <div>
-                    <Title order={3} mb="md">
-                      聯絡資訊
-                    </Title>
-                    <Grid>
-                      <Grid.Col span={{ base: 12, md: 4 }}>
-                        <TextInput
-                          label="聯絡人姓名"
-                          placeholder="張三"
-                          {...form.getInputProps('contact_name')}
-                        />
-                      </Grid.Col>
-                      <Grid.Col span={{ base: 12, md: 4 }}>
-                        <TextInput
-                          label="聯絡 Email"
-                          placeholder="contact@example.com"
-                          type="email"
-                          {...form.getInputProps('contact_email')}
-                        />
-                      </Grid.Col>
-                      <Grid.Col span={{ base: 12, md: 4 }}>
-                        <TextInput
-                          label="聯絡電話"
-                          placeholder="0912345678"
-                          {...form.getInputProps('contact_phone')}
-                        />
-                      </Grid.Col>
                     </Grid>
                   </div>
 

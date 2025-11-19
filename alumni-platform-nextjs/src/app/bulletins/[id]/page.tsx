@@ -14,18 +14,25 @@ import {
   Loader,
   Center,
   Image,
+  Textarea,
+  Avatar,
+  ActionIcon,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useRouter, useParams } from 'next/navigation';
+import { useForm } from '@mantine/form';
 import {
   IconCalendar,
   IconEye,
   IconUser,
   IconPinned,
   IconStar,
+  IconMessage,
+  IconTrash,
+  IconSend,
 } from '@tabler/icons-react';
 import { api } from '@/lib/api';
-import { getToken } from '@/lib/auth';
+import { getToken, getUser } from '@/lib/auth';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
@@ -48,6 +55,18 @@ interface Bulletin {
   updated_at?: string;
   cover_image_url?: string;
   allow_comments?: boolean;
+  comments?: Comment[];
+}
+
+interface Comment {
+  id: number;
+  content: string;
+  user_id: number;
+  user_name?: string;
+  user_email?: string;
+  created_at: string;
+  updated_at?: string;
+  parent_id?: number;
 }
 
 const bulletinTypes: Record<string, string> = {
@@ -66,6 +85,16 @@ export default function BulletinDetailPage() {
 
   const [bulletin, setBulletin] = useState<Bulletin | null>(null);
   const [loading, setLoading] = useState(true);
+  const [submittingComment, setSubmittingComment] = useState(false);
+  
+  const commentForm = useForm({
+    initialValues: {
+      content: '',
+    },
+    validate: {
+      content: (value) => (value.trim().length > 0 ? null : '留言內容不能為空'),
+    },
+  });
 
   useEffect(() => {
     if (Number.isNaN(bulletinId)) {
@@ -82,7 +111,8 @@ export default function BulletinDetailPage() {
       setLoading(true);
       const token = getToken();
       const response = await api.bulletins.getById(bulletinId, token || undefined);
-      setBulletin(response.bulletin || response);
+      const bulletinData = response.bulletin || response;
+      setBulletin(bulletinData);
     } catch (error) {
       notifications.show({
         title: '載入失敗',
@@ -92,6 +122,82 @@ export default function BulletinDetailPage() {
       router.push('/bulletins');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitComment = async (values: { content: string }) => {
+    if (!bulletin || !bulletin.allow_comments) {
+      notifications.show({
+        title: '無法留言',
+        message: '此公告不允許留言',
+        color: 'orange',
+      });
+      return;
+    }
+
+    try {
+      setSubmittingComment(true);
+      const token = getToken();
+      if (!token) {
+        notifications.show({
+          title: '請先登入',
+          message: '您需要登入才能留言',
+          color: 'orange',
+        });
+        router.push('/auth/login');
+        return;
+      }
+
+      await api.bulletins.createComment(bulletinId, values.content, token);
+      
+      commentForm.reset();
+      notifications.show({
+        title: '留言成功',
+        message: '您的留言已提交，等待審核',
+        color: 'green',
+      });
+      
+      // 重新載入公告以獲取最新留言
+      await loadBulletinDetail();
+    } catch (error) {
+      notifications.show({
+        title: '留言失敗',
+        message: error instanceof Error ? error.message : '無法提交留言',
+        color: 'red',
+      });
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    try {
+      const token = getToken();
+      if (!token) {
+        notifications.show({
+          title: '請先登入',
+          message: '您需要登入才能刪除留言',
+          color: 'orange',
+        });
+        return;
+      }
+
+      await api.bulletins.deleteComment(commentId, token);
+      
+      notifications.show({
+        title: '刪除成功',
+        message: '留言已刪除',
+        color: 'green',
+      });
+      
+      // 重新載入公告
+      await loadBulletinDetail();
+    } catch (error) {
+      notifications.show({
+        title: '刪除失敗',
+        message: error instanceof Error ? error.message : '無法刪除留言',
+        color: 'red',
+      });
     }
   };
 
@@ -218,6 +324,101 @@ export default function BulletinDetailPage() {
                 </Group>
               </Stack>
             </Card>
+
+            {/* 留言區 */}
+            {bulletin.allow_comments && (
+              <Card shadow="sm" padding="xl" radius="md" withBorder>
+                <Stack gap="lg">
+                  <Group gap={8}>
+                    <IconMessage size={20} />
+                    <Title order={3}>留言 ({bulletin.comments_count || 0})</Title>
+                  </Group>
+
+                  {/* 留言表單 */}
+                  <form onSubmit={commentForm.onSubmit(handleSubmitComment)}>
+                    <Stack gap="md">
+                      <Textarea
+                        placeholder="寫下您的留言..."
+                        minRows={3}
+                        maxRows={6}
+                        {...commentForm.getInputProps('content')}
+                      />
+                      <Group justify="flex-end">
+                        <Button
+                          type="submit"
+                          leftSection={<IconSend size={16} />}
+                          loading={submittingComment}
+                        >
+                          發布留言
+                        </Button>
+                      </Group>
+                    </Stack>
+                  </form>
+
+                  <Divider />
+
+                  {/* 留言列表 */}
+                  {bulletin.comments && bulletin.comments.length > 0 ? (
+                    <Stack gap="md">
+                      {bulletin.comments.map((comment) => {
+                        const currentUser = getUser();
+                        const canDelete = currentUser && (
+                          currentUser.id === comment.user_id || currentUser.role === 'admin'
+                        );
+                        const userInitials = (comment.user_name || comment.user_email || 'U')
+                          .charAt(0)
+                          .toUpperCase();
+
+                        return (
+                          <Card key={comment.id} padding="md" withBorder radius="md">
+                            <Group align="flex-start" gap="md">
+                              <Avatar size={40} radius="md" color="blue">
+                                {userInitials}
+                              </Avatar>
+                              <Stack gap={4} style={{ flex: 1 }}>
+                                <Group justify="space-between" align="center">
+                                  <Group gap={4}>
+                                    <Text fw={500} size="sm">
+                                      {comment.user_name || comment.user_email || '匿名用戶'}
+                                    </Text>
+                                    <Text size="xs" c="dimmed">
+                                      {new Date(comment.created_at).toLocaleString('zh-TW')}
+                                    </Text>
+                                  </Group>
+                                  {canDelete && (
+                                    <ActionIcon
+                                      variant="subtle"
+                                      color="red"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (confirm('確定要刪除此留言嗎？')) {
+                                          handleDeleteComment(comment.id);
+                                        }
+                                      }}
+                                    >
+                                      <IconTrash size={16} />
+                                    </ActionIcon>
+                                  )}
+                                </Group>
+                                <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
+                                  {comment.content}
+                                </Text>
+                              </Stack>
+                            </Group>
+                          </Card>
+                        );
+                      })}
+                    </Stack>
+                  ) : (
+                    <Center py="xl">
+                      <Text c="dimmed" size="sm">
+                        尚無留言，成為第一個留言的人吧！
+                      </Text>
+                    </Center>
+                  )}
+                </Stack>
+              </Card>
+            )}
           </Stack>
         </Container>
       </SidebarLayout>

@@ -141,14 +141,36 @@ def create_job(current_user):
     try:
         data = request.get_json()
 
-        required_fields = ['title', 'company', 'category_id']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'message': f'{field} is required'}), 400
+        # 驗證必填欄位
+        if not data.get('title'):
+            return jsonify({'message': 'title is required'}), 400
+        if not data.get('company'):
+            return jsonify({'message': 'company is required'}), 400
+        
+        # 處理分類：支援 category_name 或 category_id
+        category_id = None
+        if data.get('category_id'):
+            category_id = int(data['category_id'])
+        elif data.get('category_name'):
+            # 如果提供 category_name，查找或創建分類
+            category_name = data['category_name'].strip()
+            if category_name:
+                category = JobCategory.query.filter_by(name=category_name).first()
+                if not category:
+                    # 創建新分類
+                    category = JobCategory(
+                        name=category_name,
+                        is_active=True
+                    )
+                    db.session.add(category)
+                    db.session.flush()  # 獲取 ID 但不提交
+                category_id = category.id
+        else:
+            return jsonify({'message': 'category_id or category_name is required'}), 400
 
         job = Job(
             user_id=current_user.id,
-            category_id=data['category_id'],
+            category_id=category_id,
             title=data['title'],
             company=data['company'],
             company_website=data.get('company_website'),
@@ -165,7 +187,8 @@ def create_job(current_user):
             salary_negotiable=data.get('salary_negotiable', False),
             experience_years_min=int(data.get('experience_required', '').split('年')[0]) if data.get('experience_required') and '年' in str(data.get('experience_required')) else None,
             education_level=data.get('education_required') or data.get('education_level'),
-            application_email=data.get('contact_email') or data.get('application_email'),
+            # 聯絡方式：優先使用使用者資料，如果沒有則使用提供的聯絡方式
+            application_email=data.get('contact_email') or data.get('application_email') or current_user.email,
             application_url=data.get('application_url'),
             expires_at=datetime.strptime(data['deadline'], '%Y-%m-%d') if data.get('deadline') else None,
             status=JobStatus.ACTIVE,

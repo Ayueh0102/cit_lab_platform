@@ -6,6 +6,7 @@
 from flask import Blueprint, request, jsonify
 from src.models_v2 import db, Article, User
 from src.models_v2.content import ContentStatus, ArticleCategory
+from src.models_v2.article_comment import ArticleComment, CommentStatus
 from src.routes.auth_v2 import token_required, admin_required
 from datetime import datetime
 from sqlalchemy import or_
@@ -31,8 +32,13 @@ def get_articles(current_user):
             # 管理員可以查看所有文章
             query = Article.query
         else:
-            # 一般用戶只能查看已發布的文章
-            query = Article.query.filter(Article.status == ContentStatus.PUBLISHED)
+            # 一般用戶可以查看已發布的文章，以及自己創建的所有文章（包括草稿和待審核）
+            query = Article.query.filter(
+                or_(
+                    Article.status == ContentStatus.PUBLISHED,
+                    Article.author_id == current_user.id
+                )
+            )
         
         # 分類篩選
         category_id = request.args.get('category_id', type=int)
@@ -101,9 +107,8 @@ def get_article(current_user, article_id):
 
 @cms_v2_bp.route('/api/v2/cms/articles', methods=['POST'])
 @token_required
-@admin_required
 def create_article(current_user):
-    """建立新文章（僅管理員）"""
+    """建立新文章（所有使用者都可以創建，但需要審核）"""
     try:
         data = request.get_json()
         
@@ -113,6 +118,18 @@ def create_article(current_user):
         if not data.get('content'):
             return jsonify({'message': 'Content is required'}), 400
         
+        # 處理狀態：一般使用者只能創建 DRAFT 或 PENDING，管理員可以創建 PUBLISHED
+        status_str = data.get('status', 'pending').upper()
+        try:
+            status = ContentStatus[status_str]
+        except KeyError:
+            status = ContentStatus.PENDING
+        
+        # 非管理員使用者只能創建 DRAFT 或 PENDING 狀態
+        if current_user.role != 'admin':
+            if status == ContentStatus.PUBLISHED:
+                status = ContentStatus.PENDING  # 強制改為待審核
+        
         # 建立文章
         article = Article(
             author_id=current_user.id,
@@ -121,7 +138,7 @@ def create_article(current_user):
             subtitle=data.get('subtitle'),
             content=data['content'],
             summary=data.get('summary'),
-            status=ContentStatus[data.get('status', 'draft').upper()],
+            status=status,
             cover_image_url=data.get('cover_image_url'),
             tags=data.get('tags'),
         )
@@ -145,14 +162,17 @@ def create_article(current_user):
 
 @cms_v2_bp.route('/api/v2/cms/articles/<int:article_id>', methods=['PUT'])
 @token_required
-@admin_required
 def update_article(current_user, article_id):
-    """更新文章（僅管理員）"""
+    """更新文章（作者可以編輯自己的文章，管理員可以編輯所有文章）"""
     try:
         article = Article.query.get(article_id)
         
         if not article:
             return jsonify({'message': 'Article not found'}), 404
+        
+        # 檢查權限：只有作者或管理員可以編輯
+        if article.author_id != current_user.id and current_user.role != 'admin':
+            return jsonify({'message': 'Permission denied'}), 403
         
         data = request.get_json()
         
@@ -169,8 +189,18 @@ def update_article(current_user, article_id):
             article.category_id = data.get('category_id')
         if 'status' in data:
             old_status = article.status
-            article.status = ContentStatus[data['status'].upper()]
-            # 如果從草稿變為已發布，設置發布時間
+            status_str = data['status'].upper()
+            try:
+                new_status = ContentStatus[status_str]
+            except KeyError:
+                new_status = ContentStatus.PENDING
+            
+            # 非管理員使用者不能直接發布，只能改為待審核
+            if current_user.role != 'admin' and new_status == ContentStatus.PUBLISHED:
+                new_status = ContentStatus.PENDING
+            
+            article.status = new_status
+            # 如果從其他狀態變為已發布，設置發布時間
             if old_status != ContentStatus.PUBLISHED and article.status == ContentStatus.PUBLISHED:
                 article.published_at = datetime.utcnow()
         if 'cover_image_url' in data:
@@ -411,4 +441,147 @@ def delete_article_category(current_user, category_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Failed to delete category: {str(e)}'}), 500
+
+
+# ========================================
+# 文章評論管理
+# ========================================
+@cms_v2_bp.route('/api/v2/cms/articles/<int:article_id>/comments', methods=['GET'])
+def get_article_comments(article_id):
+    """取得文章評論（公開，僅顯示已審核的評論）"""
+    try:
+        article = Article.query.get(article_id)
+        if not article:
+            return jsonify({'message': 'Article not found'}), 404
+
+        # 只顯示已審核的評論
+        comments = ArticleComment.query.filter_by(
+            article_id=article_id,
+            status=CommentStatus.APPROVED
+        ).order_by(ArticleComment.created_at.desc()).all()
+
+        return jsonify({
+            'comments': [comment.to_dict() for comment in comments]
+        }), 200
+
+    except Exception as e:
+        return jsonify({'message': f'Failed to get comments: {str(e)}'}), 500
+
+
+@cms_v2_bp.route('/api/v2/cms/articles/<int:article_id>/comments', methods=['POST'])
+@token_required
+def create_article_comment(current_user, article_id):
+    """建立文章評論"""
+    try:
+        article = Article.query.get(article_id)
+        if not article:
+            return jsonify({'message': 'Article not found'}), 404
+
+        data = request.get_json()
+        
+        if not data.get('content'):
+            return jsonify({'message': 'Comment content is required'}), 400
+
+        # 建立評論（預設為待審核狀態）
+        comment = ArticleComment(
+            article_id=article_id,
+            user_id=current_user.id,
+            parent_id=data.get('parent_id'),
+            content=data['content'],
+            status=CommentStatus.PENDING  # 預設待審核
+        )
+
+        db.session.add(comment)
+        
+        # 更新文章評論數
+        article.comments_count = (article.comments_count or 0) + 1
+        
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Comment created successfully (pending approval)',
+            'comment': comment.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Failed to create comment: {str(e)}'}), 500
+
+
+@cms_v2_bp.route('/api/v2/cms/comments/<int:comment_id>', methods=['DELETE'])
+@token_required
+def delete_article_comment(current_user, comment_id):
+    """刪除評論（作者或管理員）"""
+    try:
+        comment = ArticleComment.query.get(comment_id)
+        
+        if not comment:
+            return jsonify({'message': 'Comment not found'}), 404
+
+        # 檢查權限：只有評論作者或管理員可以刪除
+        if comment.user_id != current_user.id and current_user.role != 'admin':
+            return jsonify({'message': 'Permission denied'}), 403
+
+        article = comment.article
+        db.session.delete(comment)
+        
+        # 更新文章評論數
+        if article:
+            article.comments_count = max(0, (article.comments_count or 0) - 1)
+        
+        db.session.commit()
+
+        return jsonify({'message': 'Comment deleted successfully'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Failed to delete comment: {str(e)}'}), 500
+
+
+@cms_v2_bp.route('/api/v2/cms/comments/<int:comment_id>/approve', methods=['PUT'])
+@token_required
+@admin_required
+def approve_comment(current_user, comment_id):
+    """審核通過評論（僅管理員）"""
+    try:
+        comment = ArticleComment.query.get(comment_id)
+        
+        if not comment:
+            return jsonify({'message': 'Comment not found'}), 404
+
+        comment.status = CommentStatus.APPROVED
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Comment approved successfully',
+            'comment': comment.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Failed to approve comment: {str(e)}'}), 500
+
+
+@cms_v2_bp.route('/api/v2/cms/comments/<int:comment_id>/reject', methods=['PUT'])
+@token_required
+@admin_required
+def reject_comment(current_user, comment_id):
+    """拒絕評論（僅管理員）"""
+    try:
+        comment = ArticleComment.query.get(comment_id)
+        
+        if not comment:
+            return jsonify({'message': 'Comment not found'}), 404
+
+        comment.status = CommentStatus.REJECTED
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Comment rejected successfully',
+            'comment': comment.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Failed to reject comment: {str(e)}'}), 500
 

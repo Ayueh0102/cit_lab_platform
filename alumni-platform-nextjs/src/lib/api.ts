@@ -121,15 +121,36 @@ async function fetchAPI(endpoint: string, options: FetchOptions = {}) {
     return data;
   } catch (error) {
     // 處理網路錯誤
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new Error('無法連接到伺服器，請檢查網路連線或伺服器狀態');
+    if (error instanceof TypeError) {
+      const errorMsg = error.message?.toLowerCase() || '';
+      if (errorMsg.includes('fetch') || errorMsg.includes('network') || errorMsg.includes('failed') || errorMsg.includes('cors')) {
+        const errorInfo = {
+          url: `${API_BASE_URL}${endpoint}`,
+          error: error.message || 'Unknown error',
+          endpoint,
+          type: error.name || 'TypeError',
+          stack: error.stack,
+        };
+        console.error('API 連接錯誤:', JSON.stringify(errorInfo, null, 2));
+        throw new Error(`無法連接到伺服器 (${API_BASE_URL})，請檢查網路連線或伺服器狀態`);
+      }
     }
     // 如果已經是 Error 對象，直接拋出
     if (error instanceof Error) {
+      // 記錄詳細錯誤信息
+      console.error('API 請求錯誤:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        endpoint,
+        url: `${API_BASE_URL}${endpoint}`,
+      });
       throw error;
     }
     // 其他情況轉換為 Error
-    throw new Error(String(error));
+    const errorMessage = String(error);
+    console.error('未知錯誤類型:', error);
+    throw new Error(errorMessage || '未知錯誤');
   }
 }
 
@@ -341,6 +362,19 @@ export const api = {
     
     getById: (id: number, token?: string) =>
       fetchAPI(`/api/v2/bulletins/${id}`, { token }),
+    
+    createComment: (bulletinId: number, content: string, token: string) =>
+      fetchAPI(`/api/v2/bulletins/${bulletinId}/comments`, {
+        method: 'POST',
+        body: { content },
+        token,
+      }),
+    
+    deleteComment: (commentId: number, token: string) =>
+      fetchAPI(`/api/v2/comments/${commentId}`, {
+        method: 'DELETE',
+        token,
+      }),
     
     create: (data: BulletinData, token: string) =>
       fetchAPI('/api/v2/bulletins', {
@@ -775,7 +809,7 @@ export const api = {
       content: string;
       summary?: string;
       category_id?: number;
-      status?: 'published' | 'draft' | 'archived';
+      status?: 'published' | 'draft' | 'pending' | 'archived';
       cover_image_url?: string;
       tags?: string;
     }, token: string) =>
@@ -791,7 +825,7 @@ export const api = {
       content?: string;
       summary?: string;
       category_id?: number;
-      status?: 'published' | 'draft' | 'archived';
+      status?: 'published' | 'draft' | 'pending' | 'archived';
       cover_image_url?: string;
       tags?: string;
     }, token: string) =>

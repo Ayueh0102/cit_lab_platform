@@ -47,7 +47,9 @@ from src.config.database import get_database_config
 # Import WebSocket
 from src.routes.websocket import socketio
 
-app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
+# 設置 static_folder 為 src/static 目錄
+static_folder_path = os.path.join(os.path.dirname(__file__), 'static')
+app = Flask(__name__, static_folder=static_folder_path)
 
 # 安全性配置 - 從環境變數載入 SECRET_KEY
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-please-change-in-production')

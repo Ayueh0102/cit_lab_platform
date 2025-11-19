@@ -89,6 +89,10 @@ export default function AdminPage() {
     pending_jobs: 0,
   });
   const [users, setUsers] = useState<User[]>([]);
+  const [editUserModalOpened, setEditUserModalOpened] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editUserRole, setEditUserRole] = useState<string>('');
+  const [editUserStatus, setEditUserStatus] = useState<string>('');
   const [exportOpened, { open: openExport, close: closeExport }] = useDisclosure(false);
   const [importOpened, { open: openImport, close: closeImport }] = useDisclosure(false);
   const [importType, setImportType] = useState<string>('users');
@@ -341,6 +345,107 @@ export default function AdminPage() {
     }
   };
 
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setEditUserRole(user.role);
+    setEditUserStatus(user.is_active ? 'active' : 'inactive');
+    setEditUserModalOpened(true);
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+
+    const currentUser = getUser();
+    
+    // 檢查是否在修改自己的權限
+    if (editingUser.id === currentUser?.id) {
+      // 如果將自己從管理員改為普通用戶，需要確認
+      if (currentUser.role === 'admin' && editUserRole === 'user') {
+        if (!confirm('警告：您即將移除自己的管理員權限，這將導致您無法再訪問管理後台。確定要繼續嗎？')) {
+          return;
+        }
+      }
+      
+      // 如果將自己設為停用，需要確認
+      if (editUserStatus === 'inactive' || editUserStatus === 'suspended') {
+        if (!confirm('警告：您即將停用自己的帳號，這將導致您無法登入。確定要繼續嗎？')) {
+          return;
+        }
+      }
+    }
+
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      await api.admin.updateUser(editingUser.id, {
+        role: editUserRole,
+        status: editUserStatus,
+      }, token);
+
+      notifications.show({
+        title: '更新成功',
+        message: '用戶權限已成功更新',
+        color: 'green',
+      });
+
+      // 如果修改的是自己的權限，需要重新登入
+      if (editingUser.id === currentUser?.id) {
+        if (editUserRole === 'user' || editUserStatus !== 'active') {
+          notifications.show({
+            title: '權限已變更',
+            message: '您的權限已變更，請重新登入',
+            color: 'orange',
+          });
+          setTimeout(() => {
+            router.push('/auth/login');
+          }, 2000);
+          return;
+        }
+      }
+
+      // 重新載入用戶列表
+      const usersData = await api.admin.getUsers(token, { page: 1, per_page: 50 });
+      setUsers(usersData.users.map((u: any) => ({
+        id: u.id,
+        email: u.email,
+        full_name: u.full_name || u.display_name || u.email.split('@')[0],
+        role: u.role,
+        is_active: u.is_active,
+        created_at: u.created_at,
+      })));
+
+      // 重新載入統計數據
+      const statsData = await api.admin.getStatistics(token);
+      const stats_info = statsData.statistics;
+      setStats({
+        total_users: stats_info.users.total,
+        total_jobs: stats_info.jobs.total,
+        total_events: stats_info.events.total,
+        total_bulletins: stats_info.bulletins.total,
+        active_users: stats_info.users.active,
+        pending_jobs: stats_info.jobs.pending,
+        active_users_30d: stats_info.users.active_30d,
+        active_jobs: stats_info.jobs.active,
+        upcoming_events: stats_info.events.upcoming,
+        published_bulletins: stats_info.bulletins.published,
+        jobs_this_month: stats_info.jobs.new_this_month,
+        events_this_month: stats_info.events.new_this_month,
+        bulletins_this_month: stats_info.bulletins.new_this_month,
+        bulletins_this_week: stats_info.bulletins.new_this_week,
+      });
+
+      setEditUserModalOpened(false);
+      setEditingUser(null);
+    } catch (error) {
+      notifications.show({
+        title: '更新失敗',
+        message: error instanceof Error ? error.message : '無法更新用戶權限',
+        color: 'red',
+      });
+    }
+  };
+
   const handleDeleteUser = async (userId: number) => {
     if (!confirm('確定要刪除此用戶嗎？')) {
       return;
@@ -352,6 +457,26 @@ export default function AdminPage() {
 
       await api.admin.deleteUser(userId, token);
       setUsers(users.filter((u) => u.id !== userId));
+      
+      // 重新載入統計數據
+      const statsData = await api.admin.getStatistics(token);
+      const stats_info = statsData.statistics;
+      setStats({
+        total_users: stats_info.users.total,
+        total_jobs: stats_info.jobs.total,
+        total_events: stats_info.events.total,
+        total_bulletins: stats_info.bulletins.total,
+        active_users: stats_info.users.active,
+        pending_jobs: stats_info.jobs.pending,
+        active_users_30d: stats_info.users.active_30d,
+        active_jobs: stats_info.jobs.active,
+        upcoming_events: stats_info.events.upcoming,
+        published_bulletins: stats_info.bulletins.published,
+        jobs_this_month: stats_info.jobs.new_this_month,
+        events_this_month: stats_info.events.new_this_month,
+        bulletins_this_month: stats_info.bulletins.new_this_month,
+        bulletins_this_week: stats_info.bulletins.new_this_week,
+      });
       
       notifications.show({
         title: '刪除成功',
@@ -823,7 +948,12 @@ export default function AdminPage() {
                           </Table.Td>
                           <Table.Td>
                             <Group gap="xs">
-                              <ActionIcon variant="light" color="blue">
+                              <ActionIcon 
+                                variant="light" 
+                                color="blue"
+                                onClick={() => handleEditUser(user)}
+                                title="編輯權限"
+                              >
                                 <IconEdit size={16} />
                               </ActionIcon>
                               <ActionIcon
@@ -1344,6 +1474,62 @@ export default function AdminPage() {
               </Button>
             </Group>
           </Stack>
+        </Modal>
+
+        {/* 編輯用戶權限 Modal */}
+        <Modal
+          opened={editUserModalOpened}
+          onClose={() => {
+            setEditUserModalOpened(false);
+            setEditingUser(null);
+          }}
+          title="編輯用戶權限"
+          centered
+        >
+          {editingUser && (
+            <Stack gap="md">
+              <div>
+                <Text size="sm" c="dimmed">用戶</Text>
+                <Text fw={500}>{editingUser.full_name} ({editingUser.email})</Text>
+              </div>
+
+              <Select
+                label="角色"
+                data={[
+                  { value: 'user', label: '系友' },
+                  { value: 'admin', label: '管理員' },
+                ]}
+                value={editUserRole}
+                onChange={(value) => value && setEditUserRole(value)}
+              />
+
+              <Select
+                label="狀態"
+                data={[
+                  { value: 'active', label: '活躍' },
+                  { value: 'inactive', label: '停用' },
+                  { value: 'suspended', label: '暫停' },
+                ]}
+                value={editUserStatus}
+                onChange={(value) => value && setEditUserStatus(value)}
+              />
+
+              <Group justify="flex-end" mt="md">
+                <Button
+                  variant="subtle"
+                  onClick={() => {
+                    setEditUserModalOpened(false);
+                    setEditingUser(null);
+                  }}
+                >
+                  取消
+                </Button>
+                <Button onClick={handleUpdateUser}>
+                  儲存
+                </Button>
+              </Group>
+            </Stack>
+          )}
         </Modal>
       </SidebarLayout>
     </ProtectedRoute>

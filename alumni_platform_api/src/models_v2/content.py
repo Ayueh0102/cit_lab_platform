@@ -17,6 +17,7 @@ class ContentStatus(enum.Enum):
     """內容狀態"""
     PUBLISHED = "published"    # 已發布
     DRAFT = "draft"            # 草稿
+    PENDING = "pending"        # 待審核
     ARCHIVED = "archived"      # 已封存
     SCHEDULED = "scheduled"    # 排程發布
 
@@ -502,6 +503,7 @@ class Article(BaseModel):
     # 統計資訊
     views_count = Column(Integer, default=0, comment='瀏覽次數')
     likes_count = Column(Integer, default=0, comment='按讚數')
+    comments_count = Column(Integer, default=0, comment='評論數')
 
     # 發布時間
     published_at = Column(DateTime, comment='發布時間')
@@ -540,6 +542,7 @@ class Article(BaseModel):
             'tags': self.tags,
             'views_count': self.views_count,
             'likes_count': self.likes_count,
+            'comments_count': getattr(self, 'comments_count', 0) or 0,
             'published_at': self.published_at.isoformat() if self.published_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None

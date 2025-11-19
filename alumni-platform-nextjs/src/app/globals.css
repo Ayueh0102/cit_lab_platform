@@ -273,3 +273,68 @@ body {
     display: none;
   }
 }
+
+/* 移動端優化 */
+@media (max-width: 768px) {
+  /* 改善觸控目標大小 */
+  button,
+  a,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* 優化文字大小 */
+  body {
+    font-size: 16px; /* 防止 iOS 自動縮放 */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* 改善滾動體驗 */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 優化卡片間距 */
+  .mantine-Card-root {
+    margin-bottom: 1rem;
+  }
+
+  /* 優化輸入框 */
+  input,
+  textarea,
+  select {
+    font-size: 16px; /* 防止 iOS 自動縮放 */
+  }
+}
+
+/* 平板優化 */
+@media (max-width: 1024px) and (min-width: 769px) {
+  /* 適中的間距 */
+  .mantine-Container-root {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* 改善移動端按鈕點擊反饋 */
+@media (max-width: 768px) {
+  button:active,
+  [role="button"]:active,
+  .mantine-UnstyledButton-root:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* 優化移動端表格 */
+@media (max-width: 768px) {
+  table {
+    font-size: 0.875rem;
+  }
+
+  th,
+  td {
+    padding: 0.5rem;
+  }
+}

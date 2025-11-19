@@ -55,7 +55,9 @@ def create_work_experience(current_user):
             end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None,
             is_current=data.get('is_current', False),
             description=data.get('description'),
-            achievements=data.get('achievements')
+            achievements=data.get('achievements'),
+            annual_salary_min=data.get('annual_salary_min'),
+            annual_salary_max=data.get('annual_salary_max')
         )
 
         db.session.add(experience)
@@ -108,6 +110,10 @@ def update_work_experience(current_user, exp_id):
             experience.description = data['description']
         if 'achievements' in data:
             experience.achievements = data['achievements']
+        if 'annual_salary_min' in data:
+            experience.annual_salary_min = data['annual_salary_min']
+        if 'annual_salary_max' in data:
+            experience.annual_salary_max = data['annual_salary_max']
 
         db.session.commit()
 
@@ -193,9 +199,10 @@ def create_education(current_user):
             start_year=start_year,
             end_year=end_year,
             is_current=data.get('is_current', False),
-            gpa=str(data['gpa']) if data.get('gpa') else None,
             honors=data.get('honors'),
-            thesis_title=data.get('description')  # 使用 description 作為 thesis_title
+            thesis_title=data.get('description'),  # 使用 description 作為 thesis_title
+            advisor_1=data.get('advisor_1'),
+            advisor_2=data.get('advisor_2')
         )
 
         db.session.add(education)
@@ -241,8 +248,10 @@ def update_education(current_user, edu_id):
             education.end_year = end_date_obj.year
         elif 'end_year' in data:
             education.end_year = data['end_year']
-        if 'gpa' in data:
-            education.gpa = str(data['gpa']) if data['gpa'] else None
+        if 'advisor_1' in data:
+            education.advisor_1 = data['advisor_1']
+        if 'advisor_2' in data:
+            education.advisor_2 = data['advisor_2']
         if 'honors' in data:
             education.honors = data['honors']
         if 'description' in data:

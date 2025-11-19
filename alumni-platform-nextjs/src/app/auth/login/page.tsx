@@ -133,10 +133,10 @@ export default function LoginPage() {
                 mb="xs"
                 className={classes.loginTitle}
               >
-                系友會平台
+                色彩所系友會
               </Title>
               <Text c="dimmed" size="sm" ta="center" mb="xl">
-                色彩與照明科技研究所
+                色彩與照明科技研究所 CIT
               </Text>
 
               <form onSubmit={form.onSubmit(handleSubmit)}>

@@ -36,6 +36,8 @@ interface Event {
   id: number;
   title: string;
   description?: string;
+  cover_image_url?: string;
+  image_url?: string;
   start_time?: string;
   end_time?: string;
   location?: string;
@@ -135,7 +137,7 @@ export default function EventsPage() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
-  const [filterTime, setFilterTime] = useState<string | null>('upcoming');
+  const [filterTime, setFilterTime] = useState<string | null>(null);
   const [filterLocation, setFilterLocation] = useState('');
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -364,23 +366,33 @@ export default function EventsPage() {
                           onClick={() => router.push(`/events/${event.id}`)}
                         >
                           <Stack gap="md">
-                            {/* 活動圖片 */}
-                            {event.image_url && (
+                            {/* 活動封面圖片 */}
+                            {(event.cover_image_url || event.image_url) && (
                               <div style={{
                                 position: 'relative',
                                 width: '100%',
                                 height: '200px',
-                                borderRadius: '15px',
-                                marginBottom: '1rem',
-                                overflow: 'hidden'
+                                borderRadius: 'var(--mantine-radius-md)',
+                                marginBottom: '0.5rem',
+                                overflow: 'hidden',
                               }}>
                                 <Image
-                                  src={event.image_url}
+                                  src={event.cover_image_url || event.image_url || ''}
                                   alt={event.title}
                                   fill
                                   style={{ objectFit: 'cover' }}
-                                  unoptimized={event.image_url.startsWith('http://localhost')}
+                                  unoptimized={(event.cover_image_url || event.image_url || '').startsWith('http://localhost')}
                                 />
+                                {/* 漸層遮罩 */}
+                                <div style={{
+                                  position: 'absolute',
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  height: '60%',
+                                  background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)',
+                                  pointerEvents: 'none',
+                                }} />
                               </div>
                             )}
 

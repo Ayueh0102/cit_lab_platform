@@ -61,7 +61,9 @@ export default function ArticleDetailPage() {
   const isAdmin = currentUser?.role === 'admin';
 
   const [article, setArticle] = useState<Article | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [commentContent, setCommentContent] = useState('');
   const [liking, setLiking] = useState(false);
 
   useEffect(() => {
@@ -73,7 +75,7 @@ export default function ArticleDetailPage() {
       setLoading(true);
       const token = getToken();
 
-      const articleData = await api.cms.getArticle(articleId, token);
+      const articleData = await api.cms.getArticle(articleId, token || undefined);
       setArticle(articleData);
     } catch (error) {
       notifications.show({

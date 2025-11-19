@@ -94,17 +94,95 @@
   border-radius: 15px;
 }
 
-@media (max-width: 768px) {
+/* 平板優化 */
+@media (max-width: 1024px) and (min-width: 769px) {
   .loginContainer {
-    padding: 1rem;
+    padding: 1.5rem;
   }
 
   .loginCard {
-    padding: 2rem !important;
+    padding: 2.5rem !important;
+    max-width: 90%;
   }
 
   .loginTitle {
-    font-size: 2rem;
+    font-size: 2.2rem;
+  }
+}
+
+/* 手機優化 */
+@media (max-width: 768px) {
+  .loginContainer {
+    padding: 0.75rem;
+    min-height: 100vh;
+    min-height: 100dvh; /* 支援動態視窗高度 */
+  }
+
+  .loginBackground {
+    /* 移動端減少背景模糊以提高性能 */
+    backdrop-filter: blur(2px);
+  }
+
+  .loginSlide {
+    /* 移動端減少縮放動畫 */
+    transform: scale(1.05);
+  }
+
+  .loginContent {
+    width: 100%;
+    padding: 0;
+  }
+
+  .loginCard {
+    padding: 1.5rem !important;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  }
+
+  .loginTitle {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .input {
+    border-radius: 12px;
+    font-size: 16px; /* 防止 iOS 自動縮放 */
+  }
+
+  .loginBtn {
+    border-radius: 15px;
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+
+  .loginHelp {
+    padding: 0.75rem;
+    font-size: 0.7rem;
+    margin-top: 1rem;
+  }
+}
+
+/* 小手機優化 */
+@media (max-width: 480px) {
+  .loginContainer {
+    padding: 0.5rem;
+  }
+
+  .loginCard {
+    padding: 1.25rem !important;
+    border-radius: 16px;
+  }
+
+  .loginTitle {
+    font-size: 1.5rem;
+  }
+
+  .loginHelp {
+    padding: 0.5rem;
+    font-size: 0.65rem;
   }
 }
 

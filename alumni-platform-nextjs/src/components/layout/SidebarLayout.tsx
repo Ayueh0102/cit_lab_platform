@@ -14,7 +14,12 @@ import {
   Box,
   Loader,
   Center,
+  Drawer,
+  Burger,
+  Header,
+  ActionIcon,
 } from '@mantine/core';
+import { useDisclosure, useMediaQuery } from '@mantine/hooks';
 import {
   IconHome,
   IconBriefcase,
@@ -28,6 +33,7 @@ import {
   IconChevronDown,
   IconUserCircle,
   IconFileText,
+  IconMenu2,
 } from '@tabler/icons-react';
 import { getUser, clearAuth, isAuthenticated, getToken } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -47,6 +53,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] = useDisclosure(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isTablet = useMediaQuery('(max-width: 1024px)');
   const userName = user?.profile?.display_name || user?.profile?.full_name || user?.email || 'User';
 
   useEffect(() => {
@@ -69,7 +78,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // 使用 WebSocket 即時更新通知數量
+  // 使用 WebSocket 即時更新通知數量（連接失敗不影響功能）
   useWebSocket({
     onNotificationCountUpdate: (count) => {
       setUnreadCount(count);
@@ -86,6 +95,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     router.refresh();
   };
 
+  const handleNavClick = (path: string) => {
+    router.push(path);
+    if (isMobile || isTablet) {
+      closeDrawer();
+    }
+  };
+
   const navItems: NavItem[] = [
     { icon: <IconHome size={20} />, label: '首頁', path: '/' },
     { icon: <IconBriefcase size={20} />, label: '職缺分享', path: '/jobs' },
@@ -96,7 +112,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     { icon: <IconUserCircle size={20} />, label: '職涯管理', path: '/career' },
     { icon: <IconBell size={20} />, label: '通知', path: '/notifications', badge: unreadCount },
     { icon: <IconSettings size={20} />, label: '管理後台', path: '/admin', adminOnly: true },
-    { icon: <IconFileText size={20} />, label: '內容管理', path: '/cms', adminOnly: true },
+    { icon: <IconFileText size={20} />, label: '系友動態', path: '/cms' },
   ];
 
   // 過濾掉僅管理員可見的項目
@@ -104,56 +120,11 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     !item.adminOnly || user?.role === 'admin'
   );
 
-  // 避免 hydration 錯誤 - 等待客戶端掛載
-  if (!mounted) {
-    return (
-      <AppShell
-        padding="md"
-        navbar={{
-          width: 280,
-          breakpoint: 'sm',
-        }}
-        styles={{
-          navbar: {
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          },
-          main: {
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-            minHeight: '100vh',
-          },
-        }}
-      >
-        <AppShell.Navbar p="md">
-          <Center h="100%">
-            <Loader color="white" />
-          </Center>
-        </AppShell.Navbar>
-        <AppShell.Main>{children}</AppShell.Main>
-      </AppShell>
-    );
-  }
-
-  return (
-    <AppShell
-      padding="md"
-      navbar={{
-        width: 280,
-        breakpoint: 'sm',
-      }}
-      styles={{
-        navbar: {
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        },
-        main: {
-          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-          minHeight: '100vh',
-        },
-      }}
-    >
-      {/* 左側導航欄 */}
-      <AppShell.Navbar p="md">
-        <Stack gap="md" h="100%">
-          {/* Logo 區域 */}
+  // 導航內容組件（可重用於側邊欄和 Drawer）
+  const NavContent = ({ showLogo = true }: { showLogo?: boolean }) => (
+    <Stack gap="md" h="100%" p="md">
+      {/* Logo 區域 - 僅在桌面端側邊欄顯示 */}
+      {showLogo && !isMobile && !isTablet && (
           <Box>
             <Group gap="sm" mb="lg">
               <Avatar
@@ -170,17 +141,19 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               </Avatar>
               <div>
                 <Text size="lg" fw={700} c="white">
-                  光電系友會
+                色彩所系友會
                 </Text>
                 <Text size="xs" c="white" style={{ opacity: 0.9 }}>
-                  Alumni Platform
+                CIT
                 </Text>
               </div>
             </Group>
+        </Box>
+      )}
 
             {/* 用戶資訊卡片 */}
             <Box
-              p="md"
+        p={isMobile ? "sm" : "md"}
               style={{
                 background: 'rgba(255, 255, 255, 0.15)',
                 borderRadius: '12px',
@@ -188,11 +161,11 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               }}
             >
               <Group gap="sm">
-                <Avatar color="white" size="md" radius="xl">
+          <Avatar color="white" size={isMobile ? "sm" : "md"} radius="xl">
                   {userName.charAt(0)}
                 </Avatar>
                 <div style={{ flex: 1 }}>
-                  <Text size="sm" fw={600} c="white" lineClamp={1}>
+            <Text size={isMobile ? "xs" : "sm"} fw={600} c="white" lineClamp={1}>
                     {userName}
                   </Text>
                   <Badge size="xs" color="rgba(255, 255, 255, 0.3)" variant="filled">
@@ -200,7 +173,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                   </Badge>
                 </div>
               </Group>
-            </Box>
           </Box>
 
           {/* 導航菜單 */}
@@ -208,8 +180,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             {filteredNavItems.map((item) => (
               <UnstyledButton
                 key={item.path}
-                onClick={() => router.push(item.path)}
-                p="sm"
+            onClick={() => handleNavClick(item.path)}
+            p={isMobile ? "xs" : "sm"}
                 style={{
                   borderRadius: '8px',
                   background: pathname === item.path 
@@ -230,7 +202,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               >
                 <Group gap="sm">
                   <Box c="white">{item.icon}</Box>
-                  <Text size="sm" fw={pathname === item.path ? 600 : 400} c="white" style={{ flex: 1 }}>
+              <Text size={isMobile ? "xs" : "sm"} fw={pathname === item.path ? 600 : 400} c="white" style={{ flex: 1 }}>
                     {item.label}
                   </Text>
                   {item.badge !== undefined && item.badge > 0 && (
@@ -246,7 +218,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           {/* 登出按鈕 */}
           <UnstyledButton
             onClick={handleLogout}
-            p="sm"
+        p={isMobile ? "xs" : "sm"}
             style={{
               borderRadius: '8px',
               background: 'rgba(255, 255, 255, 0.1)',
@@ -261,18 +233,199 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             }}
           >
             <Group gap="sm">
-              <IconLogout size={20} color="white" />
-              <Text size="sm" c="white">
+          <IconLogout size={isMobile ? 18 : 20} color="white" />
+          <Text size={isMobile ? "xs" : "sm"} c="white">
                 登出
               </Text>
             </Group>
           </UnstyledButton>
         </Stack>
+  );
+
+  // 避免 hydration 錯誤 - 等待客戶端掛載
+  if (!mounted) {
+    return (
+      <AppShell
+        padding={isMobile ? "xs" : "md"}
+        navbar={!isMobile && !isTablet ? {
+          width: 280,
+          breakpoint: 'sm',
+        } : undefined}
+        header={isMobile || isTablet ? {
+          height: 60,
+        } : undefined}
+        styles={{
+          navbar: {
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          },
+          header: {
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          },
+          main: {
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            minHeight: '100vh',
+          },
+        }}
+      >
+        {isMobile || isTablet ? (
+          <AppShell.Header p="md">
+            <Group justify="space-between" h="100%">
+              <Group gap="sm">
+                <Avatar size={32} radius="xl">🎓</Avatar>
+                <Text size="sm" fw={700} c="white">色彩所系友會</Text>
+              </Group>
+              <Loader color="white" size="sm" />
+            </Group>
+          </AppShell.Header>
+        ) : (
+          <AppShell.Navbar p="md">
+            <Center h="100%">
+              <Loader color="white" />
+            </Center>
+          </AppShell.Navbar>
+        )}
+        <AppShell.Main>{children}</AppShell.Main>
+      </AppShell>
+    );
+  }
+
+  return (
+    <>
+      <AppShell
+        padding={isMobile ? "xs" : "md"}
+        navbar={!isMobile && !isTablet ? {
+          width: 280,
+          breakpoint: 'sm',
+        } : undefined}
+        header={isMobile || isTablet ? {
+          height: 60,
+        } : undefined}
+        styles={{
+          navbar: {
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          },
+          header: {
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderBottom: 'none',
+          },
+          main: {
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            minHeight: '100vh',
+          },
+        }}
+      >
+        {/* 移動端/平板端 Header */}
+        {(isMobile || isTablet) && (
+          <AppShell.Header p="md">
+            <Group justify="space-between" h="100%">
+              <Group gap="sm">
+                <Avatar 
+                  size={32} 
+                  radius="xl"
+                  styles={{
+                    root: {
+                      background: 'rgba(255, 255, 255, 0.2)',
+                    },
+                  }}
+                >
+                  🎓
+                </Avatar>
+                <div>
+                  <Text size="sm" fw={700} c="white">
+                    色彩所系友會
+                  </Text>
+                  <Text size="xs" c="white" style={{ opacity: 0.9 }}>
+                    CIT
+                  </Text>
+                </div>
+              </Group>
+              <Group gap="xs">
+                {unreadCount > 0 && (
+                  <Badge size="sm" color="red" variant="filled" circle>
+                    {unreadCount}
+                  </Badge>
+                )}
+                <Burger
+                  opened={drawerOpened}
+                  onClick={toggleDrawer}
+                  color="white"
+                  size="sm"
+                />
+              </Group>
+            </Group>
+          </AppShell.Header>
+        )}
+
+        {/* 桌面端側邊欄 */}
+        {!isMobile && !isTablet && (
+          <AppShell.Navbar p="md">
+            <NavContent showLogo={true} />
       </AppShell.Navbar>
+        )}
 
       {/* 主要內容區域 */}
       <AppShell.Main>{children}</AppShell.Main>
     </AppShell>
+
+      {/* 移動端/平板端 Drawer */}
+      {(isMobile || isTablet) && (
+        <Drawer
+          opened={drawerOpened}
+          onClose={closeDrawer}
+          position="right"
+          size={isMobile ? "280px" : "300px"}
+          padding="md"
+          title={
+            <Group gap="sm">
+              <Avatar
+                size={32}
+                radius="xl"
+                styles={{
+                  root: {
+                    background: 'rgba(255, 255, 255, 0.2)',
+                  },
+                }}
+              >
+                🎓
+              </Avatar>
+              <div>
+                <Text size="sm" fw={700} c="white">
+                  色彩所系友會
+                </Text>
+                <Text size="xs" c="white" style={{ opacity: 0.9 }}>
+                  CIT
+                </Text>
+              </div>
+            </Group>
+          }
+          styles={{
+            header: {
+              background: 'transparent',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              padding: '1rem',
+              marginBottom: '0.5rem',
+            },
+            title: {
+              color: 'white',
+            },
+            closeButton: {
+              color: 'white',
+              '&:hover': {
+                background: 'rgba(255, 255, 255, 0.1)',
+              },
+            },
+            body: {
+              padding: '0.5rem 0',
+            },
+            content: {
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            },
+          }}
+        >
+          <NavContent showLogo={false} />
+        </Drawer>
+      )}
+    </>
   );
 }
 

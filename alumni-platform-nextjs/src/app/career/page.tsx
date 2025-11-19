@@ -19,6 +19,7 @@ import {
   Tabs,
   ActionIcon,
   Divider,
+  NumberInput,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
@@ -49,6 +50,8 @@ interface WorkExperience {
   is_current: boolean;
   description?: string;
   location?: string;
+  annual_salary_min?: number;
+  annual_salary_max?: number;
 }
 
 interface Education {
@@ -62,7 +65,8 @@ interface Education {
   end_date?: string;  // API 返回的日期格式
   end_year?: number;  // 模型欄位
   is_current: boolean;
-  gpa?: number;
+  advisor_1?: string;
+  advisor_2?: string;
 }
 
 interface Skill {
@@ -108,6 +112,8 @@ export default function CareerPage() {
       is_current: false,
       description: '',
       location: '',
+      annual_salary_min: '',
+      annual_salary_max: '',
     },
     validate: {
       company: (value) => (value.length > 0 ? null : '公司名稱不能為空'),
@@ -125,7 +131,8 @@ export default function CareerPage() {
       start_date: '',
       end_date: '',
       is_current: false,
-      gpa: '',
+      advisor_1: '',
+      advisor_2: '',
     },
     validate: {
       school: (value) => (value.length > 0 ? null : '學校名稱不能為空'),
@@ -204,6 +211,8 @@ export default function CareerPage() {
       is_current: work.is_current || false,
       description: work.description || '',
       location: work.location || '',
+      annual_salary_min: work.annual_salary_min?.toString() || '',
+      annual_salary_max: work.annual_salary_max?.toString() || '',
     });
     openWorkModal();
   };
@@ -221,6 +230,8 @@ export default function CareerPage() {
         is_current: values.is_current,
         description: values.description || null,
         location: values.location || null,
+        annual_salary_min: values.annual_salary_min ? parseFloat(values.annual_salary_min as string) : null,
+        annual_salary_max: values.annual_salary_max ? parseFloat(values.annual_salary_max as string) : null,
       };
 
       if (editingWork) {
@@ -288,7 +299,8 @@ export default function CareerPage() {
       start_date: edu.start_date || (edu.start_year ? `${edu.start_year}-01-01` : ''),  // 從年份轉換為日期
       end_date: edu.end_date || (edu.end_year ? `${edu.end_year}-01-01` : ''),  // 從年份轉換為日期
       is_current: edu.is_current || false,
-      gpa: edu.gpa?.toString() || '',
+      advisor_1: edu.advisor_1 || '',
+      advisor_2: edu.advisor_2 || '',
     });
     openEduModal();
   };
@@ -305,7 +317,8 @@ export default function CareerPage() {
         start_date: values.start_date,
         end_date: values.end_date || null,
         is_current: values.is_current,
-        gpa: values.gpa ? parseFloat(values.gpa) : null,
+        advisor_1: values.advisor_1 || null,
+        advisor_2: values.advisor_2 || null,
       };
 
       if (editingEdu) {
@@ -402,7 +415,7 @@ export default function CareerPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return '';
     const date = new Date(dateString);
     return date.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' });
@@ -586,11 +599,12 @@ export default function CareerPage() {
                                   ? ' - 至今'
                                   : ''}
                               </Text>
-                              {edu.gpa && (
+                              {edu.advisor_1 && (
                                 <>
                                   <Text c="dimmed">•</Text>
                                   <Text size="sm" c="dimmed">
-                                    GPA: {edu.gpa}
+                                    指導教授：{edu.advisor_1}
+                                    {edu.advisor_2 && `、${edu.advisor_2}`}
                                   </Text>
                                 </>
                               )}
@@ -728,6 +742,24 @@ export default function CareerPage() {
                 {...workForm.getInputProps('location')}
                 key={workForm.key('location')}
               />
+              <Group grow>
+                <NumberInput
+                  label="年薪大致區間（最低）"
+                  placeholder="例如：800000"
+                  thousandSeparator=","
+                  min={0}
+                  {...workForm.getInputProps('annual_salary_min')}
+                  key={workForm.key('annual_salary_min')}
+                />
+                <NumberInput
+                  label="年薪大致區間（最高）"
+                  placeholder="例如：1200000"
+                  thousandSeparator=","
+                  min={0}
+                  {...workForm.getInputProps('annual_salary_max')}
+                  key={workForm.key('annual_salary_max')}
+                />
+              </Group>
               <Textarea
                 label="工作描述"
                 placeholder="描述您的工作內容和成就..."
@@ -757,7 +789,7 @@ export default function CareerPage() {
             <Stack gap="md">
               <TextInput
                 label="學校名稱"
-                placeholder="例如：國立清華大學"
+                placeholder="例如：國立臺灣科技大學"
                 required
                 {...eduForm.getInputProps('school')}
                 key={eduForm.key('school')}
@@ -777,7 +809,7 @@ export default function CareerPage() {
               />
               <TextInput
                 label="主修"
-                placeholder="例如：光電工程"
+                placeholder="例如：色彩與照明科技研究所"
                 {...eduForm.getInputProps('major')}
                 key={eduForm.key('major')}
               />
@@ -811,14 +843,20 @@ export default function CareerPage() {
                 }
                 key={eduForm.key('is_current')}
               />
-              <TextInput
-                label="GPA"
-                placeholder="例如：3.5"
-                type="number"
-                step="0.1"
-                {...eduForm.getInputProps('gpa')}
-                key={eduForm.key('gpa')}
-              />
+              <Group grow>
+                <TextInput
+                  label="指導教授（一）"
+                  placeholder="例如：王教授"
+                  {...eduForm.getInputProps('advisor_1')}
+                  key={eduForm.key('advisor_1')}
+                />
+                <TextInput
+                  label="指導教授（二）"
+                  placeholder="例如：李教授（選填）"
+                  {...eduForm.getInputProps('advisor_2')}
+                  key={eduForm.key('advisor_2')}
+                />
+              </Group>
               <Group justify="flex-end" mt="md">
                 <Button variant="default" onClick={closeEduModal}>
                   取消

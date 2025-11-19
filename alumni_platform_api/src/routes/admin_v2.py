@@ -181,15 +181,24 @@ def update_user_admin(current_user, user_id):
         
         data = request.get_json()
         
+        # 檢查是否在修改自己的權限
+        is_modifying_self = user_id == current_user.id
+        
         # 更新角色
         if 'role' in data:
             if data['role'] in ['admin', 'user']:
+                # 允許管理員修改自己的權限（包括移除管理員權限）
                 user.role = data['role']
+            else:
+                return jsonify({'message': 'Invalid role'}), 400
         
         # 更新狀態
         if 'status' in data:
             if data['status'] in ['active', 'inactive', 'suspended']:
+                # 允許管理員修改自己的狀態（包括停用自己）
                 user.status = data['status']
+            else:
+                return jsonify({'message': 'Invalid status'}), 400
         
         db.session.commit()
         
@@ -200,7 +209,8 @@ def update_user_admin(current_user, user_id):
                 'email': user.email,
                 'role': user.role,
                 'status': user.status,
-            }
+            },
+            'is_self': is_modifying_self
         }), 200
         
     except Exception as e:

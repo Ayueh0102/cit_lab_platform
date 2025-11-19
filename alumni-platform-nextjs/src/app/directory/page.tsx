@@ -87,6 +87,19 @@ export default function DirectoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchTerm, filterYear, currentPage]);
 
+  // 監聽頁面可見性變化，當頁面重新可見時重新載入數據
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadUsers();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   const loadUsers = async () => {
     try {
       setLoading(true);
@@ -255,61 +268,71 @@ export default function DirectoryPage() {
                             </Group>
                           )}
 
+                          {/* 社交連結 - 顯示在主要資訊區域 */}
+                          {(user.profile?.linkedin_url || user.profile?.github_url || user.profile?.personal_website) && (
+                            <Group gap="xs" mt="xs">
+                              {user.profile?.linkedin_url && (
+                                <Anchor
+                                  href={user.profile.linkedin_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  size="sm"
+                                  c="blue"
+                                >
+                                  <Group gap={4}>
+                                    <IconBrandLinkedin size={16} />
+                                    <Text size="sm">LinkedIn</Text>
+                                  </Group>
+                                </Anchor>
+                              )}
+                              {user.profile?.github_url && (
+                                <Anchor
+                                  href={user.profile.github_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  size="sm"
+                                  c="gray"
+                                >
+                                  <Group gap={4}>
+                                    <IconBrandGithub size={16} />
+                                    <Text size="sm">GitHub</Text>
+                                  </Group>
+                                </Anchor>
+                              )}
+                              {user.profile?.personal_website && (
+                                <Anchor
+                                  href={user.profile.personal_website}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  size="sm"
+                                  c="teal"
+                                >
+                                  <Group gap={4}>
+                                    <IconWorld size={16} />
+                                    <Text size="sm">網站</Text>
+                                  </Group>
+                                </Anchor>
+                              )}
+                            </Group>
+                          )}
+
                           {user.profile?.bio && (
                             <Text size="sm" lineClamp={2} c="dimmed">
                               {user.profile.bio}
                             </Text>
                           )}
 
-                          <Group gap="md" mt="sm">
-                            {user.profile?.show_email && user.email && (
+                          {/* 聯絡方式 */}
+                          {user.profile?.show_email && user.email && (
+                            <Group gap="md" mt="sm">
                               <Group gap={4}>
                                 <IconMail size={14} />
                                 <Anchor href={`mailto:${user.email}`} size="sm">
                                   聯絡
                                 </Anchor>
                               </Group>
-                            )}
-                            {user.profile?.linkedin_url && (
-                              <Group gap={4}>
-                                <IconBrandLinkedin size={14} />
-                                <Anchor
-                                  href={user.profile.linkedin_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  size="sm"
-                                >
-                                  LinkedIn
-                                </Anchor>
-                              </Group>
-                            )}
-                            {user.profile?.github_url && (
-                              <Group gap={4}>
-                                <IconBrandGithub size={14} />
-                                <Anchor
-                                  href={user.profile.github_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  size="sm"
-                                >
-                                  GitHub
-                                </Anchor>
-                              </Group>
-                            )}
-                            {user.profile?.personal_website && (
-                              <Group gap={4}>
-                                <IconWorld size={14} />
-                                <Anchor
-                                  href={user.profile.personal_website}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  size="sm"
-                                >
-                                  網站
-                                </Anchor>
-                              </Group>
-                            )}
-                          </Group>
+                            </Group>
+                          )}
                         </Stack>
                       </Group>
                     </Card>

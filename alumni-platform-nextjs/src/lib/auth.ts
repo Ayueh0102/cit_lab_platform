@@ -6,24 +6,61 @@
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'user_data';
 
+export interface UserProfile {
+  id?: number;
+  user_id?: number;
+  full_name?: string;
+  display_name?: string;
+  avatar_url?: string | null;
+  bio?: string | null;
+  graduation_year?: number | null;
+  current_company?: string | null;
+  current_position?: string | null;
+  current_location?: string | null;
+  industry?: string | null;
+  email?: string;
+  [key: string]: any;
+}
+
 export interface User {
   id: number;
   email: string;
-  name: string;
+  role: string;
+  status: string;
+  email_verified: boolean;
+  created_at: string;
+  last_login_at?: string | null;
+  profile?: UserProfile;
+  // 向後兼容的欄位
+  name?: string;
   student_id?: string;
   graduation_year?: number;
-  role: string;
-  created_at: string;
 }
 
 /**
  * 儲存認證資訊
  */
-export function setAuth(token: string, user: User): void {
+export function setAuth(token: string, user: any): void {
   if (typeof window === 'undefined') return;
   
+  // 確保用戶對象格式正確
+  const userData: User = {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    status: user.status || 'active',
+    email_verified: user.email_verified || false,
+    created_at: user.created_at,
+    last_login_at: user.last_login_at,
+    profile: user.profile,
+    // 向後兼容：從 profile 中提取 name
+    name: user.profile?.full_name || user.name || user.email,
+    student_id: user.profile?.student_id || user.student_id,
+    graduation_year: user.profile?.graduation_year || user.graduation_year,
+  };
+  
   localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.setItem(USER_KEY, JSON.stringify(userData));
 }
 
 /**

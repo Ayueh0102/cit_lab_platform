@@ -34,6 +34,10 @@ class WorkExperience(BaseModel):
     achievements = db.Column(Text, nullable=True)  # JSON array
     technologies = db.Column(Text, nullable=True)  # JSON array
     
+    # 薪資資訊
+    annual_salary_min = db.Column(Integer, nullable=True)  # 年薪最低（元）
+    annual_salary_max = db.Column(Integer, nullable=True)  # 年薪最高（元）
+    
     # 關聯
     user = relationship('User', back_populates='work_experiences')
     
@@ -118,6 +122,8 @@ class WorkExperience(BaseModel):
             'description': self.description,
             'achievements': self.get_achievements_list(),
             'technologies': self.get_technologies_list(),
+            'annual_salary_min': self.annual_salary_min,
+            'annual_salary_max': self.annual_salary_max,
         }
 
 
@@ -144,9 +150,12 @@ class Education(BaseModel):
     is_current = db.Column(Boolean, default=False, nullable=False)
     
     # 成績與榮譽
-    gpa = db.Column(String(20), nullable=True)
     honors = db.Column(Text, nullable=True)  # JSON array
     thesis_title = db.Column(String(500), nullable=True)
+    
+    # 指導教授
+    advisor_1 = db.Column(String(200), nullable=True)  # 指導教授（一）
+    advisor_2 = db.Column(String(200), nullable=True)  # 指導教授（二）
     
     # 關聯
     user = relationship('User', backref='educations')
@@ -196,9 +205,10 @@ class Education(BaseModel):
             'end_date': end_date.isoformat() if end_date else None,
             'end_year': self.end_year,
             'is_current': self.is_current,
-            'gpa': float(self.gpa) if self.gpa and self.gpa.replace('.', '').replace('-', '').isdigit() else None,
             'honors': json.loads(self.honors) if self.honors else None,
             'description': self.thesis_title,  # 使用 thesis_title 作為 description
+            'advisor_1': self.advisor_1,
+            'advisor_2': self.advisor_2,
         }
 
 

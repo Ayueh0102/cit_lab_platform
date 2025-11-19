@@ -277,12 +277,18 @@ def update_profile(current_user):
             db.session.add(profile)
 
         # 基本資料
+        if 'full_name' in data:
+            profile.full_name = data['full_name']
+        if 'display_name' in data:
+            profile.display_name = data['display_name']
         if 'graduation_year' in data:
             profile.graduation_year = data['graduation_year']
         if 'class_name' in data:
             profile.class_name = data['class_name']
         if 'phone' in data:
             profile.phone = data['phone']
+        if 'location' in data:
+            profile.current_location = data['location']  # API 使用 location，模型使用 current_location
 
         # 職涯資訊
         if 'current_company' in data:
@@ -293,11 +299,15 @@ def update_profile(current_user):
             profile.industry = data['industry']
 
         # 社交連結
-        if 'linkedin_id' in data:
+        if 'linkedin_url' in data:
+            profile.linkedin_url = data['linkedin_url']
+        elif 'linkedin_id' in data:
             profile.linkedin_id = data['linkedin_id']
         if 'personal_website' in data:
             profile.personal_website = data['personal_website']
-        if 'github_username' in data:
+        if 'github_url' in data:
+            profile.github_url = data['github_url']
+        elif 'github_username' in data:
             profile.github_username = data['github_username']
 
         # 個人介紹

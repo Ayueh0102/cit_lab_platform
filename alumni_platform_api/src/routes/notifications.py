@@ -517,8 +517,11 @@ def upload_file(current_user):
         filename = secure_filename(file.filename)
         unique_filename = f"{uuid.uuid4()}_{filename}"
         
-        # 建立上傳目錄
-        upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'static', 'uploads')
+        # 建立上傳目錄 - 使用與 Flask app 相同的 static 目錄
+        # 計算 static 目錄路徑：從 src/routes/notifications.py 向上三層到 alumni_platform_api，然後進入 src/static
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        static_dir = os.path.join(base_dir, 'src', 'static')
+        upload_dir = os.path.join(static_dir, 'uploads')
         os.makedirs(upload_dir, exist_ok=True)
         
         # 保存檔案
@@ -526,7 +529,7 @@ def upload_file(current_user):
         file.save(file_path)
         
         # 記錄到資料庫
-        file_type = 'image' if file_ext in {'jpg', 'jpeg', 'png', 'gif'} else 'document'
+        file_type_category = 'image' if file_ext in {'jpg', 'jpeg', 'png', 'gif'} else 'document'
         related_type = request.form.get('related_type')
         related_id = request.form.get('related_id', type=int)
         
@@ -534,9 +537,8 @@ def upload_file(current_user):
             user_id=current_user.id,
             file_name=filename,
             file_path=f'/static/uploads/{unique_filename}',
-            file_type=file_type,
+            file_type=file.content_type or f'application/{file_ext}',  # 使用 MIME type
             file_size=file_size,
-            mime_type=file.content_type,
             related_type=related_type,
             related_id=related_id
         )
@@ -544,10 +546,15 @@ def upload_file(current_user):
         db.session.add(file_upload)
         db.session.commit()
         
+        # 構建完整的 URL
+        from flask import request as flask_request
+        base_url = flask_request.host_url.rstrip('/')
+        file_url = f'{base_url}/static/uploads/{unique_filename}'
+        
         return jsonify({
             'message': 'File uploaded successfully',
             'file': file_upload.to_dict(),
-            'url': f'/static/uploads/{unique_filename}'
+            'url': file_url
         }), 201
         
     except Exception as e:

@@ -1,0 +1,140 @@
+---
+description: Design System Rules for Figma Integration
+globs: "**/*.tsx", "**/*.ts", "**/*.css"
+---
+
+# Design System Rules
+
+This document outlines the design system standards for the `alumni-platform-nextjs` project to ensure consistent integration of Figma designs using the Model Context Protocol.
+
+## 1. Token Definitions
+
+Design tokens are primarily managed through the Mantine theme configuration and Tailwind CSS.
+
+- **Source of Truth**: `src/theme.ts` (Mantine) and `src/app/globals.css` (Global Styles/Tailwind).
+- **Primary Color**: `blue` (Mantine default palette).
+- **Typography**:
+  - Font Family: System fonts (`-apple-system`, `BlinkMacSystemFont`, etc.).
+  - Headings: Defined in `theme.headings`.
+- **Spacing & Radius**: Standard Mantine sizes (`xs`, `sm`, `md`, `lg`, `xl`).
+- **Breakpoints**:
+  - `xs`: 36em (576px)
+  - `sm`: 48em (768px)
+  - `md`: 62em (992px)
+  - `lg`: 75em (1200px)
+  - `xl`: 88em (1408px)
+
+### Code Example (`src/theme.ts`)
+```typescript
+import { createTheme } from '@mantine/core';
+
+export const theme = createTheme({
+  primaryColor: 'blue',
+  radius: {
+    md: '0.5rem',
+  },
+  // ...
+});
+```
+
+## 2. Component Library
+
+- **Base Library**: [Mantine v7](https://mantine.dev/) (`@mantine/core`, `@mantine/hooks`, `@mantine/form`).
+- **Location**: `src/components/`
+  - `ui/`: Generic/Shared components (e.g., `RichTextEditor`).
+  - `layout/`: Structural components (`Header`, `Sidebar`).
+  - `feature/`: Feature-specific components (e.g., `auth/`, `dashboard/`).
+- **Architecture**: Functional components using React Hooks.
+
+### Usage Pattern
+Prefer using Mantine components over HTML primitives.
+
+```tsx
+// Good
+import { Button, Group } from '@mantine/core';
+
+export function MyComponent() {
+  return (
+    <Group>
+      <Button variant="filled">Action</Button>
+    </Group>
+  );
+}
+
+// Avoid
+export function MyComponent() {
+  return (
+    <div className="flex">
+      <button className="bg-blue-500">Action</button>
+    </div>
+  );
+}
+```
+
+## 3. Frameworks & Libraries
+
+- **Frontend Framework**: [Next.js v16](https://nextjs.org/) (App Router).
+- **Language**: TypeScript.
+- **Styling**:
+  - **Mantine**: Primary component styling and theming.
+  - **Tailwind CSS v4**: Utility classes for layout and custom one-offs.
+  - **PostCSS**: Configuration in `postcss.config.mjs`.
+- **Rich Text**: [Tiptap](https://tiptap.dev/).
+
+## 4. Asset Management
+
+- **Static Assets**: Store in `public/`.
+- **Images**: Use `next/image` for local assets or optimized remote images.
+- **Dynamic Uploads**: Handled via `api.files.upload`.
+
+```tsx
+import Image from 'next/image';
+
+<Image src="/logo.png" alt="Logo" width={100} height={50} />
+```
+
+## 5. Icon System
+
+- **Library**: [@tabler/icons-react](https://tabler.io/icons).
+- **Usage**: Named imports.
+- **Size**: Default size is usually `16` or `20` pixels.
+
+```tsx
+import { IconUser, IconSettings } from '@tabler/icons-react';
+
+<IconUser size={20} />
+```
+
+## 6. Styling Approach
+
+- **Methodology**: Hybrid (Mantine Props + Tailwind Utility Classes).
+- **Responsive Design**: Use Mantine object syntax for props or Tailwind responsive prefixes.
+- **Global Styles**: `src/app/globals.css` for animations (`@keyframes`) and global resets.
+
+### Responsive Example (Mantine)
+```tsx
+<Box w={{ base: '100%', sm: '50%', md: '33%' }}>
+  Content
+</Box>
+```
+
+### Responsive Example (Tailwind)
+```tsx
+<div className="w-full sm:w-1/2 md:w-1/3">
+  Content
+</div>
+```
+
+## 7. Project Structure
+
+- `src/app/`: Page routes and layouts (App Router).
+- `src/components/`: Reusable UI components.
+- `src/lib/`: Utility functions (API, Auth).
+- `src/hooks/`: Custom React hooks.
+- `src/theme.ts`: Theme configuration.
+
+When generating code from Figma:
+1.  Identify standard Mantine components (Cards, Buttons, Inputs).
+2.  Map Figma tokens (colors, spacing) to Mantine theme tokens (`theme.colors`, `theme.spacing`).
+3.  Use `Stack` (vertical) and `Group` (horizontal) for layout instead of raw Flexbox `div`s where possible.
+4.  Use `Icon*` components from `@tabler/icons-react` for icons.

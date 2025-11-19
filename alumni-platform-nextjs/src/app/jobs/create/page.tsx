@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Container,
   Title,
@@ -15,8 +15,6 @@ import {
   NumberInput,
   Switch,
   Grid,
-  Loader,
-  Center,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -26,25 +24,16 @@ import { getToken } from '@/lib/auth';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
-interface JobCategory {
-  id: number;
-  name: string;
-  icon?: string;
-  color?: string;
-}
-
 export default function CreateJobPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<JobCategory[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   const form = useForm({
     mode: 'uncontrolled',
     initialValues: {
       title: '',
       company: '',
-      category_id: '',
+      category_name: '',
       location: '',
       job_type: '',
       work_mode: '',
@@ -58,9 +47,6 @@ export default function CreateJobPage() {
       salary_negotiable: false,
       experience_required: '',
       education_required: '',
-      contact_email: '',
-      contact_phone: '',
-      application_url: '',
       company_website: '',
       company_logo_url: '',
       deadline: '',
@@ -68,37 +54,9 @@ export default function CreateJobPage() {
     validate: {
       title: (value) => (!value ? '請輸入職缺標題' : null),
       company: (value) => (!value ? '請輸入公司名稱' : null),
-      category_id: (value) => (!value ? '請選擇職缺分類' : null),
-      contact_email: (value) => {
-        if (!value) return '請輸入聯絡信箱';
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          return '請輸入有效的電子郵件地址';
-        }
-        return null;
-      },
+      category_name: (value) => (!value ? '請輸入職缺分類' : null),
     },
   });
-
-  useEffect(() => {
-    loadCategories();
-  }, []);
-
-  const loadCategories = async () => {
-    try {
-      setCategoriesLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v2/job-categories`);
-      const data = await response.json();
-      setCategories(data.categories || []);
-    } catch (error) {
-      notifications.show({
-        title: '載入失敗',
-        message: '無法載入職缺分類',
-        color: 'red',
-      });
-    } finally {
-      setCategoriesLoading(false);
-    }
-  };
 
   const handleSubmit = async (values: typeof form.values) => {
     try {
@@ -119,7 +77,7 @@ export default function CreateJobPage() {
       const jobData: any = {
         title: values.title,
         company: values.company,
-        category_id: parseInt(values.category_id as string),
+        category_name: values.category_name,
         location: values.location || undefined,
         job_type: values.job_type || undefined,
         work_mode: values.work_mode || undefined,
@@ -133,9 +91,6 @@ export default function CreateJobPage() {
         salary_negotiable: values.salary_negotiable,
         experience_required: values.experience_required || undefined,
         education_required: values.education_required || undefined,
-        contact_email: values.contact_email,
-        contact_phone: values.contact_phone || undefined,
-        application_url: values.application_url || undefined,
         company_website: values.company_website || undefined,
         company_logo_url: values.company_logo_url || undefined,
         deadline: values.deadline || undefined,
@@ -174,18 +129,6 @@ export default function CreateJobPage() {
     { value: 'remote', label: '遠端' },
     { value: 'hybrid', label: '混合' },
   ];
-
-  if (categoriesLoading) {
-    return (
-      <ProtectedRoute>
-        <SidebarLayout>
-          <Center style={{ minHeight: '60vh' }}>
-            <Loader size="xl" />
-          </Center>
-        </SidebarLayout>
-      </ProtectedRoute>
-    );
-  }
 
   return (
     <ProtectedRoute>
@@ -229,16 +172,12 @@ export default function CreateJobPage() {
                           />
                         </Grid.Col>
                         <Grid.Col span={{ base: 12, md: 6 }}>
-                          <Select
+                          <TextInput
                             label="職缺分類 *"
-                            placeholder="選擇分類"
+                            placeholder="例如：光學工程、軟體開發、色彩科學"
                             required
-                            data={categories.map((cat) => ({
-                              value: cat.id.toString(),
-                              label: cat.name,
-                            }))}
-                            {...form.getInputProps('category_id')}
-                            key={form.key('category_id')}
+                            {...form.getInputProps('category_name')}
+                            key={form.key('category_name')}
                           />
                         </Grid.Col>
                       </Grid>
@@ -402,36 +341,6 @@ export default function CreateJobPage() {
                         type="date"
                         {...form.getInputProps('deadline')}
                         key={form.key('deadline')}
-                      />
-                    </Stack>
-                  </div>
-
-                  {/* 聯絡方式 */}
-                  <div>
-                    <Title order={3} mb="md">
-                      聯絡方式
-                    </Title>
-                    <Stack gap="md">
-                      <TextInput
-                        label="聯絡信箱 *"
-                        placeholder="hr@company.com"
-                        required
-                        {...form.getInputProps('contact_email')}
-                        key={form.key('contact_email')}
-                      />
-
-                      <TextInput
-                        label="聯絡電話"
-                        placeholder="例如：02-1234-5678"
-                        {...form.getInputProps('contact_phone')}
-                        key={form.key('contact_phone')}
-                      />
-
-                      <TextInput
-                        label="申請網址"
-                        placeholder="https://..."
-                        {...form.getInputProps('application_url')}
-                        key={form.key('application_url')}
                       />
                     </Stack>
                   </div>

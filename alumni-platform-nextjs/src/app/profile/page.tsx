@@ -39,6 +39,7 @@ import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { getUser, getToken, setAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
 interface UserProfile {
   full_name: string;
@@ -64,6 +65,7 @@ interface User {
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -92,27 +94,64 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadProfile = () => {
+  const loadProfile = async () => {
     try {
-      const userData = getUser();
-      setUser(userData);
-      
-      if (userData?.profile) {
-        form.setValues({
-          full_name: userData.profile.full_name || '',
-          display_name: userData.profile.display_name || '',
-          email: userData.email || '',
-          phone: userData.profile.phone || '',
-          graduation_year: userData.profile.graduation_year,
-          current_company: userData.profile.current_company || '',
-          current_position: userData.profile.current_position || '',
-          bio: userData.profile.bio || '',
-          location: userData.profile.location || '',
-          linkedin_url: userData.profile.linkedin_url || '',
-          github_url: userData.profile.github_url || '',
-          personal_website: userData.profile.personal_website || '',
-          skills: userData.profile.skills || [],
-        });
+      setLoading(true);
+      const token = getToken();
+      if (!token) {
+        router.push('/auth/login');
+        return;
+      }
+
+      // 從 API 重新獲取最新的用戶資料
+      const response = await api.auth.getCurrentUser(token);
+      // API 返回的格式可能是 { user: {...} } 或直接是 user 對象
+      const userData = response.user || response;
+      if (userData) {
+        setAuth(token, userData);
+        setUser(userData);
+        
+        if (userData?.profile) {
+          form.setValues({
+            full_name: userData.profile.full_name || '',
+            display_name: userData.profile.display_name || '',
+            email: userData.email || '',
+            phone: userData.profile.phone || '',
+            graduation_year: userData.profile.graduation_year,
+            current_company: userData.profile.current_company || '',
+            current_position: userData.profile.current_position || '',
+            bio: userData.profile.bio || '',
+            location: userData.profile.location || userData.profile.current_location || '',
+            linkedin_url: userData.profile.linkedin_url || '',
+            github_url: userData.profile.github_url || '',
+            personal_website: userData.profile.personal_website || '',
+            skills: userData.profile.skills || [],
+          });
+        }
+      } else {
+        // 如果 API 失敗，使用本地存儲的資料
+        const userData = getUser();
+        if (userData) {
+          setUser(userData);
+        }
+        
+        if (userData?.profile) {
+          form.setValues({
+            full_name: userData.profile.full_name || '',
+            display_name: userData.profile.display_name || '',
+            email: userData.email || '',
+            phone: userData.profile.phone || '',
+            graduation_year: userData.profile.graduation_year,
+            current_company: userData.profile.current_company || '',
+            current_position: userData.profile.current_position || '',
+            bio: userData.profile.bio || '',
+            location: userData.profile.location || userData.profile.current_location || '',
+            linkedin_url: userData.profile.linkedin_url || '',
+            github_url: userData.profile.github_url || '',
+            personal_website: userData.profile.personal_website || '',
+            skills: userData.profile.skills || [],
+          });
+        }
       }
     } catch (error) {
       notifications.show({
@@ -173,6 +212,9 @@ export default function ProfilePage() {
         message: '您的個人資料已更新',
         color: 'green',
       });
+      
+      // 重新載入個人資料以確保數據同步
+      await loadProfile();
       
       setEditing(false);
     } catch (error) {

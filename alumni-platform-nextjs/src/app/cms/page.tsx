@@ -82,10 +82,6 @@ export default function CMSManagePage() {
   const [articleToDelete, setArticleToDelete] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isAdmin) {
-      router.push('/');
-      return;
-    }
     loadCategories();
     loadArticles();
   }, [page, statusFilter, categoryFilter, searchQuery]);
@@ -250,9 +246,9 @@ export default function CMSManagePage() {
             {/* 標題和操作 */}
             <Group justify="space-between">
               <div>
-                <Title order={1}>內容管理系統 (CMS)</Title>
+                <Title order={1}>系友動態</Title>
                 <Text c="dimmed" mt="xs">
-                  管理平台文章與內容
+                  分享系友活動、記錄與文章，記錄系友會的美好時光
                 </Text>
               </div>
               <Button
@@ -423,7 +419,7 @@ export default function CMSManagePage() {
                           
                           <div style={{ marginTop: 'auto' }}>
                             <Divider mb="sm" />
-                            <Group justify="space-between" size="xs">
+                            <Group justify="space-between" gap="xs">
                               <Group gap="xs">
                                 <IconUser size={14} />
                                 <Text size="xs" c="dimmed">

@@ -10,6 +10,7 @@ from .jobs import Job, JobCategory, JobRequest
 from .messages import Conversation, Message
 from .events import Event, EventCategory, EventRegistration
 from .content import Bulletin, BulletinCategory, BulletinComment, Article, ArticleCategory
+from .article_comment import ArticleComment, CommentStatus
 from .system import Notification, SystemLog, SystemSetting, UserActivity, FileUpload, NotificationType, NotificationStatus
 
 __all__ = [
