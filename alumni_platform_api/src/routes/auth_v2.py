@@ -283,12 +283,28 @@ def update_profile(current_user):
             profile.display_name = data['display_name']
         if 'graduation_year' in data:
             profile.graduation_year = data['graduation_year']
+        if 'class_year' in data:
+            profile.class_year = data['class_year']  # 屆數（如：101, 102, 103）
         if 'class_name' in data:
             profile.class_name = data['class_name']
         if 'phone' in data:
             profile.phone = data['phone']
         if 'location' in data:
             profile.current_location = data['location']  # API 使用 location，模型使用 current_location
+        
+        # 學籍資料
+        if 'degree' in data:
+            profile.degree = data['degree']
+        if 'major' in data:
+            profile.major = data['major']
+        if 'student_id' in data:
+            profile.student_id = data['student_id']
+        if 'thesis_title' in data:
+            profile.thesis_title = data['thesis_title']
+        if 'advisor_1' in data:
+            profile.advisor_1 = data['advisor_1']
+        if 'advisor_2' in data:
+            profile.advisor_2 = data['advisor_2']
 
         # 職涯資訊
         if 'current_company' in data:

@@ -128,9 +128,15 @@ class UserProfile(BaseModel):
     
     # 畢業資訊
     graduation_year = db.Column(Integer, nullable=True)
+    class_year = db.Column(Integer, nullable=True)  # 屆數，例如：101, 102, 103 (第1xx屆)
     degree = db.Column(String(50), nullable=True)  # bachelor, master, phd
     major = db.Column(String(100), nullable=True)
     student_id = db.Column(String(50), nullable=True)
+    thesis_title = db.Column(String(500), nullable=True)  # 論文題目
+    
+    # 指導教授
+    advisor_1 = db.Column(String(100), nullable=True)  # 指導教授（一）
+    advisor_2 = db.Column(String(100), nullable=True)  # 指導教授（二）- 備用
     
     # 目前狀態
     current_company = db.Column(String(200), nullable=True)
@@ -163,8 +169,13 @@ class UserProfile(BaseModel):
             'display_name': self.display_name,
             'avatar_url': self.avatar_url,
             'graduation_year': self.graduation_year,
+            'class_year': self.class_year,
             'degree': self.degree,
             'major': self.major,
+            'student_id': self.student_id,
+            'thesis_title': self.thesis_title,
+            'advisor_1': self.advisor_1,
+            'advisor_2': self.advisor_2,
             'current_company': self.current_company,
             'current_position': self.current_position,
             'current_location': self.current_location,
