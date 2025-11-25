@@ -8,9 +8,9 @@ import "@mantine/dates/styles.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "校友平台 | Alumni Platform",
-  description: "現代化的校友互動平台，提供職缺媒合、活動管理、系友聯繫等功能",
-  keywords: "校友, 職缺, 活動, 校友會, alumni platform",
+  title: "色彩與照明科技研究所系友會 | NTUST-CIT Alumni Association",
+  description: "台科大色彩與照明科技研究所系友會平台，提供職缺媒合、活動管理、系友聯繫等功能",
+  keywords: "色彩所, CIT, 系友會, 台科大, 職缺, 活動, alumni platform, NTUST",
 };
 
 export default function RootLayout({

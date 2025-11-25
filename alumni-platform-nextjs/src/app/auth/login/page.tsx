@@ -127,16 +127,27 @@ export default function LoginPage() {
         <div className={classes.loginContent}>
           <Container size={420}>
             <Paper className={classes.loginCard} shadow="xl" p={40} radius="xl">
+              {/* Logo */}
+              <Box style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                <Image
+                  src="/logo-cit.png"
+                  alt="NTUST-CIT Alumni Association"
+                  width={180}
+                  height={80}
+                  style={{ objectFit: 'contain' }}
+                  priority
+                />
+              </Box>
               <Title
                 ta="center"
                 fw={700}
                 mb="xs"
                 className={classes.loginTitle}
               >
-                色彩所系友會
+                色彩與照明科技研究所系友會
               </Title>
               <Text c="dimmed" size="sm" ta="center" mb="xl">
-                色彩與照明科技研究所 CIT
+                NTUST-CIT Alumni Association
               </Text>
 
               <form onSubmit={form.onSubmit(handleSubmit)}>

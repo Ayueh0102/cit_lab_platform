@@ -25,7 +25,7 @@ body {
   color: #e2e8f0;
 }
 
-/* === 極光漫遊背景 (Aurora Drift Background) - Liquid Edition === */
+/* === 極光漫遊背景 (Aurora Drift Background) - Enhanced Liquid Edition === */
 /* 元件樣式 - 透過 AuroraBackground.tsx 引用 */
 
 .aurora-container {
@@ -45,94 +45,137 @@ body {
   background-color: #0f172a;
 }
 
-/* Layer 1: Deep Liquid Base (Deep Blue/Indigo) */
+/* Layer 1: Deep Liquid Base (CIT Blue Theme) */
 .aurora-layer-1 {
   position: absolute;
-  top: -20%;
-  left: -20%;
-  width: 140%;
-  height: 140%;
+  top: -30%;
+  left: -30%;
+  width: 160%;
+  height: 160%;
   background:
-    radial-gradient(circle at 10% 20%, rgba(0, 82, 212, 0.4), transparent 50%),
-    radial-gradient(circle at 90% 80%, rgba(67, 100, 247, 0.35), transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(111, 168, 220, 0.25), transparent 60%);
-  filter: blur(80px) contrast(1.1);
-  animation: aurora-liquid-1 24s infinite ease-in-out;
-  opacity: 0.9;
+    radial-gradient(ellipse at 10% 20%, rgba(0, 82, 212, 0.5), transparent 55%),
+    radial-gradient(ellipse at 85% 75%, rgba(79, 172, 254, 0.45), transparent 55%),
+    radial-gradient(ellipse at 50% 50%, rgba(0, 198, 255, 0.35), transparent 65%);
+  filter: blur(60px) contrast(1.15);
+  animation: aurora-liquid-1 18s infinite ease-in-out;
+  opacity: 0.95;
   mix-blend-mode: screen;
   border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
 }
 
 [data-mantine-color-scheme="dark"] .aurora-layer-1 {
-  opacity: 0.6;
+  opacity: 0.65;
 }
 
-/* Layer 2: Warm Liquid Flow (Gold/Orange/Amber) */
+/* Layer 2: Secondary Flow (Cyan/Teal) */
 .aurora-layer-2 {
   position: absolute;
-  top: -20%;
-  left: -20%;
-  width: 140%;
-  height: 140%;
+  top: -25%;
+  left: -25%;
+  width: 150%;
+  height: 150%;
   background:
-    radial-gradient(circle at 80% 20%, rgba(255, 183, 77, 0.45), transparent 50%),
-    radial-gradient(circle at 20% 80%, rgba(255, 138, 101, 0.4), transparent 50%),
-    radial-gradient(circle at 50% 40%, rgba(255, 213, 79, 0.35), transparent 60%);
-  filter: blur(90px) contrast(1.2);
-  animation: aurora-liquid-2 28s infinite ease-in-out;
-  opacity: 0.85;
+    radial-gradient(ellipse at 75% 15%, rgba(0, 198, 255, 0.5), transparent 50%),
+    radial-gradient(ellipse at 25% 85%, rgba(78, 205, 196, 0.45), transparent 55%),
+    radial-gradient(ellipse at 60% 45%, rgba(111, 168, 220, 0.4), transparent 60%);
+  filter: blur(70px) contrast(1.2);
+  animation: aurora-liquid-2 22s infinite ease-in-out;
+  opacity: 0.9;
   mix-blend-mode: screen;
   border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
 }
 
 [data-mantine-color-scheme="dark"] .aurora-layer-2 {
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
-/* Layer 3: Highlight Diffusion (Cyan/White/Soft Pink) */
+/* Layer 3: Highlight Diffusion (Light accents) */
 .aurora-layer-3 {
   position: absolute;
-  top: -30%;
-  left: -10%;
-  width: 120%;
-  height: 120%;
+  top: -35%;
+  left: -15%;
+  width: 130%;
+  height: 130%;
   background:
-    radial-gradient(circle at 30% 30%, rgba(0, 242, 254, 0.3), transparent 40%),
-    radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.5), transparent 45%),
-    radial-gradient(circle at 50% 10%, rgba(250, 208, 196, 0.3), transparent 45%);
-  filter: blur(100px);
+    radial-gradient(ellipse at 30% 25%, rgba(0, 242, 254, 0.4), transparent 45%),
+    radial-gradient(ellipse at 70% 75%, rgba(255, 255, 255, 0.55), transparent 50%),
+    radial-gradient(ellipse at 45% 10%, rgba(79, 172, 254, 0.35), transparent 50%);
+  filter: blur(80px);
   mix-blend-mode: overlay;
-  opacity: 0.8;
-  animation: aurora-liquid-3 32s infinite ease-in-out;
+  opacity: 0.85;
+  animation: aurora-liquid-3 26s infinite ease-in-out;
   border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
 }
 
 [data-mantine-color-scheme="dark"] .aurora-layer-3 {
-  opacity: 0.4;
+  opacity: 0.45;
   mix-blend-mode: screen;
 }
 
-/* Glow Layer: Atmospheric Diffusion */
+/* Layer 4: Wave Effect (New - for more dynamics) */
+.aurora-layer-4 {
+  position: absolute;
+  top: -40%;
+  left: -20%;
+  width: 140%;
+  height: 140%;
+  background:
+    radial-gradient(ellipse at 20% 60%, rgba(0, 82, 212, 0.3), transparent 45%),
+    radial-gradient(ellipse at 80% 40%, rgba(0, 198, 255, 0.25), transparent 50%);
+  filter: blur(100px);
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  animation: aurora-wave 15s infinite ease-in-out;
+  border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%;
+}
+
+[data-mantine-color-scheme="dark"] .aurora-layer-4 {
+  opacity: 0.35;
+}
+
+/* Glow Layer: Rotating Atmospheric Diffusion */
 .aurora-glow {
   position: absolute;
-  inset: -20%;
+  inset: -30%;
   background:
-    conic-gradient(from 180deg at 50% 50%, 
+    conic-gradient(from 0deg at 50% 50%, 
+      rgba(0, 82, 212, 0.2), 
+      rgba(79, 172, 254, 0.2), 
       rgba(0, 198, 255, 0.15), 
-      rgba(255, 183, 77, 0.15), 
-      rgba(255, 114, 96, 0.1), 
-      rgba(111, 168, 220, 0.15), 
-      rgba(0, 198, 255, 0.15));
-  filter: blur(140px);
+      rgba(78, 205, 196, 0.15),
+      rgba(111, 168, 220, 0.2),
+      rgba(0, 82, 212, 0.2));
+  filter: blur(120px);
   mix-blend-mode: overlay;
-  opacity: 0.7;
-  animation: aurora-color 40s linear infinite;
+  opacity: 0.8;
+  animation: aurora-color 30s linear infinite;
   pointer-events: none;
 }
 
 [data-mantine-color-scheme="dark"] .aurora-glow {
-  opacity: 0.3;
+  opacity: 0.35;
   mix-blend-mode: screen;
+}
+
+/* Shimmer Layer: Subtle light streaks */
+.aurora-shimmer {
+  position: absolute;
+  inset: 0;
+  background: 
+    linear-gradient(125deg, 
+      transparent 0%, 
+      rgba(255, 255, 255, 0.1) 25%, 
+      transparent 50%, 
+      rgba(255, 255, 255, 0.08) 75%, 
+      transparent 100%);
+  background-size: 400% 400%;
+  animation: aurora-shimmer 8s ease-in-out infinite;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+[data-mantine-color-scheme="dark"] .aurora-shimmer {
+  opacity: 0.3;
 }
 
 .aurora-particles {
@@ -147,30 +190,34 @@ body {
   position: absolute;
   display: block;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9), transparent 70%);
-  opacity: 0.6;
-  filter: blur(3px);
-  animation: aurora-particle 22s ease-in-out infinite;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.95), transparent 70%);
+  opacity: 0.7;
+  filter: blur(2px);
+  animation: aurora-particle 18s ease-in-out infinite;
 }
 
 [data-mantine-color-scheme="dark"] .aurora-particles span {
-  opacity: 0.3;
+  opacity: 0.35;
 }
 
-/* === Liquid Animations === */
+/* === Enhanced Liquid Animations === */
 
 @keyframes aurora-liquid-1 {
   0% {
     transform: scale(1) translate(0, 0) rotate(0deg);
     border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
   }
-  33% {
-    transform: scale(1.1) translate(2%, -3%) rotate(2deg);
-    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  25% {
+    transform: scale(1.15) translate(3%, -4%) rotate(3deg);
+    border-radius: 55% 45% 40% 60% / 55% 35% 65% 45%;
   }
-  66% {
-    transform: scale(0.95) translate(-2%, 3%) rotate(-2deg);
-    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  50% {
+    transform: scale(1.05) translate(-2%, 3%) rotate(-2deg);
+    border-radius: 65% 35% 55% 45% / 45% 55% 45% 55%;
+  }
+  75% {
+    transform: scale(0.95) translate(-3%, -2%) rotate(1deg);
+    border-radius: 35% 65% 60% 40% / 60% 40% 60% 40%;
   }
   100% {
     transform: scale(1) translate(0, 0) rotate(0deg);
@@ -183,8 +230,12 @@ body {
     transform: scale(1) translate(0, 0) rotate(0deg);
     border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
   }
-  50% {
-    transform: scale(1.2) translate(-4%, 4%) rotate(-3deg);
+  33% {
+    transform: scale(1.2) translate(-5%, 5%) rotate(-4deg);
+    border-radius: 45% 55% 55% 45% / 50% 50% 50% 50%;
+  }
+  66% {
+    transform: scale(1.1) translate(4%, -3%) rotate(3deg);
     border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
   }
   100% {
@@ -195,31 +246,81 @@ body {
 
 @keyframes aurora-liquid-3 {
   0% {
-    transform: scale(1) translate(0, 0);
+    transform: scale(1) translate(0, 0) rotate(0deg);
     border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
   }
-  50% {
-    transform: scale(1.15) translate(3%, 3%);
+  33% {
+    transform: scale(1.1) translate(4%, 4%) rotate(2deg);
+    border-radius: 50% 50% 50% 50% / 40% 60% 40% 60%;
+  }
+  66% {
+    transform: scale(1.2) translate(-3%, 2%) rotate(-3deg);
     border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
   }
   100% {
-    transform: scale(1) translate(0, 0);
+    transform: scale(1) translate(0, 0) rotate(0deg);
     border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  }
+}
+
+@keyframes aurora-wave {
+  0% {
+    transform: scale(1) translate(0, 0) rotate(0deg);
+    opacity: 0.5;
+  }
+  25% {
+    transform: scale(1.3) translate(8%, -5%) rotate(5deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.1) translate(-5%, 8%) rotate(-3deg);
+    opacity: 0.6;
+  }
+  75% {
+    transform: scale(1.25) translate(5%, 5%) rotate(2deg);
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(1) translate(0, 0) rotate(0deg);
+    opacity: 0.5;
+  }
+}
+
+@keyframes aurora-shimmer {
+  0% {
+    background-position: 0% 50%;
+    opacity: 0.3;
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 0.6;
+  }
+  100% {
+    background-position: 0% 50%;
+    opacity: 0.3;
   }
 }
 
 @keyframes aurora-particle {
   0% {
-    transform: translate(0, 0) scale(0.8);
-    opacity: 0.4;
+    transform: translate(0, 0) scale(0.7);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translate(20px, -25px) scale(1.1);
+    opacity: 0.7;
   }
   50% {
-    transform: translate(30px, -30px) scale(1.3);
-    opacity: 0.8;
+    transform: translate(40px, -10px) scale(1.4);
+    opacity: 0.9;
+  }
+  75% {
+    transform: translate(15px, -35px) scale(1.0);
+    opacity: 0.6;
   }
   100% {
-    transform: translate(0, 0) scale(0.8);
-    opacity: 0.4;
+    transform: translate(0, 0) scale(0.7);
+    opacity: 0.3;
   }
 }
 

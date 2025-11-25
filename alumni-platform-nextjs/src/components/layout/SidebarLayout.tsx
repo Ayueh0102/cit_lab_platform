@@ -33,6 +33,7 @@ import {
 import { usePathname, useRouter } from 'next/navigation';
 import { clearAuth, getUser } from '@/lib/auth';
 import { notifications } from '@mantine/notifications';
+import Image from 'next/image';
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -108,25 +109,31 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Group gap="xs" align="center" style={{ cursor: 'pointer' }} onClick={() => router.push('/')}>
-              <ThemeIcon 
-                size="lg" 
-                radius="md" 
-                className="gradient-light"
-                style={{ border: 'none' }}
-              >
-                <IconSchool size={22} color="white" />
-              </ThemeIcon>
-              <Box visibleFrom="xs">
+            <Group gap="sm" align="center" style={{ cursor: 'pointer' }} onClick={() => router.push('/')}>
+              {/* 系友會 Logo */}
+              <Box style={{ width: 48, height: 48, position: 'relative' }}>
+                <Image
+                  src="/logo-cit.png"
+                  alt="NTUST-CIT Alumni Association"
+                  fill
+                  style={{ objectFit: 'contain' }}
+                  priority
+                />
+              </Box>
+              <Box visibleFrom="sm">
                 <Text 
                   size="lg" 
                   fw={800} 
-                  className="text-gradient-light"
-                  style={{ letterSpacing: '-0.5px' }}
+                  style={{ 
+                    letterSpacing: '-0.5px',
+                    background: 'linear-gradient(135deg, #0052D4 0%, #4facfe 50%, #00c6ff 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
                 >
-                  台科色彩所系友會平台
+                  色彩與照明科技研究所系友會
                 </Text>
-                <Text size="xs" c="dimmed" fw={500} mt={-4}>校友互動平台</Text>
+                <Text size="xs" c="dimmed" fw={500} mt={-4}>NTUST-CIT Alumni Association</Text>
               </Box>
             </Group>
           </Group>
