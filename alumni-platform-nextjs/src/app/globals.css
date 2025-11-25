@@ -57,7 +57,7 @@ body {
     radial-gradient(ellipse at 85% 75%, rgba(79, 172, 254, 0.45), transparent 55%),
     radial-gradient(ellipse at 50% 50%, rgba(0, 198, 255, 0.35), transparent 65%);
   filter: blur(60px) contrast(1.15);
-  animation: aurora-liquid-1 18s infinite ease-in-out;
+  animation: aurora-liquid-1 6s infinite ease-in-out;
   opacity: 0.95;
   mix-blend-mode: screen;
   border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
@@ -79,7 +79,7 @@ body {
     radial-gradient(ellipse at 25% 85%, rgba(78, 205, 196, 0.45), transparent 55%),
     radial-gradient(ellipse at 60% 45%, rgba(111, 168, 220, 0.4), transparent 60%);
   filter: blur(70px) contrast(1.2);
-  animation: aurora-liquid-2 22s infinite ease-in-out;
+  animation: aurora-liquid-2 8s infinite ease-in-out;
   opacity: 0.9;
   mix-blend-mode: screen;
   border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
@@ -103,7 +103,7 @@ body {
   filter: blur(80px);
   mix-blend-mode: overlay;
   opacity: 0.85;
-  animation: aurora-liquid-3 26s infinite ease-in-out;
+  animation: aurora-liquid-3 10s infinite ease-in-out;
   border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
 }
 
@@ -125,7 +125,7 @@ body {
   filter: blur(100px);
   mix-blend-mode: screen;
   opacity: 0.7;
-  animation: aurora-wave 15s infinite ease-in-out;
+  animation: aurora-wave 5s infinite ease-in-out;
   border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%;
 }
 
@@ -148,7 +148,7 @@ body {
   filter: blur(120px);
   mix-blend-mode: overlay;
   opacity: 0.8;
-  animation: aurora-color 30s linear infinite;
+  animation: aurora-color 12s linear infinite;
   pointer-events: none;
 }
 
@@ -169,7 +169,7 @@ body {
       rgba(255, 255, 255, 0.08) 75%, 
       transparent 100%);
   background-size: 400% 400%;
-  animation: aurora-shimmer 8s ease-in-out infinite;
+  animation: aurora-shimmer 3s ease-in-out infinite;
   pointer-events: none;
   mix-blend-mode: overlay;
 }

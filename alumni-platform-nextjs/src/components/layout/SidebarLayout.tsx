@@ -111,7 +111,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
             <Group gap="sm" align="center" style={{ cursor: 'pointer' }} onClick={() => router.push('/')}>
               {/* 系友會 Logo */}
-              <Box style={{ width: 48, height: 48, position: 'relative' }}>
+              <Box style={{ width: 56, height: 56, position: 'relative' }}>
                 <Image
                   src="/logo-cit.png"
                   alt="NTUST-CIT Alumni Association"

@@ -3,20 +3,20 @@
 import { Box } from '@mantine/core';
 
 export function AuroraBackground() {
-  // 增加粒子數量和多樣性
+  // 增加粒子數量和多樣性 - 6秒週期
   const particles = [
-    { left: '5%', top: '25%', size: 160, duration: 20, delay: 0 },
-    { left: '20%', top: '60%', size: 140, duration: 18, delay: 2 },
-    { left: '45%', top: '15%', size: 120, duration: 16, delay: 1 },
-    { left: '65%', top: '70%', size: 150, duration: 22, delay: 3 },
-    { left: '80%', top: '30%', size: 130, duration: 19, delay: 4 },
-    { left: '35%', top: '80%', size: 170, duration: 24, delay: 5 },
-    { left: '70%', top: '10%', size: 100, duration: 15, delay: 6 },
-    { left: '15%', top: '85%', size: 110, duration: 17, delay: 7 },
-    { left: '90%', top: '50%', size: 90, duration: 14, delay: 8 },
-    { left: '50%', top: '45%', size: 180, duration: 25, delay: 9 },
-    { left: '10%', top: '40%', size: 85, duration: 13, delay: 10 },
-    { left: '75%', top: '85%', size: 95, duration: 16, delay: 11 },
+    { left: '5%', top: '25%', size: 160, duration: 6, delay: 0 },
+    { left: '20%', top: '60%', size: 140, duration: 5, delay: 0.5 },
+    { left: '45%', top: '15%', size: 120, duration: 7, delay: 0.3 },
+    { left: '65%', top: '70%', size: 150, duration: 6, delay: 1 },
+    { left: '80%', top: '30%', size: 130, duration: 5.5, delay: 1.5 },
+    { left: '35%', top: '80%', size: 170, duration: 8, delay: 2 },
+    { left: '70%', top: '10%', size: 100, duration: 5, delay: 2.5 },
+    { left: '15%', top: '85%', size: 110, duration: 6, delay: 3 },
+    { left: '90%', top: '50%', size: 90, duration: 4.5, delay: 3.5 },
+    { left: '50%', top: '45%', size: 180, duration: 7, delay: 4 },
+    { left: '10%', top: '40%', size: 85, duration: 5, delay: 4.5 },
+    { left: '75%', top: '85%', size: 95, duration: 6, delay: 5 },
   ];
 
   return (
