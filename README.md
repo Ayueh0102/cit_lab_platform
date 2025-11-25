@@ -13,13 +13,16 @@
 
 ## ✨ 功能特色
 
-- 🔐 **使用者管理** - JWT 認證、角色權限
-- 💼 **職缺媒合** - 系友職缺發布與申請
-- 📅 **活動管理** - 系友會活動報名與簽到
-- 📢 **公告系統** - 重要訊息發布
-- 💬 **即時訊息** - 系友間私訊交流
-- 📊 **數據管理** - CSV 匯入匯出
-- 🎨 **現代化 UI** - 響應式設計、深色模式支援
+| 功能 | 說明 |
+|------|------|
+| 🔐 **使用者管理** | JWT 認證、角色權限、個人資料 |
+| 💼 **職缺媒合** | 系友職缺發布、申請、交流 |
+| 📅 **活動管理** | 系友會活動報名與簽到 |
+| 📢 **公告系統** | 重要訊息發布與分類 |
+| 💬 **即時訊息** | 系友間私訊交流 |
+| 📊 **管理後台** | 統計數據、用戶管理、內容審核 |
+| 📁 **CSV 匯入匯出** | 批量資料管理 |
+| 🎨 **現代化 UI** | 響應式設計、深色模式支援 |
 
 ---
 
@@ -78,18 +81,28 @@ alumni-platform-complete-final/
 │   ├── src/
 │   │   ├── app/               # App Router 頁面
 │   │   ├── components/        # React 元件
-│   │   └── lib/              # API 客戶端與工具
+│   │   ├── lib/              # API 客戶端與工具
+│   │   └── hooks/            # 自定義 Hooks
 │   └── package.json
 │
 ├── alumni_platform_api/        # Flask 3 後端
 │   ├── src/
+│   │   ├── main_v2.py        # 應用程式入口
 │   │   ├── models_v2/        # SQLAlchemy 模型
 │   │   ├── routes/           # API 路由
-│   │   └── main_v2.py        # 應用程式入口
+│   │   └── database/         # 資料庫檔案
 │   └── requirements.txt
 │
+├── docs/                       # 📚 文檔目錄
+│   ├── ARCHITECTURE.md        # 系統架構 (含 Mermaid 圖)
+│   ├── API_REFERENCE.md       # API 完整參考
+│   ├── DATABASE.md            # 資料庫模型文檔
+│   └── DEVELOPMENT.md         # 開發指南
+│
+├── scripts/                    # 腳本目錄
+├── csv_samples/                # CSV 範例資料
 ├── README.md                   # 本文檔
-└── DATABASE_MODELS_V2_COMPLETE.md  # 資料庫文檔
+└── CHANGELOG.md               # 更新日誌
 ```
 
 ---
@@ -104,61 +117,50 @@ alumni-platform-complete-final/
 
 ---
 
-## 📚 API 文檔
+## 📚 API 端點概覽
 
-### 認證端點
-- `POST /api/v2/auth/register` - 註冊
-- `POST /api/v2/auth/login` - 登入
-- `POST /api/v2/auth/logout` - 登出
-- `GET /api/v2/auth/me` - 取得當前使用者資訊
+### 認證 `/api/v2/auth`
+- `POST /login` - 登入
+- `POST /register` - 註冊
+- `GET /me` - 取得當前使用者
 
-### 職缺端點
-- `GET /api/v2/jobs` - 取得職缺列表
-- `POST /api/v2/jobs` - 建立職缺
-- `GET /api/v2/jobs/:id` - 取得職缺詳情
-- `PUT /api/v2/jobs/:id` - 更新職缺
-- `DELETE /api/v2/jobs/:id` - 刪除職缺
+### 職缺 `/api/v2/jobs`
+- `GET /` - 取得職缺列表
+- `POST /` - 建立職缺
+- `GET /:id` - 取得職缺詳情
+- `POST /:id/requests` - 申請職缺
 
-### 活動端點
-- `GET /api/v2/events` - 取得活動列表
-- `POST /api/v2/events` - 建立活動
-- `POST /api/v2/events/:id/register` - 報名活動
+### 活動 `/api/v2/events`
+- `GET /` - 取得活動列表
+- `POST /` - 建立活動
+- `POST /:id/register` - 報名活動
 
-完整 API 文檔請參考：[API_V2_DOCUMENTATION.md](alumni_platform_api/API_V2_DOCUMENTATION.md)
+### 公告 `/api/v2/bulletins`
+- `GET /` - 取得公告列表
+- `POST /` - 建立公告
+
+> 完整 API 文檔請參考：[docs/API_REFERENCE.md](docs/API_REFERENCE.md)
 
 ---
 
 ## 🛠️ 技術棧
 
 ### 前端
-- **Framework**: Next.js 15.0 (App Router)
-- **UI Library**: Mantine 7
-- **Runtime**: React 19
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS + Mantine CSS-in-JS
-- **Build Tool**: Turbopack
+| 技術 | 版本 | 用途 |
+|------|------|------|
+| Next.js | 15.0 | React 框架 (App Router) |
+| React | 19 | UI 函式庫 |
+| Mantine | 7 | UI 元件庫 |
+| TypeScript | 5 | 型別安全 |
+| Tailwind CSS | 3 | 樣式框架 |
 
 ### 後端
-- **Framework**: Flask 3.x
-- **ORM**: SQLAlchemy 2.0+
-- **Database**: SQLite (開發) / PostgreSQL (生產)
-- **Authentication**: PyJWT
-- **API**: RESTful (`/api/v2/*`)
-
----
-
-## 🗄️ 資料庫
-
-### 主要資料表
-- `users_v2` - 使用者帳號
-- `user_profiles_v2` - 使用者檔案
-- `jobs_v2` - 職缺資訊
-- `events_v2` - 活動資訊
-- `bulletins_v2` - 公告資訊
-- `conversations_v2` - 對話
-- `messages_v2` - 訊息
-
-完整資料庫結構請參考：[DATABASE_MODELS_V2_COMPLETE.md](DATABASE_MODELS_V2_COMPLETE.md)
+| 技術 | 版本 | 用途 |
+|------|------|------|
+| Flask | 3.x | Web 框架 |
+| SQLAlchemy | 2.0+ | ORM |
+| PyJWT | 2.x | JWT 認證 |
+| SQLite/PostgreSQL | - | 資料庫 |
 
 ---
 
@@ -169,13 +171,13 @@ alumni-platform-complete-final/
 pnpm dev          # 啟動開發伺服器
 pnpm build        # 建置正式環境
 pnpm lint         # 執行 ESLint
-pnpm type-check   # TypeScript 型別檢查
+pnpm test         # 執行測試
 ```
 
 ### 後端
 ```bash
-python src/main_v2.py              # 啟動開發伺服器
-python -m pytest                    # 執行測試 (待實作)
+python src/main_v2.py    # 啟動開發伺服器
+pytest                    # 執行測試
 ```
 
 ---
@@ -196,11 +198,23 @@ JWT_SECRET_KEY=your-jwt-secret-here
 
 ---
 
+## 📖 文檔索引
+
+| 文檔 | 說明 |
+|------|------|
+| [系統架構](docs/ARCHITECTURE.md) | 系統架構圖、資料流程、部署架構 |
+| [API 參考](docs/API_REFERENCE.md) | 完整 API 端點說明與範例 |
+| [資料庫文檔](docs/DATABASE.md) | 資料模型、關聯關係、枚舉定義 |
+| [開發指南](docs/DEVELOPMENT.md) | 開發環境設定、程式碼規範、Git 流程 |
+| [更新日誌](CHANGELOG.md) | 版本更新記錄 |
+
+---
+
 ## 🤝 貢獻指南
 
 1. Fork 本專案
 2. 建立功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交變更 (`git commit -m 'Add amazing feature'`)
+3. 提交變更 (`git commit -m '✨ Add amazing feature'`)
 4. 推送到分支 (`git push origin feature/amazing-feature`)
 5. 開啟 Pull Request
 
