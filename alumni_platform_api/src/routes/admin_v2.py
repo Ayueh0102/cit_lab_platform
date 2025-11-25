@@ -5,6 +5,8 @@
 
 from flask import Blueprint, request, jsonify, current_app
 from src.models_v2 import db, User, UserProfile, Job, Event, Bulletin, Notification
+from src.models_v2.jobs import JobStatus
+from src.models_v2.content import ContentStatus
 from src.routes.auth_v2 import token_required, admin_required
 from datetime import datetime, timedelta
 
@@ -32,8 +34,8 @@ def get_statistics(current_user):
         
         # 職缺統計
         total_jobs = Job.query.count()
-        active_jobs = Job.query.filter_by(status='ACTIVE').count()
-        pending_jobs = Job.query.filter_by(status='PENDING').count()
+        active_jobs = Job.query.filter(Job.status == JobStatus.ACTIVE).count()
+        draft_jobs = Job.query.filter(Job.status == JobStatus.DRAFT).count()
         
         # 活動統計
         total_events = Event.query.count()
@@ -43,7 +45,7 @@ def get_statistics(current_user):
         
         # 公告統計
         total_bulletins = Bulletin.query.count()
-        published_bulletins = Bulletin.query.filter_by(status='PUBLISHED').count()
+        published_bulletins = Bulletin.query.filter(Bulletin.status == ContentStatus.PUBLISHED).count()
         
         # 本月新增統計
         this_month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -68,7 +70,7 @@ def get_statistics(current_user):
                 'jobs': {
                     'total': total_jobs,
                     'active': active_jobs,
-                    'pending': pending_jobs,
+                    'draft': draft_jobs,
                     'new_this_month': jobs_this_month,
                 },
                 'events': {
@@ -258,7 +260,7 @@ def approve_job(current_user, job_id):
         if not job:
             return jsonify({'message': 'Job not found'}), 404
         
-        job.status = 'ACTIVE'
+        job.status = JobStatus.ACTIVE
         db.session.commit()
         
         return jsonify({'message': 'Job approved successfully'}), 200
@@ -273,12 +275,13 @@ def approve_job(current_user, job_id):
 @admin_required
 def approve_event(current_user, event_id):
     """審核通過活動"""
+    from src.models_v2.events import EventStatus
     try:
         event = Event.query.get(event_id)
         if not event:
             return jsonify({'message': 'Event not found'}), 404
         
-        event.status = 'PUBLISHED'
+        event.status = EventStatus.UPCOMING
         db.session.commit()
         
         return jsonify({'message': 'Event approved successfully'}), 200
@@ -298,7 +301,9 @@ def approve_bulletin(current_user, bulletin_id):
         if not bulletin:
             return jsonify({'message': 'Bulletin not found'}), 404
         
-        bulletin.status = 'PUBLISHED'
+        bulletin.status = ContentStatus.PUBLISHED
+        if not bulletin.published_at:
+            bulletin.published_at = datetime.utcnow()
         db.session.commit()
         
         return jsonify({'message': 'Bulletin approved successfully'}), 200

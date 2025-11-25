@@ -1186,12 +1186,12 @@ export default function AdminPage() {
                                 <Table.Td>
                                   <Badge
                                     color={
-                                      event.status === 'PUBLISHED' ? 'green' :
-                                      event.status === 'DRAFT' ? 'gray' : 'red'
+                                      event.status === 'published' ? 'green' :
+                                      event.status === 'draft' ? 'gray' : 'red'
                                     }
                                   >
-                                    {event.status === 'PUBLISHED' ? '已發布' :
-                                     event.status === 'DRAFT' ? '草稿' : '已取消'}
+                                    {event.status === 'published' ? '已發布' :
+                                     event.status === 'draft' ? '草稿' : '已取消'}
                                   </Badge>
                                 </Table.Td>
                                 <Table.Td>
@@ -1202,7 +1202,7 @@ export default function AdminPage() {
                                 </Table.Td>
                                 <Table.Td>
                                   <Group gap="xs">
-                                    {event.status === 'DRAFT' && (
+                                    {event.status === 'draft' && (
                                       <Tooltip label="審核通過">
                                         <ActionIcon
                                           variant="light"
@@ -1325,12 +1325,12 @@ export default function AdminPage() {
                                 <Table.Td>
                                   <Badge
                                     color={
-                                      bulletin.status === 'PUBLISHED' ? 'green' :
-                                      bulletin.status === 'DRAFT' ? 'gray' : 'orange'
+                                      bulletin.status === 'published' ? 'green' :
+                                      bulletin.status === 'draft' ? 'gray' : 'orange'
                                     }
                                   >
-                                    {bulletin.status === 'PUBLISHED' ? '已發布' :
-                                     bulletin.status === 'DRAFT' ? '草稿' : '已封存'}
+                                    {bulletin.status === 'published' ? '已發布' :
+                                     bulletin.status === 'draft' ? '草稿' : '已封存'}
                                   </Badge>
                                 </Table.Td>
                                 <Table.Td>
@@ -1349,7 +1349,7 @@ export default function AdminPage() {
                                 </Table.Td>
                                 <Table.Td>
                                   <Group gap="xs">
-                                    {bulletin.status === 'DRAFT' && (
+                                    {bulletin.status === 'draft' && (
                                       <Tooltip label="審核通過">
                                         <ActionIcon
                                           variant="light"

@@ -216,11 +216,11 @@ export default function CreateEventPage() {
                                 <img
                                   src={coverImageUrl}
                                   alt="活動封面"
-                                  style={{ 
-                                    width: '100%', 
-                                    height: '100%', 
-                                    objectFit: 'cover', 
-                                    borderRadius: 'var(--mantine-radius-md)' 
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    borderRadius: 'var(--mantine-radius-md)'
                                   }}
                                 />
                                 <Button

@@ -4,10 +4,10 @@
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, Enum
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 import enum
-from .base import BaseModel, db
+from .base import BaseModel, db, enum_type
 
 
 # ========================================
@@ -134,9 +134,9 @@ class Bulletin(BaseModel):
     summary = Column(Text, comment='摘要')
 
     # 內容屬性
-    bulletin_type = Column(Enum(BulletinType), default=BulletinType.ANNOUNCEMENT,
+    bulletin_type = Column(enum_type(BulletinType), default=BulletinType.ANNOUNCEMENT,
                           comment='公告類型')
-    status = Column(Enum(ContentStatus), default=ContentStatus.PUBLISHED,
+    status = Column(enum_type(ContentStatus), default=ContentStatus.PUBLISHED,
                    comment='發布狀態')
 
     # 媒體資源
@@ -319,7 +319,7 @@ class BulletinComment(BaseModel):
 
     # 留言內容
     content = Column(Text, nullable=False, comment='留言內容')
-    status = Column(Enum(CommentStatus), default=CommentStatus.APPROVED,
+    status = Column(enum_type(CommentStatus), default=CommentStatus.APPROVED,
                    comment='留言狀態')
 
     # 統計
@@ -493,7 +493,7 @@ class Article(BaseModel):
     summary = Column(Text, comment='摘要')
 
     # 文章屬性
-    status = Column(Enum(ContentStatus), default=ContentStatus.DRAFT,
+    status = Column(enum_type(ContentStatus), default=ContentStatus.DRAFT,
                    comment='發布狀態')
 
     # 媒體資源

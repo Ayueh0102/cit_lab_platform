@@ -4,7 +4,7 @@ Base Models and Mixins
 """
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from sqlalchemy import Column, Integer, DateTime
+from sqlalchemy import Column, Integer, DateTime, Enum as SQLEnum
 
 db = SQLAlchemy()
 
@@ -95,3 +95,14 @@ Time = db.Time
 DateTime = db.DateTime
 ForeignKey = db.ForeignKey
 relationship = db.relationship
+
+
+def enum_type(enum_cls, **enum_kwargs):
+    """建立使用 enum value 儲存的 SQLAlchemy Enum 型別"""
+    return SQLEnum(
+        enum_cls,
+        values_callable=lambda cls: [member.value for member in cls],
+        native_enum=False,
+        validate_strings=True,
+        **enum_kwargs,
+    )

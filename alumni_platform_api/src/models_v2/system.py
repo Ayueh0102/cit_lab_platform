@@ -4,10 +4,10 @@
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, Enum, JSON
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, JSON
 from sqlalchemy.orm import relationship
 import enum
-from .base import BaseModel, db
+from .base import BaseModel, db, enum_type
 
 
 # ========================================
@@ -56,7 +56,7 @@ class Notification(BaseModel):
                     nullable=False, comment='接收者ID')
 
     # 通知內容
-    notification_type = Column(Enum(NotificationType),
+    notification_type = Column(enum_type(NotificationType),
                               default=NotificationType.OTHER,
                               comment='通知類型')
     title = Column(String(200), nullable=False, comment='通知標題')
@@ -68,7 +68,7 @@ class Notification(BaseModel):
     action_url = Column(String(500), comment='操作連結')
 
     # 通知狀態
-    status = Column(Enum(NotificationStatus), default=NotificationStatus.UNREAD,
+    status = Column(enum_type(NotificationStatus), default=NotificationStatus.UNREAD,
                    comment='通知狀態')
     read_at = Column(DateTime, comment='已讀時間')
 
@@ -271,7 +271,7 @@ class SystemLog(BaseModel):
     __tablename__ = 'system_logs_v2'
 
     # 日誌資訊
-    log_level = Column(Enum(LogLevel), default=LogLevel.INFO, comment='日誌等級')
+    log_level = Column(enum_type(LogLevel), default=LogLevel.INFO, comment='日誌等級')
     category = Column(String(100), comment='日誌分類')
     action = Column(String(200), comment='操作名稱')
     message = Column(Text, comment='日誌訊息')

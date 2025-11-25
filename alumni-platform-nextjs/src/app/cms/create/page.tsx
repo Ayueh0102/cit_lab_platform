@@ -36,7 +36,7 @@ export default function CMSCreatePage() {
   const currentUser = getUser();
   const isAdmin = currentUser?.role === 'admin';
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<Array<{id: number; name: string; is_active?: boolean}>>([]);
+  const [categories, setCategories] = useState<Array<{ id: number; name: string; is_active?: boolean }>>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [coverImageUrl, setCoverImageUrl] = useState<string>('');
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -61,7 +61,7 @@ export default function CMSCreatePage() {
 
   useEffect(() => {
     loadCategories();
-    
+
     // 從 localStorage 載入草稿
     const savedDraft = localStorage.getItem('cms_draft');
     if (savedDraft) {
@@ -125,7 +125,7 @@ export default function CMSCreatePage() {
       }
 
       const response = await api.files.upload(file, 'article_cover', undefined, token);
-      
+
       if (response.url) {
         setCoverImageUrl(response.url);
         form.setFieldValue('cover_image_url', response.url);
@@ -170,14 +170,14 @@ export default function CMSCreatePage() {
       const contentHtml = values.content || '';
       const titleMatch = contentHtml.match(/<h1[^>]*>(.*?)<\/h1>/i);
       const extractedTitle = titleMatch ? titleMatch[1].replace(/<[^>]*>/g, '').trim() : '';
-      
+
       // 如果沒有手動輸入摘要，自動從內容擷取前 150 字
       let autoSummary = values.summary;
       if (!autoSummary && contentHtml) {
         const textContent = contentHtml.replace(/<[^>]+>/g, '').trim();
         autoSummary = textContent.substring(0, 150) + (textContent.length > 150 ? '...' : '');
       }
-      
+
       await api.cms.create({
         title: extractedTitle || values.title || '無標題',
         subtitle: values.subtitle || undefined,
@@ -232,7 +232,7 @@ export default function CMSCreatePage() {
                   <Title order={1}>發布新文章</Title>
                 </div>
               </Group>
-              
+
               {/* 自動保存狀態 */}
               {lastSaved && (
                 <Text size="sm" c="dimmed">
@@ -248,7 +248,7 @@ export default function CMSCreatePage() {
                 <Paper shadow="sm" p="xl" radius="md" withBorder>
                   <Stack gap="md">
                     <Title order={3}>封面與摘要</Title>
-                    
+
                     {/* 封面圖片上傳 */}
                     <div>
                       <Text size="sm" fw={500} mb="xs">封面圖片（選填）</Text>
@@ -368,7 +368,7 @@ export default function CMSCreatePage() {
                         />
                       </Group>
                     </Group>
-                    
+
                     <RichTextEditor
                       content={form.values.content}
                       onChange={(content) => form.setFieldValue('content', content)}
@@ -397,11 +397,11 @@ export default function CMSCreatePage() {
                     loading={loading}
                     leftSection={<IconUpload size={16} />}
                   >
-                    {form.values.status === 'published' 
-                      ? '發布文章' 
-                      : form.values.status === 'pending' 
-                      ? '提交審核' 
-                      : '保存草稿'}
+                    {form.values.status === 'published'
+                      ? '發布文章'
+                      : form.values.status === 'pending'
+                        ? '提交審核'
+                        : '保存草稿'}
                   </Button>
                 </Group>
               </Stack>

@@ -1,431 +1,289 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
 import {
   AppShell,
-  Group,
-  Text,
-  UnstyledButton,
-  Avatar,
-  Badge,
-  Menu,
-  Stack,
-  Box,
-  Loader,
-  Center,
-  Drawer,
   Burger,
-  Header,
-  ActionIcon,
+  Group,
+  NavLink,
+  Text,
+  Box,
+  Avatar,
+  Menu,
+  UnstyledButton,
+  rem,
+  ThemeIcon,
+  ScrollArea,
 } from '@mantine/core';
-import { useDisclosure, useMediaQuery } from '@mantine/hooks';
+import { useDisclosure } from '@mantine/hooks';
 import {
   IconHome,
   IconBriefcase,
   IconCalendarEvent,
-  IconUsers,
-  IconBell as IconBellOutline,
-  IconUser,
   IconBell,
+  IconMessage,
   IconSettings,
   IconLogout,
-  IconChevronDown,
-  IconUserCircle,
-  IconFileText,
-  IconMenu2,
+  IconUser,
+  IconUsers,
+  IconSchool,
+  IconShieldLock,
+  IconChevronRight,
 } from '@tabler/icons-react';
-import { getUser, clearAuth, isAuthenticated, getToken } from '@/lib/auth';
-import { api } from '@/lib/api';
-import { useWebSocket } from '@/hooks/use-websocket';
+import { usePathname, useRouter } from 'next/navigation';
+import { clearAuth, getUser } from '@/lib/auth';
+import { notifications } from '@mantine/notifications';
 
-interface NavItem {
-  icon: React.ReactNode;
-  label: string;
-  path: string;
-  badge?: number;
-  adminOnly?: boolean;
+interface SidebarLayoutProps {
+  children: React.ReactNode;
 }
 
-export function SidebarLayout({ children }: { children: React.ReactNode }) {
+export function SidebarLayout({ children }: SidebarLayoutProps) {
+  const [opened, { toggle }] = useDisclosure();
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] = useDisclosure(false);
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const isTablet = useMediaQuery('(max-width: 1024px)');
-  const userName = user?.profile?.display_name || user?.profile?.full_name || user?.email || 'User';
 
   useEffect(() => {
     setMounted(true);
-    if (isAuthenticated()) {
-      setUser(getUser());
-      loadUnreadCount();
-    }
+    // 僅在客戶端獲取用戶資訊
+    const userData = getUser();
+    setUser(userData);
   }, []);
-
-  const loadUnreadCount = async () => {
-    try {
-      const token = getToken();
-      if (!token) return;
-
-      const response = await api.notifications.getUnreadCount(token);
-      setUnreadCount(response.unread_count || 0);
-    } catch (error) {
-      // 靜默失敗
-    }
-  };
-
-  // 使用 WebSocket 即時更新通知數量（連接失敗不影響功能）
-  useWebSocket({
-    onNotificationCountUpdate: (count) => {
-      setUnreadCount(count);
-    },
-    onNotification: () => {
-      // 有新通知時更新數量
-      loadUnreadCount();
-    },
-  });
 
   const handleLogout = () => {
     clearAuth();
+    notifications.show({
+      title: '已登出',
+      message: '您已成功登出系統',
+      color: 'blue',
+    });
     router.push('/auth/login');
-    router.refresh();
   };
 
-  const handleNavClick = (path: string) => {
-    router.push(path);
-    if (isMobile || isTablet) {
-      closeDrawer();
-    }
-  };
-
-  const navItems: NavItem[] = [
-    { icon: <IconHome size={20} />, label: '首頁', path: '/' },
-    { icon: <IconBriefcase size={20} />, label: '職缺分享', path: '/jobs' },
-    { icon: <IconCalendarEvent size={20} />, label: '活動列表', path: '/events' },
-    { icon: <IconUsers size={20} />, label: '系友名錄', path: '/directory' },
-    { icon: <IconBellOutline size={20} />, label: '公佈欄', path: '/bulletins' },
-    { icon: <IconUser size={20} />, label: '個人檔案', path: '/profile' },
-    { icon: <IconUserCircle size={20} />, label: '職涯管理', path: '/career' },
-    { icon: <IconBell size={20} />, label: '通知', path: '/notifications', badge: unreadCount },
-    { icon: <IconSettings size={20} />, label: '管理後台', path: '/admin', adminOnly: true },
-    { icon: <IconFileText size={20} />, label: '系友動態', path: '/cms' },
+  // 導航項目配置 - 增加顏色標識
+  const navItems = [
+    { label: '首頁總覽', icon: IconHome, link: '/', color: 'blue' },
+    { label: '系友通訊錄', icon: IconUsers, link: '/directory', color: 'indigo' },
+    { label: '職缺機會', icon: IconBriefcase, link: '/jobs', color: 'teal' },
+    { label: '活動聚會', icon: IconCalendarEvent, link: '/events', color: 'orange' },
+    { label: '校園公告', icon: IconBell, link: '/bulletins', color: 'grape' },
+    { label: '系友動態', icon: IconSchool, link: '/cms', color: 'pink' },
+    { label: '訊息中心', icon: IconMessage, link: '/messages', color: 'cyan' },
   ];
 
-  // 過濾掉僅管理員可見的項目
-  const filteredNavItems = navItems.filter(item => 
-    !item.adminOnly || user?.role === 'admin'
-  );
-
-  // 導航內容組件（可重用於側邊欄和 Drawer）
-  const NavContent = ({ showLogo = true }: { showLogo?: boolean }) => (
-    <Stack gap="md" h="100%" p="md">
-      {/* Logo 區域 - 僅在桌面端側邊欄顯示 */}
-      {showLogo && !isMobile && !isTablet && (
-          <Box>
-            <Group gap="sm" mb="lg">
-              <Avatar
-                size={50}
-                radius="xl"
-                styles={{
-                  root: {
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
-                  },
-                }}
-              >
-                🎓
-              </Avatar>
-              <div>
-                <Text size="lg" fw={700} c="white">
-                色彩所系友會
-                </Text>
-                <Text size="xs" c="white" style={{ opacity: 0.9 }}>
-                CIT
-                </Text>
-              </div>
-            </Group>
-        </Box>
-      )}
-
-            {/* 用戶資訊卡片 */}
-            <Box
-        p={isMobile ? "sm" : "md"}
-              style={{
-                background: 'rgba(255, 255, 255, 0.15)',
-                borderRadius: '12px',
-                backdropFilter: 'blur(10px)',
-              }}
-            >
-              <Group gap="sm">
-          <Avatar color="white" size={isMobile ? "sm" : "md"} radius="xl">
-                  {userName.charAt(0)}
-                </Avatar>
-                <div style={{ flex: 1 }}>
-            <Text size={isMobile ? "xs" : "sm"} fw={600} c="white" lineClamp={1}>
-                    {userName}
-                  </Text>
-                  <Badge size="xs" color="rgba(255, 255, 255, 0.3)" variant="filled">
-                    {user?.role === 'admin' ? '管理員' : '系友'}
-                  </Badge>
-                </div>
-              </Group>
-          </Box>
-
-          {/* 導航菜單 */}
-          <Stack gap={4} style={{ flex: 1 }}>
-            {filteredNavItems.map((item) => (
-              <UnstyledButton
-                key={item.path}
-            onClick={() => handleNavClick(item.path)}
-            p={isMobile ? "xs" : "sm"}
-                style={{
-                  borderRadius: '8px',
-                  background: pathname === item.path 
-                    ? 'rgba(255, 255, 255, 0.25)' 
-                    : 'transparent',
-                  transition: 'all 0.2s',
-                  border: pathname === item.path 
-                    ? '2px solid rgba(255, 255, 255, 0.4)'
-                    : '2px solid transparent',
-                }}
-                styles={{
-                  root: {
-                    '&:hover': {
-                      background: 'rgba(255, 255, 255, 0.15)',
-                    },
-                  },
-                }}
-              >
-                <Group gap="sm">
-                  <Box c="white">{item.icon}</Box>
-              <Text size={isMobile ? "xs" : "sm"} fw={pathname === item.path ? 600 : 400} c="white" style={{ flex: 1 }}>
-                    {item.label}
-                  </Text>
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <Badge size="sm" color="red" variant="filled" circle>
-                      {item.badge}
-                    </Badge>
-                  )}
-                </Group>
-              </UnstyledButton>
-            ))}
-          </Stack>
-
-          {/* 登出按鈕 */}
-          <UnstyledButton
-            onClick={handleLogout}
-        p={isMobile ? "xs" : "sm"}
-            style={{
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-            }}
-            styles={{
-              root: {
-                '&:hover': {
-                  background: 'rgba(255, 100, 100, 0.3)',
-                },
-              },
-            }}
-          >
-            <Group gap="sm">
-          <IconLogout size={isMobile ? 18 : 20} color="white" />
-          <Text size={isMobile ? "xs" : "sm"} c="white">
-                登出
-              </Text>
-            </Group>
-          </UnstyledButton>
-        </Stack>
-  );
-
-  // 避免 hydration 錯誤 - 等待客戶端掛載
-  if (!mounted) {
-    return (
-      <AppShell
-        padding={isMobile ? "xs" : "md"}
-        navbar={!isMobile && !isTablet ? {
-          width: 280,
-          breakpoint: 'sm',
-        } : undefined}
-        header={isMobile || isTablet ? {
-          height: 60,
-        } : undefined}
-        styles={{
-          navbar: {
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          },
-          header: {
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          },
-          main: {
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-            minHeight: '100vh',
-          },
-        }}
-      >
-        {isMobile || isTablet ? (
-          <AppShell.Header p="md">
-            <Group justify="space-between" h="100%">
-              <Group gap="sm">
-                <Avatar size={32} radius="xl">🎓</Avatar>
-                <Text size="sm" fw={700} c="white">色彩所系友會</Text>
-              </Group>
-              <Loader color="white" size="sm" />
-            </Group>
-          </AppShell.Header>
-        ) : (
-          <AppShell.Navbar p="md">
-            <Center h="100%">
-              <Loader color="white" />
-            </Center>
-          </AppShell.Navbar>
-        )}
-        <AppShell.Main>{children}</AppShell.Main>
-      </AppShell>
-    );
+  // 管理員專屬項目
+  if (user?.role === 'admin') {
+    navItems.push({ label: '管理後台', icon: IconShieldLock, link: '/admin', color: 'red' });
   }
 
   return (
-    <>
-      <AppShell
-        padding={isMobile ? "xs" : "md"}
-        navbar={!isMobile && !isTablet ? {
-          width: 280,
-          breakpoint: 'sm',
-        } : undefined}
-        header={isMobile || isTablet ? {
-          height: 60,
-        } : undefined}
-        styles={{
-          navbar: {
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          },
-          header: {
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderBottom: 'none',
-          },
-          main: {
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-            minHeight: '100vh',
-          },
+    <AppShell
+      header={{ height: 70 }}
+      navbar={{
+        width: 280,
+        breakpoint: 'sm',
+        collapsed: { mobile: !opened },
+      }}
+      padding="md"
+      styles={{
+        root: {
+          backgroundColor: 'transparent',
+        },
+        main: {
+          backgroundColor: 'transparent', // 讓背景圖透出來
+        },
+      }}
+    >
+      {/* Header: 實色背景 */}
+      <AppShell.Header 
+        style={{ 
+          borderBottom: 'none', 
+          zIndex: 101,
+          backgroundColor: 'var(--mantine-color-body)',
+          backdropFilter: 'none',
         }}
       >
-        {/* 移動端/平板端 Header */}
-        {(isMobile || isTablet) && (
-          <AppShell.Header p="md">
-            <Group justify="space-between" h="100%">
-              <Group gap="sm">
-                <Avatar 
-                  size={32} 
-                  radius="xl"
-                  styles={{
-                    root: {
-                      background: 'rgba(255, 255, 255, 0.2)',
-                    },
-                  }}
-                >
-                  🎓
-                </Avatar>
-                <div>
-                  <Text size="sm" fw={700} c="white">
-                    色彩所系友會
-                  </Text>
-                  <Text size="xs" c="white" style={{ opacity: 0.9 }}>
-                    CIT
-                  </Text>
-                </div>
-              </Group>
-              <Group gap="xs">
-                {unreadCount > 0 && (
-                  <Badge size="sm" color="red" variant="filled" circle>
-                    {unreadCount}
-                  </Badge>
-                )}
-                <Burger
-                  opened={drawerOpened}
-                  onClick={toggleDrawer}
-                  color="white"
-                  size="sm"
-                />
-              </Group>
-            </Group>
-          </AppShell.Header>
-        )}
-
-        {/* 桌面端側邊欄 */}
-        {!isMobile && !isTablet && (
-          <AppShell.Navbar p="md">
-            <NavContent showLogo={true} />
-      </AppShell.Navbar>
-        )}
-
-      {/* 主要內容區域 */}
-      <AppShell.Main>{children}</AppShell.Main>
-    </AppShell>
-
-      {/* 移動端/平板端 Drawer */}
-      {(isMobile || isTablet) && (
-        <Drawer
-          opened={drawerOpened}
-          onClose={closeDrawer}
-          position="right"
-          size={isMobile ? "280px" : "300px"}
-          padding="md"
-          title={
-            <Group gap="sm">
-              <Avatar
-                size={32}
-                radius="xl"
-                styles={{
-                  root: {
-                    background: 'rgba(255, 255, 255, 0.2)',
-                  },
-                }}
+        <Group h="100%" px="md" justify="space-between">
+          <Group>
+            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+            <Group gap="xs" align="center" style={{ cursor: 'pointer' }} onClick={() => router.push('/')}>
+              <ThemeIcon 
+                size="lg" 
+                radius="md" 
+                className="gradient-light"
+                style={{ border: 'none' }}
               >
-                🎓
-              </Avatar>
-              <div>
-                <Text size="sm" fw={700} c="white">
-                  色彩所系友會
+                <IconSchool size={22} color="white" />
+              </ThemeIcon>
+              <Box visibleFrom="xs">
+                <Text 
+                  size="lg" 
+                  fw={800} 
+                  className="text-gradient-light"
+                  style={{ letterSpacing: '-0.5px' }}
+                >
+                  台科色彩所系友會平台
                 </Text>
-                <Text size="xs" c="white" style={{ opacity: 0.9 }}>
-                  CIT
-                </Text>
-              </div>
+                <Text size="xs" c="dimmed" fw={500} mt={-4}>校友互動平台</Text>
+              </Box>
             </Group>
-          }
-          styles={{
-            header: {
-              background: 'transparent',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-              padding: '1rem',
-              marginBottom: '0.5rem',
-            },
-            title: {
-              color: 'white',
-            },
-            closeButton: {
-              color: 'white',
-              '&:hover': {
-                background: 'rgba(255, 255, 255, 0.1)',
-              },
-            },
-            body: {
-              padding: '0.5rem 0',
-            },
-            content: {
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            },
+          </Group>
+
+          <Group>
+            <Menu shadow="md" width={200} transitionProps={{ transition: 'pop-top-right' }} radius="md">
+              <Menu.Target>
+                <UnstyledButton className="sidebar-nav-item" p={4} px={8} style={{ borderRadius: '30px' }}>
+                  <Group gap={8}>
+                    {mounted ? (
+                      <>
+                        <Avatar 
+                          src={user?.avatar_url} 
+                          radius="xl" 
+                          size="md" 
+                          color="blue"
+                          className="shadow-sm"
+                        >
+                          {user?.full_name?.[0] || user?.email?.[0]?.toUpperCase()}
+                        </Avatar>
+                        <Box visibleFrom="xs" mr={4}>
+                          <Text size="sm" fw={600} lineClamp={1}>
+                            {user?.full_name || '使用者'}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {user?.role === 'admin' ? '系統管理員' : '系友會員'}
+                          </Text>
+                        </Box>
+                      </>
+                    ) : (
+                      <Group gap={8}>
+                         <Avatar radius="xl" size="md" color="gray" />
+                         <Box visibleFrom="xs" mr={4} style={{ width: 80, height: 20, backgroundColor: '#f0f0f0', borderRadius: 4 }} />
+                      </Group>
+                    )}
+                  </Group>
+                </UnstyledButton>
+              </Menu.Target>
+
+              <Menu.Dropdown style={{ border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
+                <Menu.Label>帳號設定</Menu.Label>
+                <Menu.Item 
+                  leftSection={<IconUser size={16} />} 
+                  onClick={() => router.push('/profile')}
+                >
+                  個人資料
+                </Menu.Item>
+                <Menu.Item 
+                  leftSection={<IconSettings size={16} />} 
+                  onClick={() => router.push('/settings')}
+                >
+                  系統設定
+                </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item 
+                  color="red" 
+                  leftSection={<IconLogout size={16} />}
+                  onClick={handleLogout}
+                >
+                  登出
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+        </Group>
+      </AppShell.Header>
+
+      {/* Navbar: 懸浮感側邊欄 */}
+      <AppShell.Navbar 
+        p="md" 
+        className="glass-panel"
+        style={{ 
+          borderRight: 'none',
+          margin: '16px 0 16px 16px', // 懸浮效果
+          height: 'calc(100vh - 102px)', // 調整高度
+          borderRadius: '16px',
+          display: opened ? 'block' : undefined
+        }}
+      >
+        <ScrollArea h="100%">
+          <Box mb="md">
+            <Text size="xs" fw={700} c="dimmed" mb="xs" px="xs" tt="uppercase" style={{ letterSpacing: '1px' }}>
+              Main Menu
+            </Text>
+            {navItems.map((item) => {
+              const isActive = pathname === item.link || pathname?.startsWith(`${item.link}/`);
+              return (
+                <NavLink
+                  key={item.label}
+                  label={
+                    <Text size="sm" fw={isActive ? 700 : 500} c={isActive ? 'dark' : 'dimmed'}>
+                      {item.label}
+                    </Text>
+                  }
+                  leftSection={
+                    <ThemeIcon 
+                      variant={isActive ? 'gradient' : 'light'} 
+                      gradient={isActive ? { from: item.color, to: 'cyan', deg: 135 } : undefined}
+                      color={item.color}
+                      size="md" 
+                      radius="md"
+                    >
+                      <item.icon size={18} stroke={2} />
+                    </ThemeIcon>
+                  }
+                  rightSection={
+                    isActive && <IconChevronRight size={14} style={{ opacity: 0.5 }} />
+                  }
+                  onClick={() => {
+                    router.push(item.link);
+                    toggle();
+                  }}
+                  active={isActive}
+                  className="sidebar-nav-item"
+                  mb={4}
+                  py={10}
+                />
+              );
+            })}
+          </Box>
+
+          <Box mt="xl">
+            <Text size="xs" fw={700} c="dimmed" mb="xs" px="xs" tt="uppercase" style={{ letterSpacing: '1px' }}>
+              Quick Access
+            </Text>
+            <NavLink
+              label="發布新職缺"
+              leftSection={<IconBriefcase size={16} />}
+              onClick={() => router.push('/jobs/create')}
+              className="sidebar-nav-item"
+              mb={4}
+              style={{ opacity: 0.8 }}
+            />
+            <NavLink
+              label="發布文章"
+              leftSection={<IconSchool size={16} />}
+              onClick={() => router.push('/cms/create')}
+              className="sidebar-nav-item"
+              mb={4}
+              style={{ opacity: 0.8 }}
+            />
+          </Box>
+        </ScrollArea>
+      </AppShell.Navbar>
+
+      <AppShell.Main className="dashboard-main">
+        <Box 
+          style={{ 
+            maxWidth: '1600px', 
+            margin: '0 auto',
+            minHeight: 'calc(100vh - 100px)',
+            position: 'relative'
           }}
         >
-          <NavContent showLogo={false} />
-        </Drawer>
-      )}
-    </>
+          {children}
+        </Box>
+      </AppShell.Main>
+    </AppShell>
   );
 }
-

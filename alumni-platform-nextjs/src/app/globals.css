@@ -2,8 +2,228 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 全局漸變背景動畫 */
-@keyframes gradientShift {
+/* 定義光譜變數 (Refined RGB) */
+:root {
+  --color-warm: #FF6B6B;
+  --color-fresh: #4ECDC4;
+  --color-light: #4facfe;
+  --color-purple: #a18cd1;
+  --bg-glass: rgba(255, 255, 255, 0.7);
+  --bg-glass-dark: rgba(255, 255, 255, 0.9);
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+body {
+  background-color: transparent;
+  color: #2d3748;
+  overflow-x: hidden;
+  position: relative;
+  min-height: 100vh;
+}
+
+[data-mantine-color-scheme="dark"] body {
+  color: #e2e8f0;
+}
+
+/* === 極光漫遊背景 (Aurora Drift Background) - Liquid Edition === */
+/* 元件樣式 - 透過 AuroraBackground.tsx 引用 */
+
+.aurora-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #f0f4f8;
+  overflow: hidden;
+  transition: background-color 0.3s ease;
+}
+
+[data-mantine-color-scheme="dark"] .aurora-container {
+  background-color: #0f172a;
+}
+
+/* Layer 1: Deep Liquid Base (Deep Blue/Indigo) */
+.aurora-layer-1 {
+  position: absolute;
+  top: -20%;
+  left: -20%;
+  width: 140%;
+  height: 140%;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(0, 82, 212, 0.4), transparent 50%),
+    radial-gradient(circle at 90% 80%, rgba(67, 100, 247, 0.35), transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(111, 168, 220, 0.25), transparent 60%);
+  filter: blur(80px) contrast(1.1);
+  animation: aurora-liquid-1 24s infinite ease-in-out;
+  opacity: 0.9;
+  mix-blend-mode: screen;
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+}
+
+[data-mantine-color-scheme="dark"] .aurora-layer-1 {
+  opacity: 0.6;
+}
+
+/* Layer 2: Warm Liquid Flow (Gold/Orange/Amber) */
+.aurora-layer-2 {
+  position: absolute;
+  top: -20%;
+  left: -20%;
+  width: 140%;
+  height: 140%;
+  background:
+    radial-gradient(circle at 80% 20%, rgba(255, 183, 77, 0.45), transparent 50%),
+    radial-gradient(circle at 20% 80%, rgba(255, 138, 101, 0.4), transparent 50%),
+    radial-gradient(circle at 50% 40%, rgba(255, 213, 79, 0.35), transparent 60%);
+  filter: blur(90px) contrast(1.2);
+  animation: aurora-liquid-2 28s infinite ease-in-out;
+  opacity: 0.85;
+  mix-blend-mode: screen;
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+}
+
+[data-mantine-color-scheme="dark"] .aurora-layer-2 {
+  opacity: 0.5;
+}
+
+/* Layer 3: Highlight Diffusion (Cyan/White/Soft Pink) */
+.aurora-layer-3 {
+  position: absolute;
+  top: -30%;
+  left: -10%;
+  width: 120%;
+  height: 120%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(0, 242, 254, 0.3), transparent 40%),
+    radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.5), transparent 45%),
+    radial-gradient(circle at 50% 10%, rgba(250, 208, 196, 0.3), transparent 45%);
+  filter: blur(100px);
+  mix-blend-mode: overlay;
+  opacity: 0.8;
+  animation: aurora-liquid-3 32s infinite ease-in-out;
+  border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+}
+
+[data-mantine-color-scheme="dark"] .aurora-layer-3 {
+  opacity: 0.4;
+  mix-blend-mode: screen;
+}
+
+/* Glow Layer: Atmospheric Diffusion */
+.aurora-glow {
+  position: absolute;
+  inset: -20%;
+  background:
+    conic-gradient(from 180deg at 50% 50%, 
+      rgba(0, 198, 255, 0.15), 
+      rgba(255, 183, 77, 0.15), 
+      rgba(255, 114, 96, 0.1), 
+      rgba(111, 168, 220, 0.15), 
+      rgba(0, 198, 255, 0.15));
+  filter: blur(140px);
+  mix-blend-mode: overlay;
+  opacity: 0.7;
+  animation: aurora-color 40s linear infinite;
+  pointer-events: none;
+}
+
+[data-mantine-color-scheme="dark"] .aurora-glow {
+  opacity: 0.3;
+  mix-blend-mode: screen;
+}
+
+.aurora-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.aurora-particles span {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9), transparent 70%);
+  opacity: 0.6;
+  filter: blur(3px);
+  animation: aurora-particle 22s ease-in-out infinite;
+}
+
+[data-mantine-color-scheme="dark"] .aurora-particles span {
+  opacity: 0.3;
+}
+
+/* === Liquid Animations === */
+
+@keyframes aurora-liquid-1 {
+  0% {
+    transform: scale(1) translate(0, 0) rotate(0deg);
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  }
+  33% {
+    transform: scale(1.1) translate(2%, -3%) rotate(2deg);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+  66% {
+    transform: scale(0.95) translate(-2%, 3%) rotate(-2deg);
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  }
+  100% {
+    transform: scale(1) translate(0, 0) rotate(0deg);
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  }
+}
+
+@keyframes aurora-liquid-2 {
+  0% {
+    transform: scale(1) translate(0, 0) rotate(0deg);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+  50% {
+    transform: scale(1.2) translate(-4%, 4%) rotate(-3deg);
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  }
+  100% {
+    transform: scale(1) translate(0, 0) rotate(0deg);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+}
+
+@keyframes aurora-liquid-3 {
+  0% {
+    transform: scale(1) translate(0, 0);
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  }
+  50% {
+    transform: scale(1.15) translate(3%, 3%);
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  }
+  100% {
+    transform: scale(1) translate(0, 0);
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  }
+}
+
+@keyframes aurora-particle {
+  0% {
+    transform: translate(0, 0) scale(0.8);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(30px, -30px) scale(1.3);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(0, 0) scale(0.8);
+    opacity: 0.4;
+  }
+}
+
+@keyframes aurora-shift {
   0% {
     background-position: 0% 50%;
   }
@@ -15,326 +235,380 @@
   }
 }
 
-@keyframes colorSlide {
+@keyframes aurora-color {
   0% {
-    background-position: 0% 50%;
+    transform: rotate(0deg);
   }
   100% {
-    background-position: 300% 50%;
+    transform: rotate(360deg);
   }
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
+/* === 毛玻璃效果 Glassmorphism === */
+.dashboard-main {
+  position: relative;
+  z-index: 1;
+  background-color: transparent;
+}
+
+.dashboard-main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.2), transparent 55%),
+    radial-gradient(circle at 80% 30%, rgba(0, 198, 255, 0.15), transparent 50%),
+    radial-gradient(circle at 30% 80%, rgba(255, 183, 77, 0.15), transparent 45%),
+    radial-gradient(circle at 60% 50%, rgba(111, 168, 220, 0.15), transparent 52%),
+    radial-gradient(circle at 45% 75%, rgba(255, 114, 96, 0.12), transparent 48%);
+  opacity: 0.9;
+  filter: blur(70px);
+  animation: aurora-shift 30s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dashboard-main > * {
+  position: relative;
+  z-index: 1;
+}
+
+.glass-panel {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: var(--shadow-glass);
+}
+
+[data-mantine-color-scheme="dark"] .glass-panel {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+[data-mantine-color-scheme="dark"] .glass-card {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.glass-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+[data-mantine-color-scheme="dark"] .glass-card:hover {
+  background: rgba(30, 41, 59, 0.85);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.card-accent {
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  filter: blur(45px);
+  opacity: 0.5;
+  mix-blend-mode: screen;
+  animation: card-accent-rotate 24s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.card-accent-fresh {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(78, 205, 196, 0.8), transparent 60%),
+    radial-gradient(circle at 70% 70%, rgba(0, 242, 254, 0.6), transparent 70%);
+}
+
+.card-accent-warm {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 138, 92, 0.8), transparent 60%),
+    radial-gradient(circle at 70% 70%, rgba(255, 99, 132, 0.6), transparent 70%);
+}
+
+.spectral-waves {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.spectral-wave {
+  position: absolute;
+  top: -10%;
+  left: -15%;
+  width: 130%;
+  height: 130%;
+  animation: spectral-wave-move 18s ease-in-out infinite;
+}
+
+.spectral-wave-secondary {
+  animation-duration: 26s;
+  animation-direction: reverse;
+  opacity: 0.5;
+  filter: blur(2px);
+}
+
+.spectral-wave-glow {
+  position: absolute;
+  width: 80%;
+  height: 80%;
+  top: 10%;
+  left: 10%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, transparent 65%);
+  filter: blur(45px);
+  opacity: 0.5;
+  mix-blend-mode: screen;
+  animation: spectral-wave-move 22s linear infinite;
+}
+
+/* === 光譜漸層 Gradient Systems === */
+
+/* 確保漸層卡片在 Hover 時保持背景色 */
+.glass-card.gradient-warm:hover {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+}
+
+.glass-card.gradient-fresh:hover {
+  background: linear-gradient(135deg, #4ECDC4 0%, #2BCBBA 100%);
+}
+
+.glass-card.gradient-light:hover {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.glass-card.gradient-magic:hover {
+  background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+}
+
+/* 暖色系 (Red/Orange - Events) */
+.gradient-warm {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+}
+
+.text-gradient-warm {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 清新系 (Green/Teal - Career) */
+.gradient-fresh {
+  background: linear-gradient(135deg, #4ECDC4 0%, #2BCBBA 100%);
+}
+
+.text-gradient-fresh {
+  background: linear-gradient(135deg, #4ECDC4 0%, #2BCBBA 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 光感系 (Blue/Indigo - Alumni/System) */
+.gradient-light {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.text-gradient-light {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 神秘系 (Purple/Pink - Admin) */
+.gradient-magic {
+  background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+}
+
+/* === 動畫 Animation === */
+
+@keyframes spectral-wave-move {
+  0% {
+    transform: translate3d(-6%, 12%, 0) scale(1);
   }
+
   50% {
-    transform: scale(1.05);
-    opacity: 0.9;
+    transform: translate3d(10%, -12%, 0) scale(1.1);
+  }
+
+  100% {
+    transform: translate3d(-6%, 12%, 0) scale(1);
   }
 }
 
-@keyframes bounceIn {
+@keyframes float {
   0% {
-    opacity: 0;
-    transform: scale(0.3);
+    transform: translateY(0px);
   }
+
   50% {
-    opacity: 1;
-    transform: scale(1.05);
+    transform: translateY(-10px);
   }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes pulse-soft {
+  0% {
+    box-shadow: 0 0 0 0 rgba(79, 172, 254, 0.4);
+  }
+
   70% {
-    transform: scale(0.9);
+    box-shadow: 0 0 0 10px rgba(79, 172, 254, 0);
   }
+
   100% {
-    opacity: 1;
-    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(79, 172, 254, 0);
   }
 }
 
-@keyframes slideInUp {
+@keyframes slide-up-fade {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+@keyframes card-accent-rotate {
+  0% {
+    transform: rotate(0deg) scale(0.95);
   }
-  to {
+
+  50% {
+    transform: rotate(15deg) scale(1.05);
+  }
+
+  100% {
+    transform: rotate(360deg) scale(0.95);
+  }
+}
+
+@keyframes prism-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes beam-enter {
+  0%, 100% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateX(2px) rotate(1deg);
     opacity: 1;
   }
 }
 
-/* 全局樣式覆蓋 */
-body {
-  overflow-x: hidden;
+@keyframes beam-refract {
+  0%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(5deg) scale(1.05);
+  }
 }
 
-/* 卡片動畫類別 */
-.animate-bounce-in {
-  animation: bounceIn 0.6s ease-out;
+@keyframes cie-pulse {
+  0% {
+    transform: scale(0.95) rotate(-10deg);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: scale(1.05) rotate(5deg);
+    opacity: 0.4;
+  }
+
+  100% {
+    transform: scale(0.95) rotate(-10deg);
+    opacity: 0.25;
+  }
 }
 
-.animate-slide-in {
-  animation: slideInUp 0.5s ease-out;
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.4s ease-out;
+.animate-slide-up {
+  animation: slide-up-fade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* 漸變卡片邊框 */
-.gradient-border-top::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #667eea, #764ba2, #ff6b6b, #feca57);
-  background-size: 300% 100%;
-  animation: colorSlide 3s linear infinite;
+.card-hover-effect {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* 漸變文字 */
-.gradient-text {
-  background: linear-gradient(135deg, #667eea, #764ba2, #ff6b6b);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.card-hover-effect:hover {
+  transform: scale(1.02) translateY(-5px);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
+  z-index: 10;
 }
 
-/* 漸變按鈕效果 */
-.gradient-button {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  transition: all 0.3s ease;
+/* === 實用工具類 === */
+.bg-mesh {
+  background-color: hsla(0, 0%, 100%, 1);
+  background-image:
+    radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(340, 100%, 76%, 0.3) 0px, transparent 50%);
 }
 
-.gradient-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-}
-
-/* 卡片 Hover 效果 */
-.card-hover {
-  transition: all 0.3s ease;
+.sidebar-nav-item {
   position: relative;
   overflow: hidden;
-}
-
-.card-hover:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-}
-
-/* 背景模糊效果 */
-.glass-effect {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-/* 漸變卡片背景 */
-.gradient-card-purple {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-}
-
-.gradient-card-orange {
-  background: linear-gradient(135deg, #ff6b6b, #feca57);
-}
-
-.gradient-card-blue {
-  background: linear-gradient(135deg, #48dbfb, #0abde3);
-}
-
-.gradient-card-pink {
-  background: linear-gradient(135deg, #ff9a9e, #fecfef);
-}
-
-/* 脈衝動畫 */
-.animate-pulse-slow {
-  animation: pulse 2s infinite;
-}
-
-/* 側邊欄漸變背景 */
-.sidebar-gradient {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-/* 漸變統計卡片 */
-.stat-card-gradient-1 {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-}
-
-.stat-card-gradient-1:hover {
-  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.4);
-}
-
-.stat-card-gradient-2 {
-  background: linear-gradient(135deg, #ff6b6b, #feca57);
-  box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
-}
-
-.stat-card-gradient-2:hover {
-  box-shadow: 0 20px 40px rgba(255, 107, 107, 0.4);
-}
-
-.stat-card-gradient-3 {
-  background: linear-gradient(135deg, #48dbfb, #0abde3);
-  box-shadow: 0 10px 30px rgba(72, 219, 251, 0.3);
-}
-
-.stat-card-gradient-3:hover {
-  box-shadow: 0 20px 40px rgba(72, 219, 251, 0.4);
-}
-
-.stat-card-gradient-4 {
-  background: linear-gradient(135deg, #a29bfe, #6c5ce7);
-  box-shadow: 0 10px 30px rgba(162, 155, 254, 0.3);
-}
-
-.stat-card-gradient-4:hover {
-  box-shadow: 0 20px 40px rgba(162, 155, 254, 0.4);
-}
-
-/* 柔和的過渡效果 */
-.smooth-transition {
   transition: all 0.3s ease;
+  border-radius: 12px;
 }
 
-/* hover 時輕微平移 */
-.hover-translate-x:hover {
+.sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.5);
   transform: translateX(5px);
 }
 
-.hover-translate-y:hover {
-  transform: translateY(-5px);
+[data-mantine-color-scheme="dark"] .sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-/* 標籤漸變效果 */
-.badge-gradient {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+.sidebar-nav-item.active {
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  font-weight: 600;
 }
 
-/* 柔和陰影 */
-.shadow-soft {
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+[data-mantine-color-scheme="dark"] .sidebar-nav-item.active {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  color: white;
 }
 
-.shadow-soft-hover:hover {
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-}
-
-/* 進度條動畫 */
-@keyframes progressFill {
-  from {
-    transform: scaleX(0);
-    transform-origin: left;
-  }
-  to {
-    transform: scaleX(1);
-    transform-origin: left;
-  }
-}
-
-.progress-animate {
-  animation: progressFill 1s ease-out;
-}
-
-/* 通知徽章脈衝 */
-.notification-badge {
-  animation: pulse 2s infinite;
-}
-
-/* Mantine 元件覆蓋 */
-.mantine-Card-root {
-  transition: all 0.3s ease;
-}
-
-/* 響應式媒體查詢輔助 */
-@media (max-width: 768px) {
-  .hide-mobile {
-    display: none;
-  }
-}
-
-@media (min-width: 769px) {
-  .hide-desktop {
-    display: none;
-  }
-}
-
-/* 移動端優化 */
-@media (max-width: 768px) {
-  /* 改善觸控目標大小 */
-  button,
-  a,
-  [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  /* 優化文字大小 */
-  body {
-    font-size: 16px; /* 防止 iOS 自動縮放 */
-    -webkit-text-size-adjust: 100%;
-  }
-
-  /* 改善滾動體驗 */
-  * {
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* 優化卡片間距 */
-  .mantine-Card-root {
-    margin-bottom: 1rem;
-  }
-
-  /* 優化輸入框 */
-  input,
-  textarea,
-  select {
-    font-size: 16px; /* 防止 iOS 自動縮放 */
-  }
-}
-
-/* 平板優化 */
-@media (max-width: 1024px) and (min-width: 769px) {
-  /* 適中的間距 */
-  .mantine-Container-root {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-}
-
-/* 改善移動端按鈕點擊反饋 */
-@media (max-width: 768px) {
-  button:active,
-  [role="button"]:active,
-  .mantine-UnstyledButton-root:active {
-    transform: scale(0.98);
-    transition: transform 0.1s ease;
-  }
-}
-
-/* 優化移動端表格 */
-@media (max-width: 768px) {
-  table {
-    font-size: 0.875rem;
-  }
-
-  th,
-  td {
-    padding: 0.5rem;
-  }
+.sidebar-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 60%;
+  width: 4px;
+  background: linear-gradient(to bottom, #4facfe, #00f2fe);
+  border-radius: 0 4px 4px 0;
 }

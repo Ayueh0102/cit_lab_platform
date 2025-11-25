@@ -1,74 +1,104 @@
 'use client';
 
-import { createTheme } from '@mantine/core';
+import { createTheme, rem } from '@mantine/core';
 
 export const theme = createTheme({
-  // 主色調 - 使用專業的藍色作為主色
-  primaryColor: 'blue',
+  // 主色調 - 使用更有活力的藍紫色
+  primaryColor: 'indigo',
   
-  // 字體設定
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  fontFamilyMonospace: 'Monaco, Courier, monospace',
+  // 字體設定 - 增加現代感
+  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   headings: {
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontWeight: '700',
     sizes: {
-      h1: { fontSize: '2rem', lineHeight: '1.2' },
-      h2: { fontSize: '1.5rem', lineHeight: '1.3' },
-      h3: { fontSize: '1.25rem', lineHeight: '1.4' },
+      h1: { fontSize: rem(32), lineHeight: '1.2' },
+      h2: { fontSize: rem(26), lineHeight: '1.3' },
+      h3: { fontSize: rem(22), lineHeight: '1.4' },
+      h4: { fontSize: rem(18), lineHeight: '1.45' },
     },
   },
 
-  // 顏色配置
-  colors: {
-    // 可以在這裡自定義更多顏色
-  },
-
-  // 圓角設定
+  // 圓角設定 - 更圓潤現代
   radius: {
-    xs: '0.25rem',
-    sm: '0.375rem',
-    md: '0.5rem',
-    lg: '0.75rem',
-    xl: '1rem',
-  },
-
-  // 間距設定
-  spacing: {
     xs: '0.5rem',
     sm: '0.75rem',
-    md: '1rem',
+    md: '1rem',    // 預設圓角加大
     lg: '1.5rem',
     xl: '2rem',
   },
 
-  // 陰影設定
+  // 陰影設定 - 更柔和的擴散陰影
   shadows: {
-    xs: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-    sm: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-    md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    xs: '0 4px 6px rgba(0, 0, 0, 0.02)',
+    sm: '0 6px 12px rgba(0, 0, 0, 0.04)',
+    md: '0 12px 24px rgba(0, 0, 0, 0.06)',
+    lg: '0 20px 40px rgba(0, 0, 0, 0.08)',
+    xl: '0 30px 60px rgba(0, 0, 0, 0.12)',
   },
 
-  // 預設組件屬性
+  // 自定義顏色 - 光譜色系
+  colors: {
+    // 暖陽 (Red/Orange 變體)
+    'spectrum-warm': [
+      '#fff0e6', '#ffdec9', '#ffba94', '#ff945e', '#ff7430', 
+      '#ff5f14', '#ff5506', '#e34500', '#cb3b00', '#b22f00'
+    ],
+    // 翠綠 (Green/Teal 變體)
+    'spectrum-fresh': [
+      '#e3faf8', '#d1f2ef', '#a8e6e0', '#7bd9ce', '#55cebf', 
+      '#3dc7b5', '#2ec4b1', '#1ead9b', '#129a8a', '#008678'
+    ],
+    // 智慧 (Blue/Indigo 變體)
+    'spectrum-light': [
+      '#eef3ff', '#dce4f5', '#b9c7e2', '#94a8cf', '#748dc0', 
+      '#5f7cb6', '#5474b2', '#44639f', '#39588f', '#2d4b82'
+    ],
+  },
+
+  // 組件預設樣式
   components: {
     Button: {
       defaultProps: {
-        radius: 'md',
+        radius: 'xl', // 按鈕全圓角
+        size: 'md',
       },
-    },
-    TextInput: {
-      defaultProps: {
-        radius: 'md',
-      },
+      styles: {
+        root: {
+          fontWeight: 600,
+          transition: 'all 0.2s ease',
+        }
+      }
     },
     Card: {
       defaultProps: {
         shadow: 'sm',
         radius: 'md',
-        withBorder: true,
+        withBorder: false, // 去除邊框，改用陰影
+        padding: 'lg',
       },
+    },
+    Paper: {
+      defaultProps: {
+        radius: 'md',
+      }
+    },
+    TextInput: {
+      defaultProps: {
+        radius: 'md',
+        size: 'md',
+      },
+      styles: {
+        input: {
+          backgroundColor: 'rgba(255, 255, 255, 0.8)', // 微透明輸入框
+          border: '1px solid rgba(0, 0, 0, 0.08)',
+          transition: 'all 0.2s ease',
+          '&:focus': {
+            borderColor: 'var(--mantine-color-primary-5)',
+            boxShadow: '0 0 0 4px rgba(var(--mantine-color-primary-rgb), 0.1)',
+          }
+        }
+      }
     },
   },
 });
-

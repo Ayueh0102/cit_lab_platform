@@ -21,6 +21,7 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import {
   IconCalendar,
   IconClock,

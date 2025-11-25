@@ -337,7 +337,7 @@ def update_profile(current_user):
 # ========================================
 # 修改密碼
 # ========================================
-@auth_v2_bp.route('/api/auth/v2/change-password', methods=['POST'])
+@auth_v2_bp.route('/api/v2/auth/change-password', methods=['POST'])
 @token_required
 def change_password(current_user):
     """修改密碼"""

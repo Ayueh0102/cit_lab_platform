@@ -178,7 +178,7 @@ def create_event(current_user):
                 event_type_enum = event_type_value
         except (KeyError, AttributeError):
             event_type_enum = EventType.OTHER
-        
+
         event = Event(
             organizer_id=current_user.id,
             category_id=data.get('category_id') if data.get('category_id') else None,

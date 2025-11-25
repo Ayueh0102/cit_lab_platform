@@ -117,11 +117,11 @@ export default function MyBulletinsPage() {
 
       let status: string | undefined;
       if (activeTab === 'published') {
-        status = 'PUBLISHED';
+        status = 'published';
       } else if (activeTab === 'draft') {
-        status = 'DRAFT';
+        status = 'draft';
       } else if (activeTab === 'archived') {
-        status = 'ARCHIVED';
+        status = 'archived';
       }
 
       const data = await api.bulletins.getMyBulletins(token, status);
@@ -343,8 +343,8 @@ export default function MyBulletinsPage() {
                                 </Badge>
                               )}
                               <Badge color={
-                                bulletin.status === 'PUBLISHED' ? 'green' :
-                                bulletin.status === 'DRAFT' ? 'yellow' : 'gray'
+                                bulletin.status === 'published' ? 'green' :
+                                bulletin.status === 'draft' ? 'yellow' : 'gray'
                               }>
                                 {statusMap[bulletin.status || ''] || bulletin.status}
                               </Badge>

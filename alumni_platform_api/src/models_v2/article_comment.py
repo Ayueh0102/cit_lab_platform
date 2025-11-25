@@ -2,9 +2,9 @@
 文章評論模型
 """
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from .base import BaseModel, db
+from .base import BaseModel, db, enum_type
 import enum
 
 
@@ -28,7 +28,7 @@ class ArticleComment(BaseModel):
                       comment='父評論ID（用於回覆）')
 
     content = Column(Text, nullable=False, comment='評論內容')
-    status = Column(SQLEnum(CommentStatus), default=CommentStatus.PENDING,
+    status = Column(enum_type(CommentStatus), default=CommentStatus.PENDING,
                    comment='評論狀態')
     likes_count = Column(Integer, default=0, comment='按讚數')
 

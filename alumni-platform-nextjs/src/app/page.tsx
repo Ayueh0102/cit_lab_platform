@@ -19,6 +19,7 @@ import {
   Progress,
   Loader,
   Center,
+  Box,
 } from '@mantine/core';
 import {
   IconBriefcase,
@@ -33,6 +34,13 @@ import {
 import { api } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
+import {
+  SpectralWaves,
+  CIEPlotDecoration,
+  PrismDecoration,
+  FloatingOrbs,
+  ColorCheckerGrid
+} from '@/components/ui/decorations';
 
 interface Stats {
   totalJobs: number;
@@ -108,7 +116,7 @@ export default function HomePage() {
       setStats({
         totalJobs: jobs.length,
         totalEvents: events.length,
-        totalAlumni: totalAlumni, // 從 API 獲取活躍系友數量
+        totalAlumni: totalAlumni,
         newThisWeek: jobs.filter((j: RecentJob) => {
           const created = new Date(j.created_at);
           const weekAgo = new Date();
@@ -123,20 +131,11 @@ export default function HomePage() {
       setRecentBulletins(bulletins.slice(0, 3));
     } catch (error) {
       console.error('載入儀表板數據失敗:', error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : '無法載入數據，請檢查後端服務是否運行';
-      notifications.show({
-        title: '載入失敗',
-        message: errorMessage,
-        color: 'red',
-      });
       // 設定空數據以避免頁面崩潰
       setStats({
         totalJobs: 0,
         totalEvents: 0,
         totalAlumni: 0,
-        totalBulletins: 0,
         newThisWeek: 0,
       });
       setRecentJobs([]);
@@ -151,7 +150,7 @@ export default function HomePage() {
     return (
       <SidebarLayout>
         <Center h={400}>
-          <Loader size="lg" />
+          <Loader size="lg" variant="bars" color="indigo" />
         </Center>
       </SidebarLayout>
     );
@@ -159,474 +158,288 @@ export default function HomePage() {
 
   return (
     <SidebarLayout>
-      <Container 
-        size={{
-          base: '100%',
-          sm: '540px',
-          md: '720px',
-          lg: '960px',
-          xl: '1140px',
-        }} 
-        py={{ base: 'md', sm: 'lg', md: 'xl' }}
-        px={{ base: 'xs', sm: 'sm', md: 'md' }}
-      >
-        {/* 歡迎標題 */}
-        <Stack gap={{ base: 'md', sm: 'lg' }} mb={{ base: 'md', sm: 'xl' }}>
-          <div>
-            <Group gap={{ base: 'sm', sm: 'md' }} align="center" wrap="nowrap">
-              <ThemeIcon 
-                size={{ base: 36, sm: 40, md: 48 }} 
-                radius="md" 
-                variant="light" 
-                color="violet"
-              >
-                <IconUsers size={20} style={{ width: '100%', height: '100%' }} />
-              </ThemeIcon>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <Title
-                  order={1}
-                  size={{ base: 'h2', sm: 'h1' }}
-                  fw={700}
-                  style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  歡迎回到系友大家庭！
-                </Title>
-              </div>
-            </Group>
-            <Text 
-              size={{ base: 'sm', sm: 'md', md: 'lg' }} 
-              c="dimmed" 
-              mt={{ base: 'xs', sm: 'sm' }}
-            >
-              歡迎各位系友使用全新的系友會社群平台，一起建立更緊密的連結
-            </Text>
-          </div>
-        </Stack>
+      <Container size="xl" py="xl">
+        {/* 歡迎區塊 */}
+        <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <Title order={1} mb="sm" className="text-gradient-light">
+            歡迎回到校友平台
+          </Title>
+          <Text c="dimmed" mb="xl">
+            探索系友動態，連結未來機會
+          </Text>
+        </div>
 
-        {/* 統計卡片 */}
-        <SimpleGrid 
-          cols={{ base: 1, sm: 2, md: 4 }} 
-          spacing={{ base: 'sm', sm: 'md', md: 'lg' }} 
-          mb={{ base: 'md', sm: 'lg', md: 'xl' }}
-        >
-          <Paper
-            p={{ base: 'md', sm: 'lg' }}
-            radius="md"
-            withBorder
-            onClick={() => router.push('/jobs')}
-            className="card-hover animate-bounce-in"
-            style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              border: 'none',
-              cursor: 'pointer',
-              animationDelay: '0.1s',
-              boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
-              position: 'relative',
-              minHeight: '100px',
-            }}
-          >
-            <div>
-              <Text size={{ base: 'xs', sm: 'sm' }} c="white" style={{ opacity: 0.9 }}>
-                本週新職缺
-              </Text>
-              <Text 
-                size={{ base: 'xl', sm: '2xl' }} 
-                fw={700} 
-                c="white" 
-                style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}
-              >
-                {stats.totalJobs}
-              </Text>
-            </div>
-            <ThemeIcon 
-              size={{ base: 40, sm: 50 }} 
-              radius="md" 
-              variant="light" 
-              color="white" 
-              style={{ 
-                position: 'absolute',
-                bottom: '12px',
-                right: '12px',
+        {/* Bento Grid 數據儀表板 */}
+        <Grid gutter="md" mb={50}>
+          {/* 活躍系友卡片 - 大卡片 */}
+          <Grid.Col span={{ base: 12, md: 6 }} className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <Paper
+              radius="lg"
+              className="glass-card gradient-light"
+              style={{
+                height: '100%',
+                position: 'relative',
+                overflow: 'hidden',
+                border: 'none',
+                color: 'white'
               }}
+              onClick={() => router.push('/directory')}
             >
-              <IconBriefcase size={24} />
-            </ThemeIcon>
-          </Paper>
+              {/* 背景裝飾：光譜波形與浮動光點 */}
+              <SpectralWaves style={{ bottom: 0, opacity: 0.3 }} />
+              <FloatingOrbs color="#ffffff" size={150} style={{ top: '-20%', right: '-10%', opacity: 0.15 }} />
+              <FloatingOrbs color="#4facfe" size={80} style={{ bottom: '10%', left: '10%', opacity: 0.2, animationDelay: '1s' }} />
 
-          <Paper
-            p={{ base: 'md', sm: 'lg' }}
-            radius="md"
-            withBorder
-            onClick={() => router.push('/events')}
-            className="card-hover animate-bounce-in"
-            style={{
-              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-              border: 'none',
-              cursor: 'pointer',
-              animationDelay: '0.2s',
-              boxShadow: '0 10px 30px rgba(240, 147, 251, 0.3)',
-              position: 'relative',
-              minHeight: '100px',
-            }}
-          >
-            <div>
-              <Text size={{ base: 'xs', sm: 'sm' }} c="white" style={{ opacity: 0.9 }}>
-                即將到來的活動
-              </Text>
-              <Text size={{ base: 'xl', sm: '2xl' }} fw={700} c="white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
-                {stats.totalEvents}
-              </Text>
-            </div>
-            <ThemeIcon 
-              size={{ base: 40, sm: 50 }} 
-              radius="md" 
-              variant="light" 
-              color="white" 
-              style={{ 
-                position: 'absolute',
-                bottom: '12px',
-                right: '12px',
-              }}
-            >
-              <IconCalendar size={24} />
-            </ThemeIcon>
-          </Paper>
-
-          <Paper
-            p={{ base: 'md', sm: 'lg' }}
-            radius="md"
-            withBorder
-            onClick={() => router.push('/directory')}
-            className="card-hover animate-bounce-in"
-            style={{
-              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-              border: 'none',
-              cursor: 'pointer',
-              animationDelay: '0.3s',
-              boxShadow: '0 10px 30px rgba(79, 172, 254, 0.3)',
-              position: 'relative',
-              minHeight: '100px',
-            }}
-          >
-            <div>
-              <Text size={{ base: 'xs', sm: 'sm' }} c="white" style={{ opacity: 0.9 }}>
-                活躍系友
-              </Text>
-              <Text size={{ base: 'xl', sm: '2xl' }} fw={700} c="white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
-                {stats.totalAlumni}
-              </Text>
-            </div>
-            <ThemeIcon 
-              size={{ base: 40, sm: 50 }} 
-              radius="md" 
-              variant="light" 
-              color="white" 
-              style={{ 
-                position: 'absolute',
-                bottom: '12px',
-                right: '12px',
-              }}
-            >
-              <IconUsers size={24} />
-            </ThemeIcon>
-          </Paper>
-
-          <Paper
-            p={{ base: 'md', sm: 'lg' }}
-            radius="md"
-            withBorder
-            onClick={() => router.push('/bulletins')}
-            className="card-hover animate-bounce-in"
-            style={{
-              background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-              border: 'none',
-              cursor: 'pointer',
-              animationDelay: '0.4s',
-              boxShadow: '0 10px 30px rgba(250, 112, 154, 0.3)',
-              position: 'relative',
-              minHeight: '100px',
-            }}
-          >
-            <div>
-              <Text size={{ base: 'xs', sm: 'sm' }} c="white" style={{ opacity: 0.9 }}>
-                本週新增
-              </Text>
-              <Text size={{ base: 'xl', sm: '2xl' }} fw={700} c="white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
-                {stats.newThisWeek}
-              </Text>
-            </div>
-            <ThemeIcon 
-              size={{ base: 40, sm: 50 }} 
-              radius="md" 
-              variant="light" 
-              color="white" 
-              style={{ 
-                position: 'absolute',
-                bottom: '12px',
-                right: '12px',
-              }}
-            >
-              <IconTrendingUp size={24} />
-            </ThemeIcon>
-          </Paper>
-        </SimpleGrid>
-
-        {/* 主要內容區域 */}
-        <Grid gutter={{ base: 'sm', sm: 'md', md: 'lg' }}>
-          {/* 最新公告 */}
-          <Grid.Col span={{ base: 12, md: 6 }}>
-            <Card 
-              shadow="sm" 
-              padding={{ base: 'md', sm: 'lg' }} 
-              radius="md" 
-              withBorder 
-              className="animate-slide-in glass-effect" 
-              style={{ animationDelay: '0.5s' }}
-            >
-              <Group justify="apart" mb="md">
-                <Group gap="xs">
-                  <IconBell size={24} color="#667eea" />
-                  <Text size="lg" fw={600}>
-                    最新公告
-                  </Text>
+              <Stack justify="space-between" h="100%" p="xl" style={{ position: 'relative', zIndex: 2 }}>
+                <Group justify="space-between" align="flex-start">
+                  <div>
+                    <Text size="sm" fw={700} tt="uppercase" style={{ opacity: 0.8 }}>CIT Network</Text>
+                    <Title order={2} fz={48} fw={800} mt={4}>{stats.totalAlumni}</Title>
+                    <Text size="sm" mt={4} style={{ opacity: 0.9 }}>位活躍系友正在連線</Text>
+                  </div>
+                  <ThemeIcon size={48} radius="xl" color="white" variant="white" style={{ color: '#4facfe' }}>
+                    <IconUsers size={28} />
+                  </ThemeIcon>
                 </Group>
-                <Button
-                  variant="subtle"
-                  size="xs"
-                  rightSection={<IconArrowRight size={14} />}
-                  onClick={() => router.push('/bulletins')}
-                >
-                  查看全部
-                </Button>
-              </Group>
 
-              <Stack gap="md">
-                {recentBulletins.length === 0 ? (
-                  <Text c="dimmed" ta="center" py="md">
-                    目前沒有公告
-                  </Text>
-                ) : (
-                  recentBulletins.map((bulletin) => (
-                    <Paper
-                      key={bulletin.id}
-                      p="md"
-                      radius="sm"
-                      withBorder
-                      className="hover-translate-x smooth-transition"
-                      style={{ 
-                        cursor: 'pointer',
-                        borderLeft: bulletin.is_pinned ? '4px solid #ff6b6b' : '4px solid #667eea',
-                        background: bulletin.is_pinned ? 'linear-gradient(135deg, #fff5f5, #ffe8e8)' : 'linear-gradient(135deg, #f8f9ff, #e8f4fd)',
-                      }}
-                      onClick={() => router.push(`/bulletins/${bulletin.id}`)}
-                    >
-                      <Group justify="apart" mb="xs">
-                        <Text fw={600} size="sm">
-                          {bulletin.title}
-                          {bulletin.is_pinned && (
-                            <Badge size="xs" color="red" ml="xs">
-                              置頂
-                            </Badge>
-                          )}
-                        </Text>
-                      </Group>
-                      <Text size="xs" c="dimmed" lineClamp={2}>
-                        {bulletin.content}
-                      </Text>
-                      <Group justify="apart" mt="xs">
-                        <Text size="xs" c="dimmed">
-                          {bulletin.author_name || '系統管理員'}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          {new Date(bulletin.created_at).toLocaleDateString('zh-TW')}
-                        </Text>
-                      </Group>
-                    </Paper>
-                  ))
-                )}
+                <Group mt="auto">
+                  <Button
+                    variant="white"
+                    radius="xl"
+                    rightSection={<IconArrowRight size={16} />}
+                    style={{ color: '#00f2fe' }}
+                  >
+                    瀏覽通訊錄
+                  </Button>
+                </Group>
               </Stack>
-            </Card>
+            </Paper>
           </Grid.Col>
 
-          {/* 近期活動 */}
-          <Grid.Col span={{ base: 12, md: 6 }}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder className="animate-slide-in glass-effect" style={{ animationDelay: '0.6s' }}>
-              <Group justify="apart" mb="md">
-                <Group gap="xs">
-                  <IconCalendar size={24} color="#f5576c" />
-                  <Text size="lg" fw={600}>
-                    近期活動
-                  </Text>
-                </Group>
-                <Button
-                  variant="subtle"
-                  size="xs"
-                  rightSection={<IconArrowRight size={14} />}
-                  onClick={() => router.push('/events')}
-                >
-                  查看全部
-                </Button>
-              </Group>
+          {/* 職缺機會 - 中卡片 */}
+          <Grid.Col span={{ base: 12, sm: 6, md: 3 }} className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
+            <Paper
+              p="lg"
+              radius="lg"
+              className="glass-card card-hover-effect"
+              h="100%"
+              onClick={() => router.push('/jobs')}
+              style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
+            >
+              {/* 裝飾：稜鏡分光 */}
+              <PrismDecoration style={{ right: '-20px', top: '-20px', transform: 'rotate(15deg) scale(1.2)' }} />
+              <Box className="card-accent card-accent-fresh" style={{ top: '-35%', right: '-20%' }} />
 
-              <Stack gap="md">
-                {recentEvents.length === 0 ? (
-                  <Text c="dimmed" ta="center" py="md">
-                    目前沒有活動
-                  </Text>
-                ) : (
-                  recentEvents.map((event) => (
-                    <Paper
-                      key={event.id}
-                      p={0}
-                      radius="sm"
-                      withBorder
-                      className="hover-translate-x smooth-transition"
-                      style={{ 
-                        cursor: 'pointer',
-                        borderLeft: '4px solid #48dbfb',
-                        background: 'linear-gradient(135deg, #f0fcff, #e0f8ff)',
-                        overflow: 'hidden',
-                      }}
-                      onClick={() => router.push(`/events/${event.id}`)}
-                    >
-                      {/* 封面圖片 */}
-                      {(event.cover_image_url || event.image_url) && (
-                        <div style={{
-                          position: 'relative',
-                          width: '100%',
-                          height: '120px',
-                          overflow: 'hidden',
-                        }}>
-                          <Image
-                            src={event.cover_image_url || event.image_url || ''}
-                            alt={event.title}
-                            fill
-                            style={{ objectFit: 'cover' }}
-                            unoptimized={(event.cover_image_url || event.image_url || '').startsWith('http://localhost')}
-                          />
-                        </div>
-                      )}
-                      <div style={{ padding: '0.75rem' }}>
-                        <Group gap="xs" mb="xs">
-                          <IconCalendar size={16} color="#f5576c" />
-                          <Text fw={600} size="sm" style={{ flex: 1 }}>
-                            {event.title}
-                          </Text>
-                        </Group>
-                        <Stack gap="xs">
-                          <Group gap={4}>
-                            <IconClock size={14} color="var(--mantine-color-gray-6)" />
-                            <Text size="xs" c="dimmed">
-                              {new Date(event.start_time).toLocaleDateString('zh-TW')}
-                            </Text>
-                          </Group>
-                          <Group gap={4}>
-                            <IconMapPin size={14} color="var(--mantine-color-gray-6)" />
-                            <Text size="xs" c="dimmed">
-                              {event.location}
-                            </Text>
-                          </Group>
-                        </Stack>
-                        <Progress
-                          value={(event.current_participants / event.max_participants) * 100}
-                          size="sm"
-                          radius="xl"
-                          color="pink"
-                        />
-                        <Text size="xs" c="dimmed" mt={4}>
-                          {event.current_participants || 0}/{event.max_participants} 已報名
-                        </Text>
-                      </div>
-                    </Paper>
-                  ))
-                )}
+              <Stack h="100%" justify="space-between" style={{ position: 'relative', zIndex: 2 }}>
+                <div>
+                  <ThemeIcon size="xl" radius="md" className="gradient-fresh" variant="gradient">
+                    <IconBriefcase size={24} color="white" />
+                  </ThemeIcon>
+                  <Text size="sm" fw={600} c="dimmed" mt="md">職缺機會</Text>
+                  <Group align="baseline" gap={4}>
+                    <Text fz={32} fw={700} className="text-gradient-fresh">{stats.totalJobs}</Text>
+                    <Text size="xs" c="dimmed">個職缺</Text>
+                  </Group>
+                </div>
+                <Group gap="xs">
+                  <Badge
+                    variant="light"
+                    color="teal"
+                    leftSection={<IconTrendingUp size={12} />}
+                  >
+                    本週 +{stats.newThisWeek}
+                  </Badge>
+                </Group>
               </Stack>
-            </Card>
+            </Paper>
           </Grid.Col>
 
-          {/* 熱門職缺 */}
-          <Grid.Col span={12}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder className="animate-slide-in glass-effect" style={{ animationDelay: '0.7s' }}>
-              <Group justify="apart" mb="md">
-                <Group gap="xs">
-                  <IconBriefcase size={24} color="#764ba2" />
-                  <Text size="lg" fw={600}>
-                    熱門職缺
-                  </Text>
-                </Group>
-                <Button
-                  variant="subtle"
-                  size="xs"
-                  rightSection={<IconArrowRight size={14} />}
-                  onClick={() => router.push('/jobs')}
-                >
-                  查看全部
-                </Button>
-              </Group>
+          {/* 活動聚會 - 中卡片 */}
+          <Grid.Col span={{ base: 12, sm: 6, md: 3 }} className="animate-slide-up" style={{ animationDelay: '0.4s' }}>
+            <Paper
+              p="lg"
+              radius="lg"
+              className="glass-card card-hover-effect"
+              h="100%"
+              onClick={() => router.push('/events')}
+              style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
+            >
+              {/* 裝飾：CIE 色度圖 */}
+              <CIEPlotDecoration style={{ right: '-10%', bottom: '-10%', opacity: 0.15, color: 'var(--color-warm)' }} />
+              <Box className="card-accent card-accent-warm" style={{ bottom: '-30%', left: '-10%' }} />
 
-              <SimpleGrid 
-                cols={{ base: 1, sm: 2, md: 3 }} 
-                spacing={{ base: 'sm', sm: 'md' }}
-              >
-                {recentJobs.length === 0 ? (
-                  <Text c="dimmed" ta="center" py="md">
-                    目前沒有職缺
-                  </Text>
-                ) : (
-                  recentJobs.map((job) => (
+              <Stack h="100%" justify="space-between" style={{ position: 'relative', zIndex: 2 }}>
+                <div>
+                  <ThemeIcon size="xl" radius="md" className="gradient-warm" variant="gradient">
+                    <IconCalendar size={24} color="white" />
+                  </ThemeIcon>
+                  <Text size="sm" fw={600} c="dimmed" mt="md">活動聚會</Text>
+                  <Group align="baseline" gap={4}>
+                    <Text fz={32} fw={700} className="text-gradient-warm">{stats.totalEvents}</Text>
+                    <Text size="xs" c="dimmed">場活動</Text>
+                  </Group>
+                </div>
+                <Text size="xs" c="dimmed">即將到來的精彩活動</Text>
+              </Stack>
+            </Paper>
+          </Grid.Col>
+        </Grid>
+
+        {/* 內容區塊：分為兩欄 */}
+        <Grid gutter="xl">
+          {/* 左側：最新動態 */}
+          <Grid.Col span={{ base: 12, md: 8 }} className="animate-slide-up" style={{ animationDelay: '0.5s' }}>
+            <Stack gap="xl">
+              {/* 最新職缺 */}
+              <Box>
+                <Group justify="space-between" mb="md">
+                  <Title order={3} size="h4">最新職缺</Title>
+                  <Button variant="subtle" color="gray" onClick={() => router.push('/jobs')} rightSection={<IconArrowRight size={16} />}>
+                    查看全部
+                  </Button>
+                </Group>
+                <Stack gap="md">
+                  {recentJobs.map((job) => (
                     <Paper
                       key={job.id}
                       p="md"
-                      radius="sm"
-                      withBorder
-                      className="hover-translate-y smooth-transition shadow-soft"
-                      style={{ 
-                        cursor: 'pointer',
-                        position: 'relative',
-                        overflow: 'hidden',
-                      }}
+                      radius="md"
+                      className="glass-card card-hover-effect"
                       onClick={() => router.push(`/jobs/${job.id}`)}
-                    ><div className="gradient-border-top" />
-                      <Group gap="sm" mb="xs">
-                        <Avatar color="violet" radius="sm" size="md">
-                          {job.company_name?.charAt(0) || 'C'}
-                        </Avatar>
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <Group wrap="nowrap">
+                        <ThemeIcon size="lg" radius="md" color="teal" variant="light">
+                          <IconBriefcase size={20} />
+                        </ThemeIcon>
                         <div style={{ flex: 1 }}>
-                          <Text fw={600} size="sm" lineClamp={1}>
-                            {job.title}
-                          </Text>
-                          <Text size="xs" c="dimmed">
-                            {job.company_name || '未提供公司'}
-                          </Text>
+                          <Text fw={600} lineClamp={1}>{job.title}</Text>
+                          <Text size="sm" c="dimmed">{job.company_name} • {job.location}</Text>
                         </div>
+                        <Text size="xs" c="dimmed">
+                          {new Date(job.created_at).toLocaleDateString('zh-TW')}
+                        </Text>
                       </Group>
-                      <Stack gap="xs" mt="xs">
-                        {job.location && (
-                          <Group gap={4}>
-                            <IconMapPin size={14} color="var(--mantine-color-gray-6)" />
-                            <Text size="xs" c="dimmed">
-                              {job.location}
-                            </Text>
-                          </Group>
+                    </Paper>
+                  ))}
+                  {recentJobs.length === 0 && (
+                    <Text c="dimmed" ta="center" py="xl">目前沒有最新職缺</Text>
+                  )}
+                </Stack>
+              </Box>
+
+              {/* 最新活動 */}
+              <Box>
+                <Group justify="space-between" mb="md">
+                  <Title order={3} size="h4">近期活動</Title>
+                  <Button variant="subtle" color="gray" onClick={() => router.push('/events')} rightSection={<IconArrowRight size={16} />}>
+                    查看全部
+                  </Button>
+                </Group>
+                <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+                  {recentEvents.map((event) => (
+                    <Paper
+                      key={event.id}
+                      radius="md"
+                      className="glass-card card-hover-effect"
+                      onClick={() => router.push(`/events/${event.id}`)}
+                      style={{ cursor: 'pointer', overflow: 'hidden' }}
+                    >
+                      <div style={{ height: '120px', background: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%)', position: 'relative' }}>
+                        {event.cover_image_url && (
+                          <img
+                            src={event.cover_image_url}
+                            alt={event.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
                         )}
-                        <Group gap={4}>
-                          <IconClock size={14} color="var(--mantine-color-gray-6)" />
-                          <Text size="xs" c="dimmed">
-                            {new Date(job.created_at).toLocaleDateString('zh-TW')}
-                          </Text>
+                        <Badge
+                          className="glass-panel"
+                          style={{ position: 'absolute', top: 10, right: 10, color: '#333' }}
+                        >
+                          {new Date(event.start_time).toLocaleDateString('zh-TW')}
+                        </Badge>
+                      </div>
+                      <Stack p="md" gap="xs">
+                        <Text fw={600} lineClamp={1}>{event.title}</Text>
+                        <Group gap="xs">
+                          <IconMapPin size={14} color="gray" />
+                          <Text size="xs" c="dimmed" lineClamp={1}>{event.location}</Text>
                         </Group>
                       </Stack>
                     </Paper>
-                  ))
+                  ))}
+                </SimpleGrid>
+                {recentEvents.length === 0 && (
+                  <Text c="dimmed" ta="center" py="xl">目前沒有近期活動</Text>
                 )}
-              </SimpleGrid>
-            </Card>
+              </Box>
+            </Stack>
+          </Grid.Col>
+
+          {/* 右側：公告與資訊 */}
+          <Grid.Col span={{ base: 12, md: 4 }} className="animate-slide-up" style={{ animationDelay: '0.6s' }}>
+            <Paper radius="lg" p="xl" className="glass-panel" style={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
+              {/* 裝飾：色彩校正網格 */}
+              <ColorCheckerGrid style={{ top: '20px', right: '20px', opacity: 0.4 }} />
+
+              <Stack gap="lg" style={{ position: 'relative', zIndex: 2 }}>
+                <Group gap="xs">
+                  <ThemeIcon variant="light" color="grape" size="md" radius="md">
+                    <IconBell size={18} />
+                  </ThemeIcon>
+                  <Title order={3} size="h4">重要公告</Title>
+                </Group>
+
+                <Stack gap="md">
+                  {recentBulletins.map((bulletin) => (
+                    <Paper
+                      key={bulletin.id}
+                      p="sm"
+                      radius="md"
+                      withBorder={false}
+                      style={{ background: 'rgba(255,255,255,0.5)' }}
+                    >
+                      <Stack gap="xs">
+                        <Group justify="space-between" align="flex-start">
+                          <Text size="sm" fw={600} lineClamp={2} style={{ flex: 1 }}>
+                            {bulletin.title}
+                          </Text>
+                          {bulletin.is_pinned && (
+                            <Badge size="xs" variant="dot" color="red">置頂</Badge>
+                          )}
+                        </Group>
+                        <Group justify="space-between">
+                          <Text size="xs" c="dimmed">
+                            {new Date(bulletin.created_at).toLocaleDateString('zh-TW')}
+                          </Text>
+                          <Button
+                            variant="subtle"
+                            size="compact-xs"
+                            onClick={() => router.push(`/bulletins/${bulletin.id}`)}
+                          >
+                            詳情
+                          </Button>
+                        </Group>
+                      </Stack>
+                    </Paper>
+                  ))}
+                  {recentBulletins.length === 0 && (
+                    <Text c="dimmed" ta="center" py="md">目前沒有公告</Text>
+                  )}
+                </Stack>
+
+                <Button
+                  variant="light"
+                  color="grape"
+                  fullWidth
+                  mt="auto"
+                  onClick={() => router.push('/bulletins')}
+                >
+                  查看所有公告
+                </Button>
+              </Stack>
+            </Paper>
           </Grid.Col>
         </Grid>
       </Container>

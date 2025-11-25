@@ -106,7 +106,7 @@ export default function BulletinsPage() {
       setLoading(true);
       const token = getToken();
       const params: any = {
-        status: 'PUBLISHED',
+        status: 'published',
         page: currentPage,
         per_page: 20,
       };

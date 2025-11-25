@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Start both frontend (Vite) and backend (Flask) in background.
-# - Frontend runs on 127.0.0.1:${PORT:-5173}
+# Start both frontend (Next.js) and backend (Flask) in background.
+# - Frontend runs on 127.0.0.1:${PORT:-3000}
 # - Backend runs on 127.0.0.1:5001
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FE_DIR="$ROOT_DIR/alumni-platform"
+FE_DIR="$ROOT_DIR/alumni-platform-nextjs"
 BE_DIR="$ROOT_DIR/alumni_platform_api"
 LOG_DIR="$ROOT_DIR/.logs"
 PID_FILE="$ROOT_DIR/.dev_pids"
@@ -14,7 +14,7 @@ PID_FILE="$ROOT_DIR/.dev_pids"
 mkdir -p "$LOG_DIR"
 
 start_frontend() {
-  local port="${PORT:-5173}"
+  local port="${PORT:-3000}"
   local log="$LOG_DIR/frontend.log"
   local pm=""
 
@@ -33,11 +33,11 @@ start_frontend() {
     fi
   fi
 
-  # Start Vite with explicit host to avoid bind issues
+  # Start Next.js dev server
   if [ "$pm" = "pnpm" ]; then
-    (cd "$FE_DIR" && nohup pnpm dev -- --host 127.0.0.1 --port "$port" >"$log" 2>&1 & echo "FRONTEND=$!" >> "$PID_FILE")
+    (cd "$FE_DIR" && PORT="$port" nohup pnpm dev >"$log" 2>&1 & echo "FRONTEND=$!" >> "$PID_FILE")
   else
-    (cd "$FE_DIR" && nohup npm run dev -- --host 127.0.0.1 --port "$port" >"$log" 2>&1 & echo "FRONTEND=$!" >> "$PID_FILE")
+    (cd "$FE_DIR" && PORT="$port" nohup npm run dev >"$log" 2>&1 & echo "FRONTEND=$!" >> "$PID_FILE")
   fi
   echo "Frontend: http://127.0.0.1:$port (logs: $log)"
 }
@@ -53,8 +53,8 @@ start_backend() {
   # Ensure deps (best-effort)
   (cd "$BE_DIR" && ./venv/bin/pip install -r requirements.txt >/dev/null 2>&1 || true)
 
-  # Start Flask app
-  (cd "$BE_DIR" && nohup ./venv/bin/python src/main.py >"$log" 2>&1 & echo "BACKEND=$!" >> "$PID_FILE")
+  # Start Flask app (using conda environment)
+  (cd "$BE_DIR" && eval "$(conda shell.bash hook)" && conda activate alumni-platform && nohup python src/main_v2.py >"$log" 2>&1 & echo "BACKEND=$!" >> "$PID_FILE")
   echo "Backend:  http://127.0.0.1:5001 (logs: $log)"
 }
 

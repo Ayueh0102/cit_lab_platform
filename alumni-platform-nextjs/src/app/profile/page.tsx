@@ -109,18 +109,18 @@ export default function ProfilePage() {
       const userData = response.user || response;
       if (userData) {
         setAuth(token, userData);
-        setUser(userData);
-        
-        if (userData?.profile) {
-          form.setValues({
-            full_name: userData.profile.full_name || '',
-            display_name: userData.profile.display_name || '',
-            email: userData.email || '',
-            phone: userData.profile.phone || '',
-            graduation_year: userData.profile.graduation_year,
-            current_company: userData.profile.current_company || '',
-            current_position: userData.profile.current_position || '',
-            bio: userData.profile.bio || '',
+      setUser(userData);
+      
+      if (userData?.profile) {
+        form.setValues({
+          full_name: userData.profile.full_name || '',
+          display_name: userData.profile.display_name || '',
+          email: userData.email || '',
+          phone: userData.profile.phone || '',
+          graduation_year: userData.profile.graduation_year,
+          current_company: userData.profile.current_company || '',
+          current_position: userData.profile.current_position || '',
+          bio: userData.profile.bio || '',
             location: userData.profile.location || userData.profile.current_location || '',
             linkedin_url: userData.profile.linkedin_url || '',
             github_url: userData.profile.github_url || '',
@@ -146,11 +146,11 @@ export default function ProfilePage() {
             current_position: userData.profile.current_position || '',
             bio: userData.profile.bio || '',
             location: userData.profile.location || userData.profile.current_location || '',
-            linkedin_url: userData.profile.linkedin_url || '',
-            github_url: userData.profile.github_url || '',
-            personal_website: userData.profile.personal_website || '',
-            skills: userData.profile.skills || [],
-          });
+          linkedin_url: userData.profile.linkedin_url || '',
+          github_url: userData.profile.github_url || '',
+          personal_website: userData.profile.personal_website || '',
+          skills: userData.profile.skills || [],
+        });
         }
       }
     } catch (error) {

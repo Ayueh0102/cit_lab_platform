@@ -222,6 +222,36 @@ def delete_bulletin(current_user, bulletin_id):
         return jsonify({'message': f'Failed: {str(e)}'}), 500
 
 
+@bulletins_v2_bp.route('/api/v2/my-bulletins', methods=['GET'])
+@token_required
+def get_my_bulletins(current_user):
+    """取得我發布的公告"""
+    status = request.args.get('status')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    query = Bulletin.query.filter_by(author_id=current_user.id)
+
+    if status:
+        # 將小寫轉換為枚舉
+        try:
+            status_enum = ContentStatus[status.upper()]
+            query = query.filter(Bulletin.status == status_enum)
+        except KeyError:
+            pass
+
+    pagination = query.order_by(Bulletin.created_at.desc())\
+        .paginate(page=page, per_page=per_page, error_out=False)
+
+    return jsonify({
+        'bulletins': [b.to_dict() for b in pagination.items],
+        'total': pagination.total,
+        'page': page,
+        'per_page': per_page,
+        'pages': pagination.pages
+    }), 200
+
+
 @bulletins_v2_bp.route('/api/v2/bulletins/<int:bulletin_id>/pin', methods=['POST'])
 @token_required
 @admin_required

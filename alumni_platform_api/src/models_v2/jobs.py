@@ -4,10 +4,10 @@
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, Enum
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 import enum
-from .base import BaseModel, db
+from .base import BaseModel, db, enum_type
 
 
 # ========================================
@@ -139,8 +139,8 @@ class Job(BaseModel):
     benefits = Column(Text, comment='福利待遇')
 
     # 職缺屬性
-    job_type = Column(Enum(JobType), default=JobType.FULL_TIME, comment='職缺類型')
-    status = Column(Enum(JobStatus), default=JobStatus.ACTIVE, comment='職缺狀態')
+    job_type = Column(enum_type(JobType), default=JobType.FULL_TIME, comment='職缺類型')
+    status = Column(enum_type(JobStatus), default=JobStatus.ACTIVE, comment='職缺狀態')
 
     location = Column(String(200), comment='工作地點')
     is_remote = Column(Boolean, default=False, comment='是否遠端工作')
@@ -301,7 +301,7 @@ class JobRequest(BaseModel):
                           nullable=False, comment='請求者ID')
 
     message = Column(Text, comment='請求訊息')
-    status = Column(Enum(RequestStatus), default=RequestStatus.PENDING, comment='請求狀態')
+    status = Column(enum_type(RequestStatus), default=RequestStatus.PENDING, comment='請求狀態')
 
     responded_at = Column(DateTime, comment='回覆時間')
     response_message = Column(Text, comment='回覆訊息')

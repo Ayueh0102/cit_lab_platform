@@ -4,10 +4,10 @@
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, Enum
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 import enum
-from .base import BaseModel, db
+from .base import BaseModel, db, enum_type
 
 
 # ========================================
@@ -134,8 +134,8 @@ class Event(BaseModel):
     description = Column(Text, nullable=False, comment='活動描述')
 
     # 活動屬性
-    event_type = Column(Enum(EventType), default=EventType.OTHER, comment='活動類型')
-    status = Column(Enum(EventStatus), default=EventStatus.UPCOMING, comment='活動狀態')
+    event_type = Column(enum_type(EventType), default=EventType.OTHER, comment='活動類型')
+    status = Column(enum_type(EventStatus), default=EventStatus.UPCOMING, comment='活動狀態')
 
     # 時間與地點
     start_time = Column(DateTime, nullable=False, comment='開始時間')
@@ -360,7 +360,7 @@ class EventRegistration(BaseModel):
                     nullable=False, comment='報名者ID')
 
     # 報名資訊
-    status = Column(Enum(RegistrationStatus), default=RegistrationStatus.REGISTERED,
+    status = Column(enum_type(RegistrationStatus), default=RegistrationStatus.REGISTERED,
                    comment='報名狀態')
     registration_note = Column(Text, comment='報名備註')
 

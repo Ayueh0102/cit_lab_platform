@@ -1,5 +1,6 @@
 // API 客戶端配置
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+// 使用相對路徑，讓 Next.js rewrites 代理到後端，避免 CORS 問題
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface FetchOptions {
   method?: string;
@@ -70,7 +71,7 @@ async function fetchAPI(endpoint: string, options: FetchOptions = {}) {
   const { method = 'GET', body, token, headers: customHeaders } = options;
 
   const headers: HeadersInit = {};
-  
+
   // 如果不是 FormData，設置 Content-Type
   if (!(body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
@@ -111,9 +112,19 @@ async function fetchAPI(endpoint: string, options: FetchOptions = {}) {
     }
 
     if (!response.ok) {
+      // 如果是 401 未授權或 Token 過期，清除認證並跳轉登入
+      if (response.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user_data');
+          window.location.href = '/auth/login';
+        }
+        throw new Error('認證已過期，請重新登入');
+      }
+
       // 確保 data 是對象，如果不是則轉換為對象
-      const errorMessage = typeof data === 'string' 
-        ? data 
+      const errorMessage = typeof data === 'string'
+        ? data
         : (data?.error || data?.message || `API 請求失敗: ${response.status}`);
       throw new Error(errorMessage);
     }
@@ -162,7 +173,7 @@ export const api = {
         method: 'POST',
         body: { email, password }, // 傳遞對象，讓 fetchAPI 處理 JSON.stringify
       }),
-    
+
     register: (data: {
       email: string;
       password: string;
@@ -174,10 +185,10 @@ export const api = {
         method: 'POST',
         body: data, // 傳遞對象，讓 fetchAPI 處理 JSON.stringify
       }),
-    
+
     getCurrentUser: (token: string) =>
       fetchAPI('/api/v2/auth/me', { token }),
-    
+
     logout: (token: string) =>
       fetchAPI('/api/v2/auth/logout', {
         method: 'POST',
@@ -204,42 +215,42 @@ export const api = {
       if (params?.status) queryParams.append('status', params.status);
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
-      
-      const url = queryParams.toString() 
+
+      const url = queryParams.toString()
         ? `/api/v2/jobs?${queryParams.toString()}`
         : '/api/v2/jobs';
-      
+
       return fetchAPI(url, { token });
     },
-    
+
     getById: (id: number, token?: string) =>
       fetchAPI(`/api/v2/jobs/${id}`, { token }),
-    
+
     create: (data: JobData, token: string) =>
       fetchAPI('/api/v2/jobs', {
         method: 'POST',
         body: data,
         token,
       }),
-    
+
     update: (id: number, data: Partial<JobData>, token: string) =>
       fetchAPI(`/api/v2/jobs/${id}`, {
         method: 'PUT',
         body: data,
         token,
       }),
-    
+
     delete: (id: number, token: string) =>
       fetchAPI(`/api/v2/jobs/${id}`, {
         method: 'DELETE',
         token,
       }),
-    
+
     getMyJobs: (token: string, status?: string) => {
       const url = status ? `/api/v2/my-jobs?status=${status}` : '/api/v2/my-jobs';
       return fetchAPI(url, { token });
     },
-    
+
     apply: (jobId: number, data: JobApplicationData, token: string) =>
       fetchAPI('/api/v2/job-requests', {
         method: 'POST',
@@ -277,55 +288,55 @@ export const api = {
 
     getCategories: (token?: string) =>
       fetchAPI('/api/v2/event-categories', { token }),
-    
+
     getById: (id: number, token?: string) =>
       fetchAPI(`/api/v2/events/${id}`, { token }),
-    
+
     create: (data: EventData, token: string) =>
       fetchAPI('/api/v2/events', {
         method: 'POST',
         body: data,
         token,
       }),
-    
+
     update: (id: number, data: Partial<EventData>, token: string) =>
       fetchAPI(`/api/v2/events/${id}`, {
         method: 'PUT',
         body: data,
         token,
       }),
-    
+
     delete: (id: number, token: string) =>
       fetchAPI(`/api/v2/events/${id}`, {
         method: 'DELETE',
         token,
       }),
-    
+
     cancel: (id: number, reason: string, token: string) =>
       fetchAPI(`/api/v2/events/${id}/cancel`, {
         method: 'POST',
         body: { reason },
         token,
       }),
-    
+
     getMyEvents: (token: string, status?: string) => {
       const url = status ? `/api/v2/my-events?status=${status}` : '/api/v2/my-events';
       return fetchAPI(url, { token });
     },
-    
+
     register: (eventId: number, data: EventRegistrationData, token: string) =>
       fetchAPI(`/api/v2/events/${eventId}/register`, {
         method: 'POST',
         body: data,
         token,
       }),
-    
+
     unregister: (eventId: number, token: string) =>
       fetchAPI(`/api/v2/events/${eventId}/unregister`, {
         method: 'POST',
         token,
       }),
-    
+
     getMyRegistrations: (token: string, status?: string) => {
       const url = status ? `/api/v2/my-registrations?status=${status}` : '/api/v2/my-registrations';
       return fetchAPI(url, { token });
@@ -349,53 +360,53 @@ export const api = {
       if (params?.status) queryParams.append('status', params.status);
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
-      
-      const url = queryParams.toString() 
+
+      const url = queryParams.toString()
         ? `/api/v2/bulletins?${queryParams.toString()}`
         : '/api/v2/bulletins';
-      
+
       return fetchAPI(url, { token });
     },
-    
+
     getCategories: (token?: string) =>
       fetchAPI('/api/v2/bulletin-categories', { token }),
-    
+
     getById: (id: number, token?: string) =>
       fetchAPI(`/api/v2/bulletins/${id}`, { token }),
-    
+
     createComment: (bulletinId: number, content: string, token: string) =>
       fetchAPI(`/api/v2/bulletins/${bulletinId}/comments`, {
         method: 'POST',
         body: { content },
         token,
       }),
-    
+
     deleteComment: (commentId: number, token: string) =>
       fetchAPI(`/api/v2/comments/${commentId}`, {
         method: 'DELETE',
         token,
       }),
-    
+
     create: (data: BulletinData, token: string) =>
       fetchAPI('/api/v2/bulletins', {
         method: 'POST',
         body: data,
         token,
       }),
-    
+
     update: (id: number, data: Partial<BulletinData>, token: string) =>
       fetchAPI(`/api/v2/bulletins/${id}`, {
         method: 'PUT',
         body: data,
         token,
       }),
-    
+
     delete: (id: number, token: string) =>
       fetchAPI(`/api/v2/bulletins/${id}`, {
         method: 'DELETE',
         token,
       }),
-    
+
     getMyBulletins: (token: string, status?: string) => {
       const url = status ? `/api/v2/my-bulletins?status=${status}` : '/api/v2/my-bulletins';
       return fetchAPI(url, { token });
@@ -406,32 +417,32 @@ export const api = {
   messages: {
     getConversations: (token: string) =>
       fetchAPI('/api/v2/conversations', { token }),
-    
+
     getConversation: (conversationId: number, token: string) =>
       fetchAPI(`/api/v2/conversations/${conversationId}`, { token }),
-    
+
     getMessages: (conversationId: number, token: string) =>
       fetchAPI(`/api/v2/conversations/${conversationId}/messages`, { token }),
-    
+
     send: (conversationId: number, data: { content: string }, token: string) =>
       fetchAPI(`/api/v2/conversations/${conversationId}/messages`, {
         method: 'POST',
         body: data,
         token,
       }),
-    
+
     markAsRead: (conversationId: number, token: string) =>
       fetchAPI(`/api/v2/conversations/${conversationId}/mark-read`, {
         method: 'POST',
         token,
       }),
-    
+
     deleteConversation: (conversationId: number, token: string) =>
       fetchAPI(`/api/v2/conversations/${conversationId}`, {
         method: 'DELETE',
         token,
       }),
-    
+
     search: (params: {
       q: string;
       conversation_id?: number;
@@ -443,16 +454,16 @@ export const api = {
       if (params.conversation_id) queryParams.append('conversation_id', params.conversation_id.toString());
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.per_page) queryParams.append('per_page', params.per_page.toString());
-      
+
       return fetchAPI(`/api/v2/messages/search?${queryParams.toString()}`, { token });
     },
-    
+
     createConversation: (userId: number, token: string) =>
       fetchAPI(`/api/v2/conversations/with/${userId}`, {
         method: 'POST',
         token,
       }),
-    
+
     getUnreadCount: (token: string) =>
       fetchAPI('/api/v2/messages/unread-count', { token }),
   },
@@ -465,7 +476,7 @@ export const api = {
         body: data,
         token,
       }),
-    
+
     getUsers: (token?: string, params?: {
       search?: string;
       graduation_year?: number;
@@ -479,14 +490,14 @@ export const api = {
       if (params?.industry) queryParams.append('industry', params.industry);
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
-      
-      const url = queryParams.toString() 
+
+      const url = queryParams.toString()
         ? `/api/v2/users?${queryParams.toString()}`
         : '/api/v2/users';
-      
+
       return fetchAPI(url, { token });
     },
-    
+
     getUserById: (id: number, token?: string) =>
       fetchAPI(`/api/v2/users/${id}`, { token }),
   },
@@ -504,35 +515,35 @@ export const api = {
       if (params?.type) queryParams.append('type', params.type);
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
-      
-      const url = queryParams.toString() 
+
+      const url = queryParams.toString()
         ? `/api/notifications?${queryParams.toString()}`
         : '/api/notifications';
-      
+
       return fetchAPI(url, { token });
     },
-    
+
     getUnreadCount: (token: string) =>
       fetchAPI('/api/notifications/unread-count', { token }),
-    
+
     markAsRead: (id: number, token: string) =>
       fetchAPI(`/api/notifications/${id}/read`, {
         method: 'POST',
         token,
       }),
-    
+
     markAllAsRead: (token: string) =>
       fetchAPI('/api/notifications/mark-all-read', {
         method: 'POST',
         token,
       }),
-    
+
     archive: (id: number, token: string) =>
       fetchAPI(`/api/notifications/${id}/archive`, {
         method: 'POST',
         token,
       }),
-    
+
     delete: (id: number, token: string) =>
       fetchAPI(`/api/notifications/${id}`, {
         method: 'DELETE',
@@ -544,63 +555,63 @@ export const api = {
   career: {
     getWorkExperiences: (token: string) =>
       fetchAPI('/api/career/work-experiences', { token }),
-    
+
     addWorkExperience: (data: any, token: string) =>
       fetchAPI('/api/career/work-experiences', {
         method: 'POST',
         body: data,
         token,
       }),
-    
+
     updateWorkExperience: (id: number, data: any, token: string) =>
       fetchAPI(`/api/career/work-experiences/${id}`, {
         method: 'PUT',
         body: data,
         token,
       }),
-    
+
     deleteWorkExperience: (id: number, token: string) =>
       fetchAPI(`/api/career/work-experiences/${id}`, {
         method: 'DELETE',
         token,
       }),
-    
+
     getEducations: (token: string) =>
       fetchAPI('/api/career/educations', { token }),
-    
+
     addEducation: (data: any, token: string) =>
       fetchAPI('/api/career/educations', {
         method: 'POST',
         body: data,
         token,
       }),
-    
+
     updateEducation: (id: number, data: any, token: string) =>
       fetchAPI(`/api/career/educations/${id}`, {
         method: 'PUT',
         body: data,
         token,
       }),
-    
+
     deleteEducation: (id: number, token: string) =>
       fetchAPI(`/api/career/educations/${id}`, {
         method: 'DELETE',
         token,
       }),
-    
+
     getSkills: (token?: string) =>
       fetchAPI('/api/career/skills', { token }),
-    
+
     getMySkills: (token: string) =>
       fetchAPI('/api/career/my-skills', { token }),
-    
+
     addSkill: (skillId: number, token: string) =>
       fetchAPI('/api/career/my-skills', {
         method: 'POST',
         body: { skill_id: skillId },
         token,
       }),
-    
+
     deleteSkill: (id: number, token: string) =>
       fetchAPI(`/api/career/my-skills/${id}`, {
         method: 'DELETE',
@@ -615,7 +626,7 @@ export const api = {
       formData.append('file', file);
       if (relatedType) formData.append('related_type', relatedType);
       if (relatedId) formData.append('related_id', relatedId.toString());
-      
+
       return fetchAPI('/api/files/upload', {
         method: 'POST',
         body: formData,
@@ -623,7 +634,7 @@ export const api = {
         headers: {}, // 不要設置 Content-Type，讓瀏覽器自動設置
       });
     },
-    
+
     getFiles: (token?: string, params?: {
       user_id?: number;
       related_type?: string;
@@ -635,14 +646,14 @@ export const api = {
       if (params?.related_type) queryParams.append('related_type', params.related_type);
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
-      
-      const url = queryParams.toString() 
+
+      const url = queryParams.toString()
         ? `/api/files?${queryParams.toString()}`
         : '/api/files';
-      
+
       return fetchAPI(url, { token });
     },
-    
+
     deleteFile: (fileId: number, token: string) =>
       fetchAPI(`/api/files/${fileId}`, {
         method: 'DELETE',
@@ -661,10 +672,10 @@ export const api = {
         body: data,
         token,
       }),
-    
+
     getNotificationPreferences: (token: string) =>
       fetchAPI('/api/user/notification-preferences', { token }),
-    
+
     updateNotificationPreferences: (data: {
       emailNotifications?: boolean;
       jobAlerts?: boolean;
@@ -682,7 +693,7 @@ export const api = {
   admin: {
     getStatistics: (token: string) =>
       fetchAPI('/api/v2/admin/statistics', { token }),
-    
+
     getUsers: (token: string, params?: {
       page?: number;
       per_page?: number;
@@ -696,14 +707,14 @@ export const api = {
       if (params?.search) queryParams.append('search', params.search);
       if (params?.role) queryParams.append('role', params.role);
       if (params?.status) queryParams.append('status', params.status);
-      
+
       const url = queryParams.toString()
         ? `/api/v2/admin/users?${queryParams.toString()}`
         : '/api/v2/admin/users';
-      
+
       return fetchAPI(url, { token });
     },
-    
+
     updateUser: (userId: number, data: {
       role?: string;
       status?: string;
@@ -713,25 +724,25 @@ export const api = {
         body: data,
         token,
       }),
-    
+
     deleteUser: (userId: number, token: string) =>
       fetchAPI(`/api/v2/admin/users/${userId}`, {
         method: 'DELETE',
         token,
       }),
-    
+
     approveJob: (jobId: number, token: string) =>
       fetchAPI(`/api/v2/admin/jobs/${jobId}/approve`, {
         method: 'POST',
         token,
       }),
-    
+
     approveEvent: (eventId: number, token: string) =>
       fetchAPI(`/api/v2/admin/events/${eventId}/approve`, {
         method: 'POST',
         token,
       }),
-    
+
     approveBulletin: (bulletinId: number, token: string) =>
       fetchAPI(`/api/v2/admin/bulletins/${bulletinId}/approve`, {
         method: 'POST',
@@ -743,7 +754,7 @@ export const api = {
   cms: {
     getCategories: (token?: string) =>
       fetchAPI('/api/v2/cms/article-categories', { token }),
-    
+
     createCategory: (data: {
       name: string;
       name_en?: string;
@@ -757,7 +768,7 @@ export const api = {
         body: data,
         token,
       }),
-    
+
     updateCategory: (id: number, data: {
       name?: string;
       name_en?: string;
@@ -772,13 +783,13 @@ export const api = {
         body: data,
         token,
       }),
-    
+
     deleteCategory: (id: number, token: string) =>
       fetchAPI(`/api/v2/cms/article-categories/${id}`, {
         method: 'DELETE',
         token,
       }),
-    
+
     getArticles: (token?: string, params?: {
       status?: 'published' | 'draft' | 'archived';
       category_id?: number;
@@ -792,17 +803,17 @@ export const api = {
       if (params?.search) queryParams.append('search', params.search);
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
-      
-      const url = queryParams.toString() 
+
+      const url = queryParams.toString()
         ? `/api/v2/cms/articles?${queryParams.toString()}`
         : '/api/v2/cms/articles';
-      
+
       return fetchAPI(url, { token });
     },
-    
+
     getArticle: (id: number, token?: string) =>
       fetchAPI(`/api/v2/cms/articles/${id}`, { token }),
-    
+
     create: (data: {
       title: string;
       subtitle?: string;
@@ -818,7 +829,7 @@ export const api = {
         body: data,
         token,
       }),
-    
+
     update: (id: number, data: {
       title?: string;
       subtitle?: string;
@@ -834,25 +845,25 @@ export const api = {
         body: data,
         token,
       }),
-    
+
     delete: (id: number, token: string) =>
       fetchAPI(`/api/v2/cms/articles/${id}`, {
         method: 'DELETE',
         token,
       }),
-    
+
     publish: (id: number, token: string) =>
       fetchAPI(`/api/v2/cms/articles/${id}/publish`, {
         method: 'POST',
         token,
       }),
-    
+
     archive: (id: number, token: string) =>
       fetchAPI(`/api/v2/cms/articles/${id}/archive`, {
         method: 'POST',
         token,
       }),
-    
+
     like: (id: number, token: string) =>
       fetchAPI(`/api/v2/cms/articles/${id}/like`, {
         method: 'POST',
@@ -863,7 +874,7 @@ export const api = {
   // CSV 匯入匯出相關
   csv: {
     exportUsers: (token: string): Promise<Blob> => {
-      return fetch(`${API_BASE_URL}/api/csv/export/users`, {
+      return fetch('/api/csv/export/users', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -875,9 +886,9 @@ export const api = {
         return res.blob();
       });
     },
-    
+
     exportJobs: (token: string): Promise<Blob> => {
-      return fetch(`${API_BASE_URL}/api/csv/export/jobs`, {
+      return fetch('/api/csv/export/jobs', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -889,9 +900,9 @@ export const api = {
         return res.blob();
       });
     },
-    
+
     exportEvents: (token: string): Promise<Blob> => {
-      return fetch(`${API_BASE_URL}/api/csv/export/events`, {
+      return fetch('/api/csv/export/events', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -903,9 +914,9 @@ export const api = {
         return res.blob();
       });
     },
-    
+
     exportBulletins: (token: string): Promise<Blob> => {
-      return fetch(`${API_BASE_URL}/api/csv/export/bulletins`, {
+      return fetch('/api/csv/export/bulletins', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -917,12 +928,12 @@ export const api = {
         return res.blob();
       });
     },
-    
+
     importUsers: (file: File, token: string) => {
       const formData = new FormData();
       formData.append('file', file);
-      
-      return fetch(`${API_BASE_URL}/api/csv/import/users`, {
+
+      return fetch('/api/csv/import/users', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -936,12 +947,12 @@ export const api = {
         return data;
       });
     },
-    
+
     importJobs: (file: File, token: string) => {
       const formData = new FormData();
       formData.append('file', file);
-      
-      return fetch(`${API_BASE_URL}/api/csv/import/jobs`, {
+
+      return fetch('/api/csv/import/jobs', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -955,12 +966,12 @@ export const api = {
         return data;
       });
     },
-    
+
     importEvents: (file: File, token: string) => {
       const formData = new FormData();
       formData.append('file', file);
-      
-      return fetch(`${API_BASE_URL}/api/csv/import/events`, {
+
+      return fetch('/api/csv/import/events', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -974,12 +985,12 @@ export const api = {
         return data;
       });
     },
-    
+
     importBulletins: (file: File, token: string) => {
       const formData = new FormData();
       formData.append('file', file);
-      
-      return fetch(`${API_BASE_URL}/api/csv/import/bulletins`, {
+
+      return fetch('/api/csv/import/bulletins', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -844,7 +844,7 @@ export default function CareerPage() {
                 key={eduForm.key('is_current')}
               />
               <Group grow>
-                <TextInput
+              <TextInput
                   label="指導教授（一）"
                   placeholder="例如：王教授"
                   {...eduForm.getInputProps('advisor_1')}
@@ -855,7 +855,7 @@ export default function CareerPage() {
                   placeholder="例如：李教授（選填）"
                   {...eduForm.getInputProps('advisor_2')}
                   key={eduForm.key('advisor_2')}
-                />
+              />
               </Group>
               <Group justify="flex-end" mt="md">
                 <Button variant="default" onClick={closeEduModal}>

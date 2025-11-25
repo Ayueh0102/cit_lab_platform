@@ -271,7 +271,7 @@ export default function DirectoryPage() {
                           {/* 社交連結 - 顯示在主要資訊區域 */}
                           {(user.profile?.linkedin_url || user.profile?.github_url || user.profile?.personal_website) && (
                             <Group gap="xs" mt="xs">
-                              {user.profile?.linkedin_url && (
+                            {user.profile?.linkedin_url && (
                                 <Anchor
                                   href={user.profile.linkedin_url}
                                   target="_blank"
@@ -284,8 +284,8 @@ export default function DirectoryPage() {
                                     <Text size="sm">LinkedIn</Text>
                                   </Group>
                                 </Anchor>
-                              )}
-                              {user.profile?.github_url && (
+                            )}
+                            {user.profile?.github_url && (
                                 <Anchor
                                   href={user.profile.github_url}
                                   target="_blank"
@@ -298,8 +298,8 @@ export default function DirectoryPage() {
                                     <Text size="sm">GitHub</Text>
                                   </Group>
                                 </Anchor>
-                              )}
-                              {user.profile?.personal_website && (
+                            )}
+                            {user.profile?.personal_website && (
                                 <Anchor
                                   href={user.profile.personal_website}
                                   target="_blank"
@@ -331,8 +331,8 @@ export default function DirectoryPage() {
                                   聯絡
                                 </Anchor>
                               </Group>
-                            </Group>
-                          )}
+                              </Group>
+                            )}
                         </Stack>
                       </Group>
                     </Card>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import { MantineProvider } from "@/components/providers/MantineProvider";
+import { AuroraBackground } from "@/components/ui/AuroraBackground";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/dates/styles.css";
@@ -24,7 +25,10 @@ export default function RootLayout({
         <meta name="viewport" content="minimum-scale=1, initial-scale=1, width=device-width, user-scalable=no" />
       </head>
       <body suppressHydrationWarning>
-        <MantineProvider>{children}</MantineProvider>
+        <MantineProvider>
+          <AuroraBackground />
+          {children}
+        </MantineProvider>
       </body>
     </html>
   );

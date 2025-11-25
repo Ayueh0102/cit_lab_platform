@@ -4,10 +4,10 @@
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, Enum
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 import enum
-from .base import BaseModel, db
+from .base import BaseModel, db, enum_type
 
 
 # ========================================
@@ -41,7 +41,7 @@ class Conversation(BaseModel):
                      nullable=False, comment='參與者2 ID')
 
     # 對話屬性
-    conversation_type = Column(Enum(ConversationType),
+    conversation_type = Column(enum_type(ConversationType),
                               default=ConversationType.DIRECT_MESSAGE,
                               comment='對話類型')
 
@@ -229,7 +229,7 @@ class Message(BaseModel):
     attachment_name = Column(String(200), comment='附件名稱')
 
     # 訊息狀態
-    status = Column(Enum(MessageStatus), default=MessageStatus.SENT, comment='訊息狀態')
+    status = Column(enum_type(MessageStatus), default=MessageStatus.SENT, comment='訊息狀態')
     read_at = Column(DateTime, comment='已讀時間')
 
     # 系統訊息標記
