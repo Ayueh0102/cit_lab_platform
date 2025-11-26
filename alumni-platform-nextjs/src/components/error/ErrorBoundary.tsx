@@ -3,10 +3,29 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { ErrorFallback } from './ErrorFallback';
 
+/**
+ * FallbackProps - 傳遞給 FallbackComponent 的屬性
+ * 符合 react-error-boundary 套件的標準 API
+ */
+export interface FallbackProps {
+  error: Error;
+  resetErrorBoundary: () => void;
+}
+
 interface Props {
   children: ReactNode;
+  /** 簡單的 fallback 元素 */
   fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  /** 接收 error 和 resetErrorBoundary 的 fallback 元件 */
+  FallbackComponent?: React.ComponentType<FallbackProps>;
+  /** render prop 形式的 fallback */
+  fallbackRender?: (props: FallbackProps) => ReactNode;
+  /** 錯誤發生時的回調 */
+  onError?: (error: Error, info: { componentStack: string }) => void;
+  /** 重置時的回調 */
+  onReset?: (details: { reason: 'imperative-api' | 'keys'; args?: unknown[]; prev?: unknown[]; next?: unknown[] }) => void;
+  /** 當這些值變更時自動重置 error boundary */
+  resetKeys?: unknown[];
 }
 
 interface State {
@@ -16,10 +35,16 @@ interface State {
 
 /**
  * React Error Boundary 元件
- * 捕獲子元件的 JavaScript 錯誤，防止整個頁面崩潰
  * 
- * 注意：Error Boundary 必須使用 class component
- * 因為 React hooks 不支援 componentDidCatch 和 getDerivedStateFromError
+ * 符合 react-error-boundary 套件的標準 API：
+ * - fallback: 簡單的 fallback 元素
+ * - FallbackComponent: 接收 error 和 resetErrorBoundary 的元件
+ * - fallbackRender: render prop 形式
+ * - onError: 錯誤回調
+ * - onReset: 重置回調
+ * - resetKeys: 自動重置觸發器
+ * 
+ * @see https://github.com/bvaughn/react-error-boundary
  */
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -28,44 +53,73 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
-    // 更新 state 使下一次渲染顯示錯誤 UI
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // 記錄錯誤到 console（開發環境）
     console.error('ErrorBoundary caught an error:', error, errorInfo);
 
-    // 呼叫自訂錯誤處理函數（如果有提供）
     if (this.props.onError) {
-      this.props.onError(error, errorInfo);
+      this.props.onError(error, { componentStack: errorInfo.componentStack || '' });
     }
-
-    // 這裡可以將錯誤發送到錯誤追蹤服務（如 Sentry）
-    // logErrorToService(error, errorInfo);
   }
 
-  resetError = (): void => {
+  componentDidUpdate(prevProps: Props): void {
+    // resetKeys 變更時自動重置
+    if (this.state.hasError && this.props.resetKeys) {
+      const hasKeysChanged = this.props.resetKeys.some(
+        (key, index) => prevProps.resetKeys?.[index] !== key
+      );
+      
+      if (hasKeysChanged) {
+        this.props.onReset?.({
+          reason: 'keys',
+          prev: prevProps.resetKeys,
+          next: this.props.resetKeys,
+        });
+        this.setState({ hasError: false, error: null });
+      }
+    }
+  }
+
+  resetErrorBoundary = (...args: unknown[]): void => {
+    this.props.onReset?.({ reason: 'imperative-api', args });
     this.setState({ hasError: false, error: null });
   };
 
   render(): ReactNode {
-    if (this.state.hasError) {
-      // 如果有自訂 fallback，使用它
-      if (this.props.fallback) {
-        return this.props.fallback;
+    const { hasError, error } = this.state;
+    const { children, fallback, FallbackComponent, fallbackRender } = this.props;
+
+    if (hasError && error) {
+      const fallbackProps: FallbackProps = {
+        error,
+        resetErrorBoundary: this.resetErrorBoundary,
+      };
+
+      // 優先順序：fallbackRender > FallbackComponent > fallback > 預設
+      if (fallbackRender) {
+        return fallbackRender(fallbackProps);
       }
 
-      // 否則使用預設的 ErrorFallback
+      if (FallbackComponent) {
+        return <FallbackComponent {...fallbackProps} />;
+      }
+
+      if (fallback) {
+        return fallback;
+      }
+
+      // 預設使用 ErrorFallback
       return (
         <ErrorFallback
-          error={this.state.error || undefined}
-          resetError={this.resetError}
+          error={error}
+          resetError={this.resetErrorBoundary}
         />
       );
     }
 
-    return this.props.children;
+    return children;
   }
 }
 

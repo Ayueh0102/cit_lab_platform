@@ -1,5 +1,6 @@
 """
 後端測試配置
+符合 pytest-flask 最佳實踐
 """
 import pytest
 import sys
@@ -8,25 +9,50 @@ import os
 # 添加專案根目錄到 Python 路徑
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-@pytest.fixture
+
+@pytest.fixture(scope='function')
 def app():
-    """創建 Flask 應用程式實例"""
-    from src.main_v2 import app
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    app.config['SECRET_KEY'] = 'test-secret-key'
-    app.config['JWT_SECRET_KEY'] = 'test-jwt-secret-key'
+    """
+    創建 Flask 應用程式實例
     
-    with app.app_context():
+    使用 function scope 確保每個測試都有獨立的資料庫
+    符合 pytest-flask 最佳實踐
+    """
+    from src.main_v2 import app as flask_app
+    
+    # 測試環境配置
+    flask_app.config.update({
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+        'SECRET_KEY': 'test-secret-key',
+        'JWT_SECRET_KEY': 'test-jwt-secret-key',
+        'WTF_CSRF_ENABLED': False,  # 測試時停用 CSRF
+        'PRESERVE_CONTEXT_ON_EXCEPTION': False,
+    })
+    
+    with flask_app.app_context():
         from src.models_v2 import db
         db.create_all()
-        yield app
+        yield flask_app
+        db.session.remove()
         db.drop_all()
+
 
 @pytest.fixture
 def client(app):
-    """創建測試客戶端"""
+    """
+    創建測試客戶端
+    
+    pytest-flask 標準 fixture
+    自動推送 request context
+    """
     return app.test_client()
+
+
+@pytest.fixture
+def runner(app):
+    """創建 CLI 測試 runner"""
+    return app.test_cli_runner()
 
 @pytest.fixture
 def auth_token(client):

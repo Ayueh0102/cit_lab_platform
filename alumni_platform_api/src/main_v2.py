@@ -99,7 +99,9 @@ app.config.update(database_config)
 db.init_app(app)
 
 # 初始化 Flask-Migrate (Alembic)
-migrate = Migrate(app, db)
+# compare_type=True: 偵測欄位類型變更
+# render_as_batch=True: SQLite 批次模式（預設已啟用）
+migrate = Migrate(app, db, compare_type=True)
 
 # 初始化 WebSocket
 socketio.init_app(app, cors_allowed_origins="*")
