@@ -112,18 +112,27 @@ socketio.init_app(app, cors_allowed_origins=ALLOWED_ORIGINS)
 # ========================================
 def init_database():
     """初始化資料庫並填入測試資料"""
+    import os
+    db_path = os.path.join(os.path.dirname(__file__), 'database', 'app_v2.db')
+    db_exists = os.path.exists(db_path)
+    
     with app.app_context():
-        # 建立所有資料表
+        # 建立所有資料表（如果不存在）
         db.create_all()
-        print("✅ Database tables created successfully")
-
+        
+        if db_exists:
+            print(f"✅ Database found at: {db_path}")
+        else:
+            print(f"⚠️  Database created at: {db_path}")
+        
         # 檢查是否需要填入測試資料
-        if User.query.count() == 0:
-            print("📊 Seeding initial data...")
+        user_count = User.query.count()
+        if user_count == 0:
+            print("📊 Database is empty, seeding initial data...")
             seed_data()
             print("✅ Initial data seeded successfully")
         else:
-            print("ℹ️  Database already contains data, skipping seed")
+            print(f"ℹ️  Database contains {user_count} users, skipping seed")
 
 
 def seed_data():

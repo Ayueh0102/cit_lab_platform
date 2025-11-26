@@ -90,3 +90,6 @@ logs/
 *.backup
 *.bak
 backups/
+
+# Database backups
+alumni_platform_api/src/database/backups/
