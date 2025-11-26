@@ -10,8 +10,6 @@ import secrets
 from datetime import datetime
 from src.models_v2 import db, User, UserProfile, Job, Event, Bulletin, EventRegistration, JobRequest
 from src.routes.auth_v2 import token_required, admin_required  # 使用統一的認證裝飾器
-from werkzeug.security import generate_password_hash
-
 csv_bp = Blueprint('csv', __name__)
 
 
@@ -24,42 +22,10 @@ csv_bp = Blueprint('csv', __name__)
 def export_users(current_user):
     """匯出系友帳號清單為 CSV"""
     try:
-        # 查詢所有使用者及其檔案
-        users = User.query.all()
-
-        # 建立 CSV
-        output = io.StringIO()
-        writer = csv.writer(output)
-
-        # 寫入標題 (使用正確的欄位名稱)
-        writer.writerow([
-            'ID', '電子郵件', '姓名', '顯示名稱', '畢業年份', '屆數',
-            '目前公司', '職位', '個人網站', 'LinkedIn',
-            '註冊日期', '最後更新'
-        ])
-
-        # 寫入資料 (使用正確的 Profile 欄位)
-        for user in users:
-            profile = user.profile
-            writer.writerow([
-                user.id,
-                user.email,
-                profile.full_name if profile else '',
-                profile.display_name if profile else '',
-                profile.graduation_year if profile else '',
-                profile.class_year if profile else '',
-                profile.current_company if profile else '',
-                profile.current_position if profile else '',
-                profile.personal_website if profile else '',
-                profile.linkedin_url if profile else '',
-                user.created_at.strftime('%Y-%m-%d') if user.created_at else '',
-                user.updated_at.strftime('%Y-%m-%d') if user.updated_at else ''
-            ])
-
+        csv_bytes = export_users_csv()
         # 準備下載
-        output.seek(0)
         return send_file(
-            io.BytesIO(output.getvalue().encode('utf-8-sig')),
+            io.BytesIO(csv_bytes),
             mimetype='text/csv',
             as_attachment=True,
             download_name=f'系友帳號清單_{datetime.now().strftime("%Y%m%d")}.csv'
@@ -484,14 +450,25 @@ def export_users_csv():
     output = io.StringIO()
     writer = csv.writer(output)
 
-    writer.writerow(['ID', '電子郵件', '姓名', '畢業年份', '班級', '目前公司', '職位', '個人網站', 'LinkedIn ID', '註冊日期', '最後更新'])
+    writer.writerow([
+        'ID', '電子郵件', '姓名', '顯示名稱', '畢業年份', '屆數',
+        '目前公司', '職位', '個人網站', 'LinkedIn',
+        '註冊日期', '最後更新'
+    ])
 
     for user in users:
         profile = user.profile
         writer.writerow([
-            user.id, user.email, user.name, user.graduation_year or '', user.class_name or '',
-            profile.current_company if profile else '', profile.current_title if profile else '',
-            profile.website if profile else '', user.linkedin_id or '',
+            user.id,
+            user.email,
+            profile.full_name if profile else '',
+            profile.display_name if profile else '',
+            profile.graduation_year if profile else '',
+            profile.class_year if profile else '',
+            profile.current_company if profile else '',
+            profile.current_position if profile else '',
+            profile.personal_website if profile else '',
+            profile.linkedin_url if profile else '',
             user.created_at.strftime('%Y-%m-%d') if user.created_at else '',
             user.updated_at.strftime('%Y-%m-%d') if user.updated_at else ''
         ])

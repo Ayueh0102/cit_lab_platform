@@ -8,7 +8,16 @@ from src.models_v2 import db, Notification, Message, Conversation
 from functools import wraps
 import jwt
 
-socketio = SocketIO(cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(async_mode='threading')
+
+
+def _get_jwt_secret():
+    """取得 JWT 秘鑰"""
+    secret = current_app.config.get('JWT_SECRET_KEY') or current_app.config.get('SECRET_KEY')
+    if not secret:
+        raise RuntimeError('JWT secret not configured')
+    return secret
+
 
 def socketio_token_required(f):
     """WebSocket 認證裝飾器"""
@@ -20,7 +29,7 @@ def socketio_token_required(f):
             return False
         
         try:
-            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+            payload = jwt.decode(token, _get_jwt_secret(), algorithms=['HS256'])
             kwargs['user_id'] = payload['user_id']
             return f(*args, **kwargs)
         except jwt.ExpiredSignatureError:
@@ -42,7 +51,7 @@ def handle_connect(auth):
     try:
         from flask import current_app
         with current_app.app_context():
-            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+            payload = jwt.decode(token, _get_jwt_secret(), algorithms=['HS256'])
             user_id = payload['user_id']
             
             # 加入用戶專屬房間
@@ -65,7 +74,7 @@ def handle_subscribe_notifications(auth):
     try:
         from flask import current_app
         with current_app.app_context():
-            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+            payload = jwt.decode(token, _get_jwt_secret(), algorithms=['HS256'])
             user_id = payload['user_id']
             
             join_room(f'user_{user_id}_notifications')
@@ -87,7 +96,7 @@ def handle_subscribe_messages(auth, data):
     try:
         from flask import current_app
         with current_app.app_context():
-            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+            payload = jwt.decode(token, _get_jwt_secret(), algorithms=['HS256'])
             user_id = payload['user_id']
             
             conversation_id = data.get('conversation_id')

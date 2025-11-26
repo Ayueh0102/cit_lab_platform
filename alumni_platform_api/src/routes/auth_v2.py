@@ -14,6 +14,20 @@ auth_v2_bp = Blueprint('auth_v2', __name__)
 
 
 # ========================================
+# Helper functions
+# ========================================
+def _get_jwt_secret():
+    """
+    取得 JWT 加密金鑰
+    優先使用 JWT_SECRET_KEY，否則退回 SECRET_KEY
+    """
+    secret = current_app.config.get('JWT_SECRET_KEY') or current_app.config.get('SECRET_KEY')
+    if not secret:
+        raise RuntimeError('JWT 秘鑰未設定')
+    return secret
+
+
+# ========================================
 # JWT Token 認證裝飾器
 # ========================================
 def token_required(f):
@@ -34,7 +48,7 @@ def token_required(f):
 
         try:
             # 解碼 JWT Token
-            data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+            data = jwt.decode(token, _get_jwt_secret(), algorithms=['HS256'])
             current_user = User.query.get(data['user_id'])
 
             if not current_user:
@@ -129,7 +143,7 @@ def register():
         token = jwt.encode({
             'user_id': user.id,
             'exp': datetime.utcnow() + timedelta(days=7)
-        }, current_app.config['SECRET_KEY'], algorithm='HS256')
+        }, _get_jwt_secret(), algorithm='HS256')
 
         # 建立登入會話
         session = UserSession(
@@ -181,12 +195,8 @@ def login():
         if not user.status == "active":
             return jsonify({'message': 'Account is inactive'}), 401
 
-        # 確保 SECRET_KEY 存在
-        secret_key = current_app.config.get('SECRET_KEY') or current_app.config.get('JWT_SECRET_KEY')
-        if not secret_key:
-            return jsonify({'message': 'Server configuration error'}), 500
-
         # 產生 JWT Token
+        secret_key = _get_jwt_secret()
         token = jwt.encode({
             'user_id': user.id,
             'exp': datetime.utcnow() + timedelta(days=7)
@@ -286,8 +296,12 @@ def update_profile(current_user):
             profile.graduation_year = data['graduation_year']
         if 'class_year' in data:
             profile.class_year = data['class_year']  # 屆數（如：101, 102, 103）
-        if 'class_name' in data:
-            profile.class_name = data['class_name']
+        elif 'class_name' in data:
+            # 舊版欄位相容：嘗試將 class_name 轉換為 class_year
+            try:
+                profile.class_year = int(data['class_name']) if data['class_name'] is not None else None
+            except (ValueError, TypeError):
+                profile.class_year = data.get('class_name')
         if 'phone' in data:
             profile.phone = data['phone']
         if 'location' in data:

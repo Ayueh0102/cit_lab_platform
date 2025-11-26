@@ -104,7 +104,7 @@ db.init_app(app)
 migrate = Migrate(app, db, compare_type=True)
 
 # 初始化 WebSocket
-socketio.init_app(app, cors_allowed_origins="*")
+socketio.init_app(app, cors_allowed_origins=ALLOWED_ORIGINS)
 
 
 # ========================================
@@ -140,7 +140,7 @@ def seed_data():
                 'role': 'admin',
                 'profile': {
                     'graduation_year': 2015,
-                    'class_name': 'A班',
+                    'class_year': 100,
                     'current_company': '系友會',
                     'current_position': '平台管理員',
                     'bio': '負責系友會平台的維護與管理'
@@ -153,7 +153,7 @@ def seed_data():
                 'role': 'user',
                 'profile': {
                     'graduation_year': 2020,
-                    'class_name': 'A班',
+                    'class_year': 108,
                     'current_company': 'ASUS',
                     'current_position': '光學工程師',
                     'industry': '電子製造',
@@ -167,7 +167,7 @@ def seed_data():
                 'role': 'user',
                 'profile': {
                     'graduation_year': 2019,
-                    'class_name': 'B班',
+                    'class_year': 107,
                     'current_company': 'MediaTek',
                     'current_position': '色彩科學研究員',
                     'industry': '半導體',
@@ -193,6 +193,7 @@ def seed_data():
                 full_name=user_data['name'],  # name 從 user_data 移到 profile
                 display_name=user_data['name'].split()[0] if user_data['name'] else None,
                 graduation_year=profile_data.get('graduation_year'),
+                class_year=profile_data.get('class_year') or profile_data.get('class_name'),
                 current_company=profile_data.get('current_company'),
                 current_position=profile_data.get('current_position'),
                 bio=profile_data.get('bio')

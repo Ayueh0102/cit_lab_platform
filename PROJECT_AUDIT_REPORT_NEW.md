@@ -19,6 +19,12 @@
 | 4.5 | ✅ 已修復 | 建立 ErrorBoundary、ErrorFallback、GlobalErrorBoundary 元件，整合至 layout.tsx |
 | 4.6 | ✅ 已修復 | 新增 test_events.py、test_career.py、test_csv.py、test_bulletins.py，更新 conftest.py 和 test_auth.py |
 
+## 🔁 v2 修補摘要（2025-11-26 晚）
+
+- **JWT 金鑰統一**：`auth_v2` 與 `websocket` 新增 `_get_jwt_secret()` helper，所有 JWT encode/decode 與 WebSocket 認證共用 `JWT_SECRET_KEY`，並保留 `SECRET_KEY` fallback。
+- **欄位／CSV 對應**：`register`、`update_profile`、CSV 匯出及種子資料全面改用 `class_year`，匯出欄位同步顯示名稱、LinkedIn 等資訊，與匯入格式一致。
+- **WebSocket CORS**：主程式 `ALLOWED_ORIGINS` 與 Socket.IO `cors_allowed_origins` 同步，避免 `*` 帶來的跨站風險。
+
 ---
 
 ## 1. 檢測範圍與方法
@@ -69,7 +75,7 @@
 | # | 問題 | 影響 | 來源 | 狀態 |
 | --- | --- | --- | --- | --- |
 | 4.1 | CSV 匯出/匯入欄位錯誤，且為所有新帳號設定 `default123`。 | 功能失效且大量帳號共享弱密碼。 | `src/routes/csv_import_export.py` | ✅ 已修復 |
-| 4.2 | CORS 全開、WebSocket 允許 `*`，且缺少 CSRF / Rate Limit。 | 易受 CSRF、暴力攻擊，違反 Flask/Next.js 安全建議。 | `src/main_v2.py`, `src/routes/websocket.py` | ✅ CORS 已修復 |
+| 4.2 | CORS 全開、WebSocket 允許 `*`，且缺少 CSRF / Rate Limit。 | 易受 CSRF、暴力攻擊，違反 Flask/Next.js 安全建議。 | `src/main_v2.py`, `src/routes/websocket.py` | ✅ 已修復 |
 | 4.3 | JWT 與完整 user JSON 儲存在 `localStorage`。 | XSS 一旦發生即洩漏 token 與個資。 | `alumni-platform-nextjs/src/lib/auth.ts` | ⚠️ 維持現狀 |
 | 4.4 | 缺乏 Alembic / Flask-Migrate。 | 無法追蹤 schema 變更，遷移成本高。 | `requirements.txt` | ✅ 已修復 |
 | 4.5 | React 根 layout 無 Error Boundary。 | 任一子元件出錯將清空整個頁面。 | `alumni-platform-nextjs/src/app/layout.tsx` | ✅ 已修復 |
@@ -118,27 +124,33 @@
 
 > 下列為檢測過程中引用的關鍵程式（節錄），供之後修復對照。
 
-```54:60:alumni_platform_api/src/main_v2.py
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-please-change-in-production')
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-key-please-change-in-production')
+```python
+# alumni_platform_api/src/main_v2.py (摘錄)
+IS_PRODUCTION = os.environ.get('FLASK_ENV') == 'production' or os.environ.get('PRODUCTION') == 'true'
 
-# Enable CORS for all routes
-CORS(app)
+# CORS 設定 - 限制允許的來源
+ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
+CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
+
+# WebSocket 使用相同的 CORS 白名單
+socketio.init_app(app, cors_allowed_origins=ALLOWED_ORIGINS)
 ```
 
-```107:125:alumni_platform_api/src/routes/auth_v2.py
-        user = User(
-            email=data['email'],
-            name=data['name'],
-            role=data.get('role', 'user')
-        )
-        ...
-        profile = UserProfile(
-            user_id=user.id,
-            graduation_year=data.get('graduation_year'),
-            class_name=data.get('class_name'),
-            phone=data.get('phone')
-        )
+```python
+# alumni_platform_api/src/routes/auth_v2.py (摘錄)
+def _get_jwt_secret():
+    """取得 JWT 加密金鑰 - 優先使用 JWT_SECRET_KEY，否則退回 SECRET_KEY"""
+    secret = current_app.config.get('JWT_SECRET_KEY') or current_app.config.get('SECRET_KEY')
+    if not secret:
+        raise RuntimeError('JWT 秘鑰未設定')
+    return secret
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # ... 省略 token 解析 ...
+        data = jwt.decode(token, _get_jwt_secret(), algorithms=['HS256'])
+        # ...
 ```
 
 ```352:390:alumni_platform_api/src/routes/events_v2.py
@@ -146,16 +158,17 @@ CORS(app)
             event_id=event_id,
             user_id=current_user.id,
             ...
-            status='confirmed' if not is_waitlist else 'waitlisted'
+            status=RegistrationStatus.REGISTERED if not is_waitlist else RegistrationStatus.WAITLIST
         )
 ```
 
-```17:29:alumni_platform_api/src/routes/career.py
-@career_bp.route('/api/career/work-experiences', methods=['GET'])
-@token_required
-def get_work_experiences(current_user):
-    user_id = request.args.get('user_id', current_user.id, type=int)
-    experiences = WorkExperience.query.filter_by(user_id=user_id).all()
+```17:41:alumni_platform_api/src/routes/career.py
+    for exp in experiences:
+        exp_dict = exp.to_dict()
+        if not is_own_data and not is_admin:
+            exp_dict.pop('annual_salary_min', None)
+            exp_dict.pop('annual_salary_max', None)
+            exp_dict.pop('salary_currency', None)
 ```
 
 ```6:64:alumni-platform-nextjs/src/lib/auth.ts
@@ -166,11 +179,14 @@ const USER_KEY = 'user_data';
   localStorage.setItem(USER_KEY, JSON.stringify(userData));
 ```
 
-```16:33:alumni-platform-nextjs/src/app/layout.tsx
-    <MantineProvider>
-      <AuroraBackground />
-      {children}
-    </MantineProvider>
+```tsx
+// alumni-platform-nextjs/src/app/layout.tsx (摘錄)
+<MantineProvider>
+  <GlobalErrorBoundary>
+    <AuroraBackground />
+    {children}
+  </GlobalErrorBoundary>
+</MantineProvider>
 ```
 
 ---
