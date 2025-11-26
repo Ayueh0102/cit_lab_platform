@@ -31,11 +31,10 @@ def client(app):
 @pytest.fixture
 def auth_token(client):
     """創建測試用戶並獲取認證 token"""
-    # 註冊測試用戶
+    # 註冊測試用戶 (使用更新後的欄位：移除 name，改用 profile 欄位)
     response = client.post('/api/v2/auth/register', json={
         'email': 'test@example.com',
-        'password': 'test123456',
-        'name': 'Test User'
+        'password': 'test123456'
     })
     
     # 登入獲取 token
@@ -48,13 +47,33 @@ def auth_token(client):
     return data.get('access_token')
 
 @pytest.fixture
+def auth_token_with_user_id(client):
+    """創建測試用戶並返回 token 和 user_id"""
+    # 註冊測試用戶
+    response = client.post('/api/v2/auth/register', json={
+        'email': 'test_with_id@example.com',
+        'password': 'test123456'
+    })
+    
+    # 登入獲取 token
+    response = client.post('/api/v2/auth/login', json={
+        'email': 'test_with_id@example.com',
+        'password': 'test123456'
+    })
+    
+    data = response.get_json()
+    return {
+        'token': data.get('access_token'),
+        'user_id': data.get('user', {}).get('id')
+    }
+
+@pytest.fixture
 def admin_token(client):
     """創建管理員用戶並獲取認證 token"""
-    # 註冊管理員用戶
+    # 註冊管理員用戶 (使用更新後的欄位)
     response = client.post('/api/v2/auth/register', json={
         'email': 'admin_test@example.com',
-        'password': 'admin123456',
-        'name': 'Admin User'
+        'password': 'admin123456'
     })
     
     # 登入獲取 token
@@ -75,4 +94,20 @@ def admin_token(client):
             db.session.commit()
     
     return token
+
+@pytest.fixture
+def second_user_token(client):
+    """創建第二個測試用戶並獲取認證 token（用於測試隱私控制）"""
+    response = client.post('/api/v2/auth/register', json={
+        'email': 'second_user@example.com',
+        'password': 'test123456'
+    })
+    
+    response = client.post('/api/v2/auth/login', json={
+        'email': 'second_user@example.com',
+        'password': 'test123456'
+    })
+    
+    data = response.get_json()
+    return data.get('access_token')
 

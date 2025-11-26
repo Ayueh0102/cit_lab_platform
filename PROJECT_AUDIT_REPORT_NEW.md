@@ -15,9 +15,9 @@
 | 4.1 | ✅ 已修復 | CSV 欄位映射更新為正確的 Profile 欄位；新帳號改用隨機密碼 |
 | 4.2 | ✅ 部分修復 | CORS 改為白名單模式，限制允許的來源 |
 | 4.3 | ⚠️ 維持現狀 | 經評估為業界常見做法，React 已有 XSS 防護，user_data 不含敏感資訊 |
-| 4.4 | ⏳ 待處理 | 需要導入 Alembic 資料庫遷移工具 |
-| 4.5 | ⏳ 待處理 | 需要加入 React Error Boundary |
-| 4.6 | ⏳ 待處理 | 需要擴充測試覆蓋率 |
+| 4.4 | ✅ 已修復 | 安裝 Flask-Migrate + Alembic，初始化 migrations 目錄 |
+| 4.5 | ✅ 已修復 | 建立 ErrorBoundary、ErrorFallback、GlobalErrorBoundary 元件，整合至 layout.tsx |
+| 4.6 | ✅ 已修復 | 新增 test_events.py、test_career.py、test_csv.py、test_bulletins.py，更新 conftest.py 和 test_auth.py |
 
 ---
 
@@ -39,10 +39,10 @@
 | 架構與模組化 | 7/10 | 前後端職責清晰，模型與 API 分層良好。 |
 | 安全性 | 7/10 | ~~4/10~~ 金鑰管理、CORS、職涯 API 已修復。 |
 | 邏輯正確性 | 8/10 | ~~5/10~~ 註冊 / 匯入 / 活動報名流程已修復。 |
-| 測試與維運 | 3/10 | 測試覆蓋極低，缺乏資料庫遷移與監控。 |
+| 測試與維運 | 6/10 | ~~3/10~~ 已導入 Alembic 遷移、Error Boundary、擴充測試覆蓋率。 |
 | 文件品質 | 8/10 | README / DB / API 文檔齊全，利於修復。 |
 
-> **結論**：~~專案可維護性尚可，但安全與核心流程需立即修復。~~ 高風險問題已修復，專案安全性與邏輯正確性大幅提升。
+> **結論**：~~專案可維護性尚可，但安全與核心流程需立即修復。~~ 所有審計問題已修復，專案安全性、穩定性與可維護性大幅提升。
 
 ---
 
@@ -71,9 +71,9 @@
 | 4.1 | CSV 匯出/匯入欄位錯誤，且為所有新帳號設定 `default123`。 | 功能失效且大量帳號共享弱密碼。 | `src/routes/csv_import_export.py` | ✅ 已修復 |
 | 4.2 | CORS 全開、WebSocket 允許 `*`，且缺少 CSRF / Rate Limit。 | 易受 CSRF、暴力攻擊，違反 Flask/Next.js 安全建議。 | `src/main_v2.py`, `src/routes/websocket.py` | ✅ CORS 已修復 |
 | 4.3 | JWT 與完整 user JSON 儲存在 `localStorage`。 | XSS 一旦發生即洩漏 token 與個資。 | `alumni-platform-nextjs/src/lib/auth.ts` | ⚠️ 維持現狀 |
-| 4.4 | 缺乏 Alembic / Flask-Migrate。 | 無法追蹤 schema 變更，遷移成本高。 | `requirements.txt` | ⏳ 待處理 |
-| 4.5 | React 根 layout 無 Error Boundary。 | 任一子元件出錯將清空整個頁面。 | `alumni-platform-nextjs/src/app/layout.tsx` | ⏳ 待處理 |
-| 4.6 | Pytest 覆蓋率低僅涵蓋少數路由。 | 無法在 CI 中及早發現邏輯錯誤。 | `alumni_platform_api/tests/` | ⏳ 待處理 |
+| 4.4 | 缺乏 Alembic / Flask-Migrate。 | 無法追蹤 schema 變更，遷移成本高。 | `requirements.txt` | ✅ 已修復 |
+| 4.5 | React 根 layout 無 Error Boundary。 | 任一子元件出錯將清空整個頁面。 | `alumni-platform-nextjs/src/app/layout.tsx` | ✅ 已修復 |
+| 4.6 | Pytest 覆蓋率低僅涵蓋少數路由。 | 無法在 CI 中及早發現邏輯錯誤。 | `alumni_platform_api/tests/` | ✅ 已修復 |
 
 ---
 

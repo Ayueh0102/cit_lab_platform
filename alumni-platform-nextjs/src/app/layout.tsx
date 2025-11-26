@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import { MantineProvider } from "@/components/providers/MantineProvider";
+import { GlobalErrorBoundary } from "@/components/error";
 import { AuroraBackground } from "@/components/ui/AuroraBackground";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
@@ -26,8 +27,10 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <MantineProvider>
-          <AuroraBackground />
-          {children}
+          <GlobalErrorBoundary>
+            <AuroraBackground />
+            {children}
+          </GlobalErrorBoundary>
         </MantineProvider>
       </body>
     </html>

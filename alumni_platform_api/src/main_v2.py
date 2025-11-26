@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
+from flask_migrate import Migrate
 
 # Import models_v2
 from src.models_v2 import db, User, UserProfile, WorkExperience, Education, Skill, UserSkill
@@ -96,6 +97,9 @@ app.register_blueprint(search_bp)            # /api/v2/search/*
 database_config = get_database_config()
 app.config.update(database_config)
 db.init_app(app)
+
+# 初始化 Flask-Migrate (Alembic)
+migrate = Migrate(app, db)
 
 # 初始化 WebSocket
 socketio.init_app(app, cors_allowed_origins="*")
