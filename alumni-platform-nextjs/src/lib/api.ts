@@ -556,6 +556,10 @@ export const api = {
     getWorkExperiences: (token: string) =>
       fetchAPI('/api/career/work-experiences', { token }),
 
+    // 獲取特定用戶的工作經歷（公開資料）
+    getUserWorkExperiences: (userId: number, token?: string) =>
+      fetchAPI(`/api/career/users/${userId}/work-experiences`, { token }),
+
     addWorkExperience: (data: any, token: string) =>
       fetchAPI('/api/career/work-experiences', {
         method: 'POST',
@@ -578,6 +582,10 @@ export const api = {
 
     getEducations: (token: string) =>
       fetchAPI('/api/career/educations', { token }),
+
+    // 獲取特定用戶的教育背景（公開資料）
+    getUserEducations: (userId: number, token?: string) =>
+      fetchAPI(`/api/career/users/${userId}/educations`, { token }),
 
     addEducation: (data: any, token: string) =>
       fetchAPI('/api/career/educations', {

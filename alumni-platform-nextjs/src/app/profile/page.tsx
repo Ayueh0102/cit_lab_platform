@@ -86,6 +86,9 @@ interface WorkExperience {
   end_date?: string;
   is_current: boolean;
   description?: string;
+  salary_min?: number;
+  salary_max?: number;
+  salary_currency?: string;
 }
 
 interface Education {
@@ -125,6 +128,7 @@ export default function ProfilePage() {
   const [educations, setEducations] = useState<Education[]>([]);
   const [eduModalOpened, { open: openEduModal, close: closeEduModal }] = useDisclosure(false);
   const [editingEdu, setEditingEdu] = useState<Education | null>(null);
+  
 
   const form = useForm<UserProfile>({
     initialValues: {
@@ -161,6 +165,9 @@ export default function ProfilePage() {
       end_date: null as Date | null,
       is_current: false,
       description: '',
+      salary_min: undefined as number | undefined,
+      salary_max: undefined as number | undefined,
+      salary_currency: 'TWD',
     },
   });
 
@@ -178,12 +185,21 @@ export default function ProfilePage() {
     },
   });
 
+  // 使用 ref 來避免 form 依賴導致的無限循環
+  // 說明：直接將 form 作為 useCallback 的依賴會導致無限循環，
+  // 因為 form.setValues 會更新 form 狀態，進而重新創建 loadProfile
+  const formRef = { current: form };
+
   const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
       const token = getToken();
       if (!token) {
-        router.push('/auth/login');
+        // 安全說明：這裡不需要跳轉到登入頁面，原因如下：
+        // 1. ProtectedRoute 組件已經在外層處理認證檢查和跳轉
+        // 2. 如果沒有 token，API 請求不會發送，不會洩漏任何資料
+        // 3. ProtectedRoute 會在渲染週期中檢測到未認證狀態並跳轉
+        setLoading(false);
         return;
       }
 
@@ -194,7 +210,7 @@ export default function ProfilePage() {
         setUser(userData);
       
         if (userData?.profile) {
-          form.setValues({
+          formRef.current.setValues({
             full_name: userData.profile.full_name || '',
             display_name: userData.profile.display_name || '',
             email: userData.email || '',
@@ -227,7 +243,8 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [router, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   const loadWorkExperiences = useCallback(async () => {
     try {
@@ -251,11 +268,13 @@ export default function ProfilePage() {
     }
   }, []);
 
+  // 只在組件掛載時載入一次
   useEffect(() => {
     loadProfile();
     loadWorkExperiences();
     loadEducations();
-  }, [loadProfile, loadWorkExperiences, loadEducations]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSave = async (values: UserProfile) => {
     try {
@@ -345,6 +364,9 @@ export default function ProfilePage() {
         end_date: values.end_date ? values.end_date.toISOString().split('T')[0] : undefined,
         is_current: values.is_current,
         description: values.description || undefined,
+        salary_min: values.salary_min || undefined,
+        salary_max: values.salary_max || undefined,
+        salary_currency: values.salary_currency || 'TWD',
       };
 
       if (editingWork) {
@@ -450,6 +472,9 @@ export default function ProfilePage() {
       end_date: work.end_date ? new Date(work.end_date) : null,
       is_current: work.is_current,
       description: work.description || '',
+      salary_min: work.salary_min,
+      salary_max: work.salary_max,
+      salary_currency: work.salary_currency || 'TWD',
     });
     openWorkModal();
   };
@@ -482,12 +507,6 @@ export default function ProfilePage() {
     );
   }
 
-  // 生成屆數選項 (第1屆到第30屆)
-  const classYears = Array.from({ length: 30 }, (_, i) => ({
-    value: (i + 1).toString(),
-    label: `第 ${i + 1} 屆`,
-  }));
-
   const currentYear = new Date().getFullYear();
   const graduationYears = Array.from({ length: 30 }, (_, i) => (currentYear - i).toString());
 
@@ -496,6 +515,51 @@ export default function ProfilePage() {
     { value: 'master', label: '碩士' },
     { value: 'phd', label: '博士' },
   ];
+
+  // 計算工作年資（從最早開始日期到最後結束日期的總月數）
+  const calculateTotalWorkMonths = () => {
+    if (workExperiences.length === 0) return 0;
+
+    // 找出最早的開始日期
+    const earliestStart = workExperiences.reduce((earliest, work) => {
+      const startDate = new Date(work.start_date);
+      return startDate < earliest ? startDate : earliest;
+    }, new Date(workExperiences[0].start_date));
+
+    // 找出最後的結束日期（如果有任何一個是 is_current，則用現在日期）
+    const hasCurrentJob = workExperiences.some(work => work.is_current);
+    let latestEnd: Date;
+    
+    if (hasCurrentJob) {
+      latestEnd = new Date();
+    } else {
+      latestEnd = workExperiences.reduce((latest, work) => {
+        const endDate = work.end_date ? new Date(work.end_date) : new Date(work.start_date);
+        return endDate > latest ? endDate : latest;
+      }, new Date(workExperiences[0].end_date || workExperiences[0].start_date));
+    }
+
+    // 計算總月數
+    const totalMonths = (latestEnd.getFullYear() - earliestStart.getFullYear()) * 12 
+      + (latestEnd.getMonth() - earliestStart.getMonth());
+    
+    return Math.max(0, totalMonths);
+  };
+
+  // 格式化年資顯示
+  const formatWorkYears = (totalMonths: number) => {
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
+    if (years === 0) {
+      return `${months} 個月`;
+    } else if (months === 0) {
+      return `${years} 年`;
+    } else {
+      return `${years} 年 ${months} 個月`;
+    }
+  };
+
+  const totalWorkMonths = calculateTotalWorkMonths();
 
   return (
     <ProtectedRoute>
@@ -706,14 +770,16 @@ export default function ProfilePage() {
                     <Stack gap="md">
                       <Grid>
                         <Grid.Col span={{ base: 12, md: 6 }}>
-                          <Select
+                          <TextInput
                             label="屆數"
-                            placeholder="選擇您的屆數"
-                            data={classYears}
+                            placeholder="例如：110"
                             disabled={!editing}
                             leftSection={<IconSchool size={16} />}
-                            value={form.values.class_year?.toString()}
-                            onChange={(value) => form.setFieldValue('class_year', value ? parseInt(value) : undefined)}
+                            value={form.values.class_year?.toString() || ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              form.setFieldValue('class_year', value ? parseInt(value) : undefined);
+                            }}
                           />
                         </Grid.Col>
                         <Grid.Col span={{ base: 12, md: 6 }}>
@@ -791,7 +857,14 @@ export default function ProfilePage() {
               <Tabs.Panel value="career" pt="xl">
                 <Paper shadow="sm" p="xl" radius="md" withBorder>
                   <Group justify="space-between" mb="lg">
-                    <Title order={3} size="h4">職涯經歷</Title>
+                    <Group gap="md">
+                      <Title order={3} size="h4">職涯經歷</Title>
+                      {totalWorkMonths > 0 && (
+                        <Badge size="lg" variant="light" color="blue">
+                          總年資：{formatWorkYears(totalWorkMonths)}
+                        </Badge>
+                      )}
+                    </Group>
                     <Button leftSection={<IconPlus size={16} />} onClick={() => {
                       setEditingWork(null);
                       workForm.reset();
@@ -801,22 +874,72 @@ export default function ProfilePage() {
                     </Button>
                   </Group>
 
-                  {/* 目前職位 */}
-                  <Card withBorder p="lg" radius="md" mb="lg" bg="blue.0">
-                    <Group justify="space-between" mb="xs">
-                      <Text fw={600}>目前職位</Text>
-                      <Button variant="subtle" size="xs" leftSection={<IconEdit size={14} />} onClick={() => setEditing(true)}>
-                        編輯
-                      </Button>
-                    </Group>
-                    <Group gap="xs">
-                      <IconBuilding size={18} />
-                      <Text>
-                        {form.values.current_position || '未設定'}
-                        {form.values.current_company && ` @ ${form.values.current_company}`}
-                      </Text>
-                    </Group>
-                  </Card>
+                  {/* 目前職位 - 優先顯示「目前在職」的工作，若無則顯示最後一筆工作 */}
+                  {(() => {
+                    const currentWorks = workExperiences.filter(w => w.is_current);
+                    // 如果沒有目前在職的工作，顯示最後一筆（按結束日期排序）
+                    const lastWork = currentWorks.length === 0 && workExperiences.length > 0
+                      ? workExperiences.reduce((latest, work) => {
+                          const latestEnd = latest.end_date ? new Date(latest.end_date) : new Date(latest.start_date);
+                          const workEnd = work.end_date ? new Date(work.end_date) : new Date(work.start_date);
+                          return workEnd > latestEnd ? work : latest;
+                        }, workExperiences[0])
+                      : null;
+                    
+                    const displayWorks = currentWorks.length > 0 ? currentWorks : (lastWork ? [lastWork] : []);
+                    const isShowingLastJob = currentWorks.length === 0 && lastWork !== null;
+
+                    return (
+                      <Card withBorder p="lg" radius="md" mb="lg" bg={isShowingLastJob ? "gray.0" : "blue.0"}>
+                        <Group justify="space-between" mb="xs">
+                          <Group gap="xs">
+                            <Text fw={600}>{isShowingLastJob ? '最近職位' : '目前職位'}</Text>
+                            {currentWorks.length > 1 && <Badge size="xs">{currentWorks.length} 個</Badge>}
+                            {isShowingLastJob && <Badge size="xs" color="gray">已離職</Badge>}
+                          </Group>
+                          <Button 
+                            variant="subtle" 
+                            size="xs" 
+                            leftSection={<IconPlus size={14} />} 
+                            onClick={() => {
+                              setEditingWork(null);
+                              workForm.reset();
+                              workForm.setFieldValue('is_current', true);
+                              openWorkModal();
+                            }}
+                          >
+                            新增
+                          </Button>
+                        </Group>
+                        {displayWorks.length === 0 ? (
+                          <Group gap="xs">
+                            <IconBuilding size={18} />
+                            <Text c="dimmed">尚未新增工作經歷</Text>
+                          </Group>
+                        ) : (
+                          <Stack gap="sm">
+                            {displayWorks.map((work) => (
+                              <div key={work.id} style={{ borderLeft: `3px solid var(--mantine-color-${isShowingLastJob ? 'gray' : 'blue'}-5)`, paddingLeft: '12px' }}>
+                                <Group justify="space-between">
+                                  <Group gap="xs">
+                                    <IconBuilding size={16} />
+                                    <Text fw={500}>{work.position} @ {work.company}</Text>
+                                  </Group>
+                                  <ActionIcon variant="subtle" size="sm" onClick={() => openEditWork(work)}>
+                                    <IconEdit size={14} />
+                                  </ActionIcon>
+                                </Group>
+                                <Text size="sm" c="dimmed">
+                                  {work.start_date?.substring(0, 7)} - {work.is_current ? '至今' : work.end_date?.substring(0, 7)}
+                                  {work.location && ` · ${work.location}`}
+                                </Text>
+                              </div>
+                            ))}
+                          </Stack>
+                        )}
+                      </Card>
+                    );
+                  })()}
 
                   <Divider label="工作經歷" labelPosition="left" mb="md" />
 
@@ -976,6 +1099,40 @@ export default function ProfilePage() {
                 label="目前在職"
                 {...workForm.getInputProps('is_current', { type: 'checkbox' })}
               />
+              <Divider label="年薪範圍（選填）" labelPosition="left" />
+              <Grid>
+                <Grid.Col span={4}>
+                  <Select
+                    label="幣別"
+                    data={[
+                      { value: 'TWD', label: 'TWD 新台幣' },
+                      { value: 'USD', label: 'USD 美元' },
+                      { value: 'CNY', label: 'CNY 人民幣' },
+                      { value: 'JPY', label: 'JPY 日圓' },
+                      { value: 'EUR', label: 'EUR 歐元' },
+                    ]}
+                    {...workForm.getInputProps('salary_currency')}
+                  />
+                </Grid.Col>
+                <Grid.Col span={4}>
+                  <NumberInput
+                    label="最低年薪"
+                    placeholder="例如：800,000"
+                    min={0}
+                    thousandSeparator=","
+                    {...workForm.getInputProps('salary_min')}
+                  />
+                </Grid.Col>
+                <Grid.Col span={4}>
+                  <NumberInput
+                    label="最高年薪"
+                    placeholder="例如：1,200,000"
+                    min={0}
+                    thousandSeparator=","
+                    {...workForm.getInputProps('salary_max')}
+                  />
+                </Grid.Col>
+              </Grid>
               <Textarea
                 label="工作描述"
                 placeholder="描述您的工作內容..."
@@ -1074,6 +1231,7 @@ export default function ProfilePage() {
             </Stack>
           </form>
         </Modal>
+
       </SidebarLayout>
     </ProtectedRoute>
   );

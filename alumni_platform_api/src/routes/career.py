@@ -40,10 +40,8 @@ def create_work_experience(current_user):
         if not data.get('company') or not data.get('position'):
             return jsonify({'message': 'Company and position are required'}), 400
 
-        # 如果設為目前工作,將其他工作設為非目前
-        if data.get('is_current'):
-            WorkExperience.query.filter_by(user_id=current_user.id, is_current=True)\
-                .update({'is_current': False})
+        # 允許多個「目前在職」的工作（如兼職、顧問等情況）
+        # 不再自動將其他工作設為非目前
 
         experience = WorkExperience(
             user_id=current_user.id,
@@ -85,11 +83,8 @@ def update_work_experience(current_user, exp_id):
 
         data = request.get_json()
 
-        # 如果設為目前工作,將其他工作設為非目前
-        if data.get('is_current') and not experience.is_current:
-            WorkExperience.query.filter_by(user_id=current_user.id, is_current=True)\
-                .filter(WorkExperience.id != exp_id)\
-                .update({'is_current': False})
+        # 允許多個「目前在職」的工作（如兼職、顧問等情況）
+        # 不再自動將其他工作設為非目前
 
         # 更新欄位
         if 'company' in data:
@@ -145,6 +140,35 @@ def delete_work_experience(current_user, exp_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Failed to delete work experience: {str(e)}'}), 500
+
+
+# ========================================
+# 公開 API - 獲取特定用戶的職涯資料
+# ========================================
+@career_bp.route('/api/career/users/<int:user_id>/work-experiences', methods=['GET'])
+@token_required
+def get_user_work_experiences(current_user, user_id):
+    """獲取特定用戶的工作經歷（公開資料）"""
+    experiences = WorkExperience.query.filter_by(user_id=user_id)\
+        .order_by(WorkExperience.is_current.desc(), WorkExperience.start_date.desc())\
+        .all()
+
+    return jsonify({
+        'work_experiences': [exp.to_dict() for exp in experiences]
+    }), 200
+
+
+@career_bp.route('/api/career/users/<int:user_id>/educations', methods=['GET'])
+@token_required
+def get_user_educations(current_user, user_id):
+    """獲取特定用戶的教育背景（公開資料）"""
+    educations = Education.query.filter_by(user_id=user_id)\
+        .order_by(Education.start_year.desc())\
+        .all()
+
+    return jsonify({
+        'educations': [edu.to_dict() for edu in educations]
+    }), 200
 
 
 # ========================================

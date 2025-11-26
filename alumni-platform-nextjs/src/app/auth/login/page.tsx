@@ -47,7 +47,6 @@ export default function LoginPage() {
   }, []);
 
   const form = useForm({
-    mode: 'uncontrolled',
     initialValues: {
       email: '',
       password: '',
@@ -158,7 +157,6 @@ export default function LoginPage() {
                     required
                     size="md"
                     {...form.getInputProps('email')}
-                    key={form.key('email')}
                     classNames={{
                       input: classes.input,
                     }}
@@ -170,7 +168,6 @@ export default function LoginPage() {
                     required
                     size="md"
                     {...form.getInputProps('password')}
-                    key={form.key('password')}
                     classNames={{
                       input: classes.input,
                     }}

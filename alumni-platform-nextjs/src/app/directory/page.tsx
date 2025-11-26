@@ -18,7 +18,11 @@ import {
   Avatar,
   Pagination,
   Anchor,
+  Modal,
+  Divider,
+  Timeline,
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
 import {
@@ -31,6 +35,9 @@ import {
   IconWorld,
   IconMail,
   IconPhone,
+  IconBuilding,
+  IconCalendar,
+  IconCertificate,
 } from '@tabler/icons-react';
 import { api } from '@/lib/api';
 import { getToken } from '@/lib/auth';
@@ -45,8 +52,13 @@ interface AlumniUser {
     display_name?: string;
     avatar_url?: string;
     graduation_year?: number;
+    class_year?: number;
     major?: string;
     degree?: string;
+    student_id?: string;
+    thesis_title?: string;
+    advisor_1?: string;
+    advisor_2?: string;
     current_company?: string;
     current_position?: string;
     location?: string;
@@ -60,6 +72,31 @@ interface AlumniUser {
   };
 }
 
+interface WorkExperience {
+  id: number;
+  company: string;
+  position: string;
+  department?: string;
+  location?: string;
+  start_date: string;
+  end_date?: string;
+  is_current: boolean;
+  description?: string;
+}
+
+interface Education {
+  id: number;
+  school: string;
+  degree: string;
+  major?: string;
+  start_year: number;
+  end_year?: number;
+  is_current: boolean;
+  description?: string;
+  advisor_1?: string;
+  advisor_2?: string;
+}
+
 export default function DirectoryPage() {
   const router = useRouter();
   const [users, setUsers] = useState<AlumniUser[]>([]);
@@ -70,6 +107,13 @@ export default function DirectoryPage() {
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  
+  // 詳細資料 Modal
+  const [detailModalOpened, { open: openDetailModal, close: closeDetailModal }] = useDisclosure(false);
+  const [selectedUser, setSelectedUser] = useState<AlumniUser | null>(null);
+  const [userWorkExperiences, setUserWorkExperiences] = useState<WorkExperience[]>([]);
+  const [userEducations, setUserEducations] = useState<Education[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // 防抖處理搜索詞
   useEffect(() => {
@@ -128,6 +172,85 @@ export default function DirectoryPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 載入用戶詳細資料（職涯經歷和教育背景）
+  const loadUserDetails = async (user: AlumniUser) => {
+    setSelectedUser(user);
+    setLoadingDetails(true);
+    openDetailModal();
+    
+    try {
+      const token = getToken();
+      // 獲取該用戶的職涯經歷和教育背景
+      const [workRes, eduRes] = await Promise.all([
+        api.career.getUserWorkExperiences(user.id, token || undefined),
+        api.career.getUserEducations(user.id, token || undefined),
+      ]);
+      
+      setUserWorkExperiences((workRes.work_experiences || []).slice(0, 3));
+      setUserEducations((eduRes.educations || []).slice(0, 3));
+    } catch (error) {
+      console.error('Failed to load user details:', error);
+      setUserWorkExperiences([]);
+      setUserEducations([]);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  // 格式化學位顯示
+  const formatDegree = (degree?: string) => {
+    const degreeMap: { [key: string]: string } = {
+      'bachelor': '學士',
+      'master': '碩士',
+      'phd': '博士',
+      'high_school': '高中',
+    };
+    return degree ? degreeMap[degree] || degree : '';
+  };
+
+  // 計算工作年資（從最早開始日期到最後結束日期的總月數）
+  const calculateTotalWorkMonths = (workExperiences: WorkExperience[]) => {
+    if (workExperiences.length === 0) return 0;
+
+    // 找出最早的開始日期
+    const earliestStart = workExperiences.reduce((earliest, work) => {
+      const startDate = new Date(work.start_date);
+      return startDate < earliest ? startDate : earliest;
+    }, new Date(workExperiences[0].start_date));
+
+    // 找出最後的結束日期（如果有任何一個是 is_current，則用現在日期）
+    const hasCurrentJob = workExperiences.some(work => work.is_current);
+    let latestEnd: Date;
+    
+    if (hasCurrentJob) {
+      latestEnd = new Date();
+    } else {
+      latestEnd = workExperiences.reduce((latest, work) => {
+        const endDate = work.end_date ? new Date(work.end_date) : new Date(work.start_date);
+        return endDate > latest ? endDate : latest;
+      }, new Date(workExperiences[0].end_date || workExperiences[0].start_date));
+    }
+
+    // 計算總月數
+    const totalMonths = (latestEnd.getFullYear() - earliestStart.getFullYear()) * 12 
+      + (latestEnd.getMonth() - earliestStart.getMonth());
+    
+    return Math.max(0, totalMonths);
+  };
+
+  // 格式化年資顯示
+  const formatWorkYears = (totalMonths: number) => {
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
+    if (years === 0) {
+      return `${months} 個月`;
+    } else if (months === 0) {
+      return `${years} 年`;
+    } else {
+      return `${years} 年 ${months} 個月`;
     }
   };
 
@@ -211,6 +334,8 @@ export default function DirectoryPage() {
                       radius="md"
                       withBorder
                       className="hover-translate-y"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => loadUserDetails(user)}
                     >
                       <Group align="flex-start" wrap="nowrap">
                         <Avatar
@@ -351,6 +476,206 @@ export default function DirectoryPage() {
             )}
           </Stack>
         </Container>
+
+        {/* 詳細資料 Modal */}
+        <Modal 
+          opened={detailModalOpened} 
+          onClose={closeDetailModal} 
+          title={selectedUser?.profile?.display_name || selectedUser?.profile?.full_name || '系友資料'}
+          size="lg"
+        >
+          {loadingDetails ? (
+            <Center py="xl">
+              <Loader size="md" />
+            </Center>
+          ) : selectedUser && (
+            <Stack gap="lg">
+              {/* 基本資料 */}
+              <div>
+                <Group align="flex-start" gap="md">
+                  <Avatar
+                    src={selectedUser.profile?.avatar_url}
+                    size={80}
+                    radius="md"
+                    color="blue"
+                  >
+                    {(selectedUser.profile?.display_name || selectedUser.profile?.full_name || 'U').charAt(0).toUpperCase()}
+                  </Avatar>
+                  <Stack gap="xs" style={{ flex: 1 }}>
+                    <Text fw={600} size="xl">
+                      {selectedUser.profile?.display_name || selectedUser.profile?.full_name}
+                    </Text>
+                    {selectedUser.profile?.current_position && selectedUser.profile?.current_company && (
+                      <Group gap="xs">
+                        <IconBriefcase size={16} />
+                        <Text size="sm">
+                          {selectedUser.profile.current_position} @ {selectedUser.profile.current_company}
+                        </Text>
+                      </Group>
+                    )}
+                    {selectedUser.profile?.location && (
+                      <Group gap="xs">
+                        <IconMapPin size={16} />
+                        <Text size="sm" c="dimmed">{selectedUser.profile.location}</Text>
+                      </Group>
+                    )}
+                  </Stack>
+                </Group>
+                
+                {selectedUser.profile?.bio && (
+                  <Text size="sm" mt="md" c="dimmed">
+                    {selectedUser.profile.bio}
+                  </Text>
+                )}
+              </div>
+
+              {/* 學籍資料 */}
+              <div>
+                <Divider label="學籍資料" labelPosition="left" mb="md" />
+                <Stack gap="xs">
+                  <Text size="sm">
+                    {[
+                      selectedUser.profile?.class_year ? `第 ${selectedUser.profile.class_year} 屆` : null,
+                      selectedUser.profile?.graduation_year ? `${selectedUser.profile.graduation_year} 年畢業` : null,
+                      selectedUser.profile?.degree ? formatDegree(selectedUser.profile.degree) : null,
+                      selectedUser.profile?.major || null,
+                    ].filter(Boolean).join(' · ')}
+                  </Text>
+                  {selectedUser.profile?.thesis_title && (
+                    <div>
+                      <Text size="sm" c="dimmed">論文題目</Text>
+                      <Text size="sm" fw={500}>{selectedUser.profile.thesis_title}</Text>
+                    </div>
+                  )}
+                  {(selectedUser.profile?.advisor_1 || selectedUser.profile?.advisor_2) && (
+                    <div>
+                      <Text size="sm" c="dimmed">指導教授</Text>
+                      <Text size="sm" fw={500}>
+                        {[selectedUser.profile?.advisor_1, selectedUser.profile?.advisor_2].filter(Boolean).join('、')}
+                      </Text>
+                    </div>
+                  )}
+                </Stack>
+              </div>
+
+              {/* 職涯經歷 */}
+              {userWorkExperiences.length > 0 && (
+                <div>
+                  <Group justify="space-between" align="center" mb="md">
+                    <Text size="sm" fw={500} c="dimmed">職涯經歷</Text>
+                    {userWorkExperiences.length > 0 && (
+                      <Badge size="sm" variant="light" color="blue">
+                        總年資：{formatWorkYears(calculateTotalWorkMonths(userWorkExperiences))}
+                      </Badge>
+                    )}
+                  </Group>
+                  <Timeline active={0} bulletSize={24} lineWidth={2}>
+                    {userWorkExperiences.map((work, index) => (
+                      <Timeline.Item
+                        key={work.id}
+                        bullet={<IconBriefcase size={12} />}
+                        title={
+                          <Group gap="xs">
+                            <Text fw={600}>{work.position}</Text>
+                            {work.is_current && <Badge size="xs" color="green">目前</Badge>}
+                          </Group>
+                        }
+                      >
+                        <Text size="sm" c="dimmed">{work.company}</Text>
+                        <Text size="xs" c="dimmed">
+                          {work.start_date?.substring(0, 7)} - {work.is_current ? '至今' : work.end_date?.substring(0, 7)}
+                          {work.location && ` · ${work.location}`}
+                        </Text>
+                        {work.description && (
+                          <Text size="sm" mt="xs">{work.description}</Text>
+                        )}
+                      </Timeline.Item>
+                    ))}
+                  </Timeline>
+                </div>
+              )}
+
+              {/* 教育背景 */}
+              {userEducations.length > 0 && (
+                <div>
+                  <Divider label="教育背景" labelPosition="left" mb="md" />
+                  <Timeline active={0} bulletSize={24} lineWidth={2}>
+                    {userEducations.map((edu) => (
+                      <Timeline.Item
+                        key={edu.id}
+                        bullet={<IconSchool size={12} />}
+                        title={
+                          <Group gap="xs">
+                            <Text fw={600}>{edu.school}</Text>
+                            {edu.is_current && <Badge size="xs" color="blue">在學中</Badge>}
+                          </Group>
+                        }
+                      >
+                        <Text size="sm" c="dimmed">
+                          {formatDegree(edu.degree)}
+                          {edu.major && ` · ${edu.major}`}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          {edu.start_year} - {edu.is_current ? '至今' : edu.end_year}
+                        </Text>
+                        {(edu.advisor_1 || edu.advisor_2) && (
+                          <Text size="xs" c="dimmed">
+                            指導教授：{[edu.advisor_1, edu.advisor_2].filter(Boolean).join('、')}
+                          </Text>
+                        )}
+                        {edu.description && (
+                          <Text size="sm" mt="xs">{edu.description}</Text>
+                        )}
+                      </Timeline.Item>
+                    ))}
+                  </Timeline>
+                </div>
+              )}
+
+              {/* 社交連結 */}
+              {(selectedUser.profile?.linkedin_url || selectedUser.profile?.github_url || selectedUser.profile?.personal_website) && (
+                <div>
+                  <Divider label="社交連結" labelPosition="left" mb="md" />
+                  <Group gap="md">
+                    {selectedUser.profile?.linkedin_url && (
+                      <Anchor
+                        href={selectedUser.profile.linkedin_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button variant="light" leftSection={<IconBrandLinkedin size={16} />} size="sm">
+                          LinkedIn
+                        </Button>
+                      </Anchor>
+                    )}
+                    {selectedUser.profile?.github_url && (
+                      <Anchor
+                        href={selectedUser.profile.github_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button variant="light" color="gray" leftSection={<IconBrandGithub size={16} />} size="sm">
+                          GitHub
+                        </Button>
+                      </Anchor>
+                    )}
+                    {selectedUser.profile?.personal_website && (
+                      <Anchor
+                        href={selectedUser.profile.personal_website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button variant="light" color="teal" leftSection={<IconWorld size={16} />} size="sm">
+                          個人網站
+                        </Button>
+                      </Anchor>
+                    )}
+                  </Group>
+                </div>
+              )}
+            </Stack>
+          )}
+        </Modal>
       </SidebarLayout>
     </ProtectedRoute>
   );
