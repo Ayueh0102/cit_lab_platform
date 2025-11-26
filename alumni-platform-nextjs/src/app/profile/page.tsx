@@ -49,7 +49,7 @@ import {
 } from '@tabler/icons-react';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { getUser, getToken, setAuth } from '@/lib/auth';
+import { getUser, getToken, setAuth, updateUser } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
@@ -310,19 +310,26 @@ export default function ProfilePage() {
         personal_website: values.personal_website?.trim() || undefined,
       };
 
-      await api.profile.update(updateData, token);
+      const response = await api.profile.update(updateData, token);
 
-      const userData = getUser();
-      if (userData) {
-        const updatedUser = {
-          ...userData,
-          profile: {
-            ...userData.profile,
-            ...updateData,
-          },
-        };
-        setAuth(token, updatedUser);
-        setUser(updatedUser);
+      // 使用 API 回傳的最新用戶資料更新 localStorage
+      if (response?.user) {
+        updateUser(response.user);
+        setUser(response.user);
+      } else {
+        // 如果 API 沒有回傳完整用戶資料，手動建構
+        const userData = getUser();
+        if (userData) {
+          const updatedUser = {
+            ...userData,
+            profile: {
+              ...userData.profile,
+              ...updateData,
+            },
+          };
+          updateUser(updatedUser);
+          setUser(updatedUser);
+        }
       }
 
       notifications.show({

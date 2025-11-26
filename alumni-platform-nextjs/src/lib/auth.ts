@@ -89,6 +89,36 @@ export function getUser(): User | null {
 }
 
 /**
+ * 更新用戶資訊（不更新 token）
+ * 用於用戶更新個人資料後同步 localStorage
+ */
+export function updateUser(user: any): void {
+  if (typeof window === 'undefined') return;
+  
+  // 確保用戶對象格式正確
+  const userData: User = {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    status: user.status || 'active',
+    email_verified: user.email_verified || false,
+    created_at: user.created_at,
+    last_login_at: user.last_login_at,
+    profile: user.profile,
+    // 向後兼容：從 profile 中提取欄位
+    name: user.profile?.full_name || user.name || user.email,
+    full_name: user.profile?.full_name,
+    student_id: user.profile?.student_id || user.student_id,
+    graduation_year: user.profile?.graduation_year || user.graduation_year,
+  };
+  
+  localStorage.setItem(USER_KEY, JSON.stringify(userData));
+  
+  // 觸發 storage 事件，讓其他組件可以監聽更新
+  window.dispatchEvent(new Event('user-updated'));
+}
+
+/**
  * 清除認證資訊
  */
 export function clearAuth(): void {

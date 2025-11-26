@@ -46,11 +46,28 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    // 僅在客戶端獲取用戶資訊
+  // 載入用戶資料的函數
+  const loadUserData = () => {
     const userData = getUser();
     setUser(userData);
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    // 初始載入用戶資訊
+    loadUserData();
+    
+    // 監聽用戶資料更新事件
+    const handleUserUpdated = () => {
+      loadUserData();
+    };
+    
+    window.addEventListener('user-updated', handleUserUpdated);
+    
+    // 清理監聽器
+    return () => {
+      window.removeEventListener('user-updated', handleUserUpdated);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -146,17 +163,17 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                     {mounted ? (
                       <>
                         <Avatar 
-                          src={user?.avatar_url} 
+                          src={user?.profile?.avatar_url || user?.avatar_url} 
                           radius="xl" 
                           size="md" 
                           color="blue"
                           className="shadow-sm"
                         >
-                          {user?.full_name?.[0] || user?.email?.[0]?.toUpperCase()}
+                          {user?.profile?.display_name?.[0] || user?.profile?.full_name?.[0] || user?.full_name?.[0] || user?.email?.[0]?.toUpperCase()}
                         </Avatar>
                         <Box visibleFrom="xs" mr={4}>
                           <Text size="sm" fw={600} lineClamp={1}>
-                            {user?.full_name || '使用者'}
+                            {user?.profile?.display_name || user?.profile?.full_name || user?.full_name || '使用者'}
                           </Text>
                           <Text size="xs" c="dimmed">
                             {user?.role === 'admin' ? '系統管理員' : '系友會員'}
