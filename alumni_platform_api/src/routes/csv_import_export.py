@@ -4,42 +4,15 @@ CSV 匯入/匯出功能
 """
 
 from flask import Blueprint, request, send_file, jsonify
-from functools import wraps
-import jwt
 import csv
 import io
-import os
+import secrets
 from datetime import datetime
 from src.models_v2 import db, User, UserProfile, Job, Event, Bulletin, EventRegistration, JobRequest
+from src.routes.auth_v2 import token_required, admin_required  # 使用統一的認證裝飾器
 from werkzeug.security import generate_password_hash
 
 csv_bp = Blueprint('csv', __name__)
-
-# JWT Token 驗證裝飾器
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization')
-        if not token:
-            return {'error': '缺少認證 token'}, 401
-
-        try:
-            if token.startswith('Bearer '):
-                token = token.split(' ')[1]
-
-            SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
-            data = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-            current_user = User.query.get(data['user_id'])
-
-            if not current_user:
-                return {'error': '無效的 token'}, 401
-
-        except Exception as e:
-            return {'error': f'Token 驗證失敗: {str(e)}'}, 401
-
-        return f(current_user, *args, **kwargs)
-
-    return decorated
 
 
 # ========================================
@@ -58,26 +31,27 @@ def export_users(current_user):
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # 寫入標題
+        # 寫入標題 (使用正確的欄位名稱)
         writer.writerow([
-            'ID', '電子郵件', '姓名', '畢業年份', '班級',
-            '目前公司', '職位', '個人網站', 'LinkedIn ID',
+            'ID', '電子郵件', '姓名', '顯示名稱', '畢業年份', '屆數',
+            '目前公司', '職位', '個人網站', 'LinkedIn',
             '註冊日期', '最後更新'
         ])
 
-        # 寫入資料
+        # 寫入資料 (使用正確的 Profile 欄位)
         for user in users:
             profile = user.profile
             writer.writerow([
                 user.id,
                 user.email,
-                user.name,
-                user.graduation_year or '',
-                user.class_name or '',
+                profile.full_name if profile else '',
+                profile.display_name if profile else '',
+                profile.graduation_year if profile else '',
+                profile.class_year if profile else '',
                 profile.current_company if profile else '',
-                profile.current_title if profile else '',
-                profile.website if profile else '',
-                user.linkedin_id or '',
+                profile.current_position if profile else '',
+                profile.personal_website if profile else '',
+                profile.linkedin_url if profile else '',
                 user.created_at.strftime('%Y-%m-%d') if user.created_at else '',
                 user.updated_at.strftime('%Y-%m-%d') if user.updated_at else ''
             ])
@@ -263,53 +237,60 @@ def import_users(current_user):
                 user = User.query.filter_by(email=email).first()
 
                 if user:
-                    # 更新現有使用者
-                    user.name = row.get('姓名', user.name)
-                    user.graduation_year = int(row.get('畢業年份', 0)) or None
-                    user.class_name = row.get('班級') or None
-                    user.linkedin_id = row.get('LinkedIn ID') or None
-                    user.updated_at = datetime.utcnow()
-
-                    # 更新 Profile
+                    # 更新現有使用者的 Profile (User 模型不含 name 等欄位)
                     if user.profile:
-                        user.profile.current_company = row.get('目前公司') or None
-                        user.profile.current_title = row.get('職位') or None
-                        user.profile.website = row.get('個人網站') or None
+                        user.profile.full_name = row.get('姓名') or user.profile.full_name
+                        user.profile.display_name = row.get('顯示名稱') or user.profile.display_name
+                        user.profile.graduation_year = int(row.get('畢業年份', 0)) or user.profile.graduation_year
+                        user.profile.class_year = int(row.get('屆數', 0)) or user.profile.class_year
+                        user.profile.current_company = row.get('目前公司') or user.profile.current_company
+                        user.profile.current_position = row.get('職位') or user.profile.current_position
+                        user.profile.personal_website = row.get('個人網站') or user.profile.personal_website
+                        user.profile.linkedin_url = row.get('LinkedIn') or user.profile.linkedin_url
                     else:
                         # 建立 Profile
                         profile = UserProfile(
                             user_id=user.id,
-                            current_company=row.get('目前公司') or None,
-                            current_title=row.get('職位') or None,
-                            website=row.get('個人網站') or None
+                            full_name=row.get('姓名'),
+                            display_name=row.get('顯示名稱'),
+                            graduation_year=int(row.get('畢業年份', 0)) or None,
+                            class_year=int(row.get('屆數', 0)) or None,
+                            current_company=row.get('目前公司'),
+                            current_position=row.get('職位'),
+                            personal_website=row.get('個人網站'),
+                            linkedin_url=row.get('LinkedIn')
                         )
                         db.session.add(profile)
 
                     updated_count += 1
 
                 else:
-                    # 建立新使用者
+                    # 建立新使用者 (使用隨機密碼，而非預設密碼)
+                    temp_password = secrets.token_urlsafe(12)  # 生成隨機密碼
                     user = User(
                         email=email,
-                        name=row.get('姓名', ''),
-                        graduation_year=int(row.get('畢業年份', 0)) or None,
-                        class_name=row.get('班級') or None,
-                        linkedin_id=row.get('LinkedIn ID') or None,
-                        password_hash=generate_password_hash('default123')  # 預設密碼
+                        role='user'
                     )
+                    user.set_password(temp_password)
                     db.session.add(user)
                     db.session.flush()  # 取得 user.id
 
-                    # 建立 Profile
+                    # 建立 Profile (使用正確的欄位名稱)
                     profile = UserProfile(
                         user_id=user.id,
-                        current_company=row.get('目前公司') or None,
-                        current_title=row.get('職位') or None,
-                        website=row.get('個人網站') or None
+                        full_name=row.get('姓名'),
+                        display_name=row.get('顯示名稱') or row.get('姓名'),
+                        graduation_year=int(row.get('畢業年份', 0)) or None,
+                        class_year=int(row.get('屆數', 0)) or None,
+                        current_company=row.get('目前公司'),
+                        current_position=row.get('職位'),
+                        personal_website=row.get('個人網站'),
+                        linkedin_url=row.get('LinkedIn')
                     )
                     db.session.add(profile)
 
                     imported_count += 1
+                    # 注意：新帳號需要透過「忘記密碼」流程重設密碼
 
                 db.session.commit()
 

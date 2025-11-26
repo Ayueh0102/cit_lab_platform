@@ -19,13 +19,26 @@ career_bp = Blueprint('career', __name__)
 def get_work_experiences(current_user):
     """取得使用者的工作經歷列表"""
     user_id = request.args.get('user_id', current_user.id, type=int)
+    is_own_data = (user_id == current_user.id)
+    is_admin = (current_user.role == 'admin')
 
     experiences = WorkExperience.query.filter_by(user_id=user_id)\
         .order_by(WorkExperience.is_current.desc(), WorkExperience.start_date.desc())\
         .all()
 
+    # 隱私控制：非本人且非管理員，隱藏薪資欄位
+    result = []
+    for exp in experiences:
+        exp_dict = exp.to_dict()
+        if not is_own_data and not is_admin:
+            # 移除敏感的薪資資訊
+            exp_dict.pop('annual_salary_min', None)
+            exp_dict.pop('annual_salary_max', None)
+            exp_dict.pop('salary_currency', None)
+        result.append(exp_dict)
+
     return jsonify({
-        'work_experiences': [exp.to_dict() for exp in experiences]
+        'work_experiences': result
     }), 200
 
 
@@ -148,13 +161,26 @@ def delete_work_experience(current_user, exp_id):
 @career_bp.route('/api/career/users/<int:user_id>/work-experiences', methods=['GET'])
 @token_required
 def get_user_work_experiences(current_user, user_id):
-    """獲取特定用戶的工作經歷（公開資料）"""
+    """獲取特定用戶的工作經歷（公開資料，隱藏薪資）"""
+    is_own_data = (user_id == current_user.id)
+    is_admin = (current_user.role == 'admin')
+    
     experiences = WorkExperience.query.filter_by(user_id=user_id)\
         .order_by(WorkExperience.is_current.desc(), WorkExperience.start_date.desc())\
         .all()
 
+    # 隱私控制：非本人且非管理員，隱藏薪資欄位
+    result = []
+    for exp in experiences:
+        exp_dict = exp.to_dict()
+        if not is_own_data and not is_admin:
+            exp_dict.pop('annual_salary_min', None)
+            exp_dict.pop('annual_salary_max', None)
+            exp_dict.pop('salary_currency', None)
+        result.append(exp_dict)
+
     return jsonify({
-        'work_experiences': [exp.to_dict() for exp in experiences]
+        'work_experiences': result
     }), 200
 
 

@@ -5,7 +5,7 @@
 
 from flask import Blueprint, request, jsonify
 from src.models_v2 import db, Event, EventCategory, EventRegistration, User, UserProfile
-from src.models_v2.events import EventStatus, EventType
+from src.models_v2.events import EventStatus, EventType, RegistrationStatus
 from src.routes.auth_v2 import token_required, admin_required
 from src.routes.notification_helper import (
     create_event_registration_notification,
@@ -386,7 +386,7 @@ def register_event(current_user, event_id):
             contact_phone=data.get('contact_phone'),
             contact_email=data.get('contact_email'),
             notes=data.get('notes'),
-            status='confirmed' if not is_waitlist else 'waitlisted'
+            status=RegistrationStatus.REGISTERED if not is_waitlist else RegistrationStatus.WAITLIST
         )
 
         db.session.add(registration)

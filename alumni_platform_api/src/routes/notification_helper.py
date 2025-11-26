@@ -3,6 +3,7 @@
 用於在各個路由中統一的建立通知
 """
 from src.models_v2 import db, Notification, NotificationType, NotificationStatus
+from src.models_v2.events import RegistrationStatus
 from src.routes.websocket import emit_notification
 from datetime import datetime
 
@@ -173,7 +174,7 @@ def notify_all_event_participants(event_id: int, notification_type: Notification
     
     registrations = EventRegistration.query.filter_by(
         event_id=event_id,
-        status='confirmed'
+        status=RegistrationStatus.REGISTERED
     ).all()
     
     notifications = []

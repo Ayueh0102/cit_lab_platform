@@ -51,12 +51,26 @@ from src.routes.websocket import socketio
 static_folder_path = os.path.join(os.path.dirname(__file__), 'static')
 app = Flask(__name__, static_folder=static_folder_path)
 
-# 安全性配置 - 從環境變數載入 SECRET_KEY
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-please-change-in-production')
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-key-please-change-in-production')
+# 安全性配置 - 從環境變數載入金鑰
+# 開發環境使用預設值，生產環境必須設定環境變數
+IS_PRODUCTION = os.environ.get('FLASK_ENV') == 'production' or os.environ.get('PRODUCTION') == 'true'
 
-# Enable CORS for all routes
-CORS(app)
+if IS_PRODUCTION:
+    # 生產環境：強制要求環境變數
+    secret_key = os.environ.get('SECRET_KEY')
+    jwt_secret_key = os.environ.get('JWT_SECRET_KEY')
+    if not secret_key or not jwt_secret_key:
+        raise ValueError('生產環境必須設定 SECRET_KEY 和 JWT_SECRET_KEY 環境變數')
+    app.config['SECRET_KEY'] = secret_key
+    app.config['JWT_SECRET_KEY'] = jwt_secret_key
+else:
+    # 開發環境：允許使用預設值
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-for-development-only')
+    app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-key-for-development-only')
+
+# CORS 設定 - 限制允許的來源
+ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
+CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
 
 # Register blueprints - v2 routes
 app.register_blueprint(auth_v2_bp)          # /api/v2/auth/*

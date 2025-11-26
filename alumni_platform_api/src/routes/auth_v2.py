@@ -86,7 +86,7 @@ def register():
         data = request.get_json()
 
         # 驗證必填欄位
-        required_fields = ['email', 'password', 'name']
+        required_fields = ['email', 'password']
         for field in required_fields:
             if field not in data or not data[field]:
                 return jsonify({'message': f'{field} is required'}), 400
@@ -103,10 +103,9 @@ def register():
         if User.query.filter_by(email=data['email']).first():
             return jsonify({'message': 'Email already registered'}), 400
 
-        # 建立新使用者
+        # 建立新使用者 (User 模型不含 name 欄位，name 是從 profile 取得的 property)
         user = User(
             email=data['email'],
-            name=data['name'],
             role=data.get('role', 'user')  # 預設為一般使用者
         )
         user.set_password(data['password'])
@@ -114,11 +113,13 @@ def register():
         db.session.add(user)
         db.session.flush()  # 取得 user.id
 
-        # 建立使用者個人檔案
+        # 建立使用者個人檔案 (使用正確的欄位名稱)
         profile = UserProfile(
             user_id=user.id,
+            full_name=data.get('name'),  # 從 name 參數存到 full_name
+            display_name=data.get('display_name') or data.get('name'),  # 顯示名稱
             graduation_year=data.get('graduation_year'),
-            class_name=data.get('class_name'),
+            class_year=data.get('class_year'),  # 修正：class_name -> class_year
             phone=data.get('phone')
         )
         db.session.add(profile)
