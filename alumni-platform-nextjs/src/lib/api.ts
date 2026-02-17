@@ -954,6 +954,35 @@ export const api = {
         method: 'POST',
         token,
       }),
+
+    // 文章評論
+    getComments: (articleId: number, token?: string) =>
+      fetchAPI(`/api/v2/cms/articles/${articleId}/comments`, { token }),
+
+    createComment: (articleId: number, content: string, token: string, parentId?: number) =>
+      fetchAPI(`/api/v2/cms/articles/${articleId}/comments`, {
+        method: 'POST',
+        body: { content, parent_id: parentId },
+        token,
+      }),
+
+    deleteComment: (commentId: number, token: string) =>
+      fetchAPI(`/api/v2/cms/comments/${commentId}`, {
+        method: 'DELETE',
+        token,
+      }),
+
+    approveComment: (commentId: number, token: string) =>
+      fetchAPI(`/api/v2/cms/comments/${commentId}/approve`, {
+        method: 'PUT',
+        token,
+      }),
+
+    rejectComment: (commentId: number, token: string) =>
+      fetchAPI(`/api/v2/cms/comments/${commentId}/reject`, {
+        method: 'PUT',
+        token,
+      }),
   },
 
   // CSV 匯入匯出相關
@@ -1166,5 +1195,43 @@ export const api = {
 
     getStatus: (userId: number, token: string) =>
       fetchAPI(`/api/v2/contacts/status/${userId}`, { token }),
+  },
+
+  // 系統設定相關（管理員）
+  systemSettings: {
+    getPublic: () =>
+      fetchAPI('/api/system/settings'),
+
+    getAll: (token: string, category?: string) => {
+      const url = category
+        ? `/api/system/settings/all?category=${encodeURIComponent(category)}`
+        : '/api/system/settings/all';
+      return fetchAPI(url, { token });
+    },
+
+    getByKey: (key: string, token: string) =>
+      fetchAPI(`/api/system/settings/${key}`, { token }),
+
+    update: (key: string, data: { setting_value: string }, token: string) =>
+      fetchAPI(`/api/system/settings/${key}`, {
+        method: 'PUT',
+        body: data,
+        token,
+      }),
+
+    create: (data: {
+      setting_key: string;
+      setting_value: string;
+      setting_type?: string;
+      category?: string;
+      name?: string;
+      description?: string;
+      is_public?: boolean;
+    }, token: string) =>
+      fetchAPI('/api/system/settings', {
+        method: 'POST',
+        body: data,
+        token,
+      }),
   },
 };

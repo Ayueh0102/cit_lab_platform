@@ -194,19 +194,19 @@ class TestEducations:
     """教育背景測試"""
     
     def test_create_education(self, client, auth_token):
-        """測試新增教育背景"""
+        """測試新增教育背景（API 使用 major 而非 field_of_study）"""
         response = client.post(
             '/api/career/educations',
             headers={'Authorization': f'Bearer {auth_token}'},
             json={
                 'school': '台灣科技大學',
                 'degree': 'master',
-                'field_of_study': '色彩與照明科技研究所',
+                'major': '色彩與照明科技研究所',  # 模型欄位為 major（nullable=False）
                 'start_year': 2018,
                 'end_year': 2020
             }
         )
-        
+
         assert response.status_code == 201
         data = response.get_json()
         assert 'education' in data

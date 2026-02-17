@@ -50,6 +50,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const bellRef = useRef<HTMLButtonElement>(null);
   const prevCountRef = useRef(0);
 
@@ -58,9 +59,22 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     try {
       const token = getToken();
       if (!token) return;
-      
+
       const response = await api.notifications.getUnreadCount(token);
       setUnreadNotificationCount(response.unread_count || 0);
+    } catch (error) {
+      // 靜默失敗
+    }
+  };
+
+  // 載入未讀訊息計數
+  const loadUnreadMessageCount = async () => {
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      const response = await api.messages.getUnreadCount(token);
+      setUnreadMessageCount(response.unread_count || 0);
     } catch (error) {
       // 靜默失敗
     }
@@ -78,21 +92,26 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     loadUserData();
     // 載入未讀通知計數
     loadUnreadNotificationCount();
-    
-    // 監聽用戶資料更新事件
+    // 載入未讀訊息計數
+    loadUnreadMessageCount();
+
+    // 監聯用戶資料更新事件
     const handleUserUpdated = () => {
       loadUserData();
     };
-    
+
     window.addEventListener('user-updated', handleUserUpdated);
-    
+
     // 定期刷新通知計數（每30秒）
     const notificationInterval = setInterval(loadUnreadNotificationCount, 30000);
-    
+    // 定期刷新訊息計數（每30秒）
+    const messageInterval = setInterval(loadUnreadMessageCount, 30000);
+
     // 清理監聽器
     return () => {
       window.removeEventListener('user-updated', handleUserUpdated);
       clearInterval(notificationInterval);
+      clearInterval(messageInterval);
     };
   }, []);
 
@@ -120,6 +139,14 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     }
     prevCountRef.current = unreadNotificationCount;
   }, [unreadNotificationCount]);
+
+  // 行動版底部導航項目
+  const bottomNavItems = [
+    { label: '首頁', icon: IconHome, link: '/' },
+    { label: '職缺', icon: IconBriefcase, link: '/jobs' },
+    { label: '訊息', icon: IconMessage, link: '/messages', badge: unreadMessageCount },
+    { label: '通知', icon: IconBell, link: '/notifications', badge: unreadNotificationCount },
+  ];
 
   // 導航項目配置 - 分組結構
   const navGroups = [
@@ -392,17 +419,107 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       </AppShell.Navbar>
 
       <AppShell.Main className="dashboard-main">
-        <Box 
-          style={{ 
-            maxWidth: '1600px', 
+        <Box
+          style={{
+            maxWidth: '1600px',
             margin: '0 auto',
             minHeight: 'calc(100vh - 100px)',
             position: 'relative'
           }}
+          pb={{ base: 70, sm: 0 }}
         >
           {children}
         </Box>
       </AppShell.Main>
+
+      {/* 行動版底部導航列 */}
+      <Box
+        hiddenFrom="sm"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 60,
+          background: 'rgba(255, 255, 255, 0.78)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.5)',
+          zIndex: 200,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-around',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        {bottomNavItems.map((item) => {
+          const isActive = pathname === item.link || (item.link !== '/' && pathname?.startsWith(`${item.link}/`));
+          return (
+            <UnstyledButton
+              key={item.link}
+              onClick={() => router.push(item.link)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 2,
+                flex: 1,
+                height: '100%',
+                position: 'relative',
+                transition: 'color 0.2s ease',
+              }}
+            >
+              <Box style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {item.badge && item.badge > 0 ? (
+                  <Indicator
+                    color="red"
+                    size={16}
+                    label={item.badge > 99 ? '99+' : item.badge}
+                    offset={2}
+                  >
+                    <item.icon
+                      size={24}
+                      stroke={isActive ? 2.5 : 1.8}
+                      color={isActive ? 'var(--mantine-color-indigo-6)' : 'var(--mantine-color-gray-5)'}
+                      fill={isActive ? 'var(--mantine-color-indigo-1)' : 'none'}
+                    />
+                  </Indicator>
+                ) : (
+                  <item.icon
+                    size={24}
+                    stroke={isActive ? 2.5 : 1.8}
+                    color={isActive ? 'var(--mantine-color-indigo-6)' : 'var(--mantine-color-gray-5)'}
+                    fill={isActive ? 'var(--mantine-color-indigo-1)' : 'none'}
+                  />
+                )}
+              </Box>
+              <Text
+                size="xs"
+                fw={isActive ? 700 : 500}
+                c={isActive ? 'indigo.6' : 'gray.5'}
+                style={{ fontSize: '0.65rem', lineHeight: 1 }}
+              >
+                {item.label}
+              </Text>
+              {isActive && (
+                <Box
+                  style={{
+                    position: 'absolute',
+                    top: 2,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 20,
+                    height: 3,
+                    borderRadius: 2,
+                    background: 'linear-gradient(90deg, var(--mantine-color-indigo-5), var(--mantine-color-cyan-5))',
+                  }}
+                />
+              )}
+            </UnstyledButton>
+          );
+        })}
+      </Box>
     </AppShell>
   );
 }

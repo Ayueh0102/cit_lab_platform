@@ -16,6 +16,8 @@ import {
   Loader,
   Center,
   ActionIcon,
+  Textarea,
+  Card,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useRouter, useParams } from 'next/navigation';
@@ -27,6 +29,11 @@ import {
   IconCalendar,
   IconUser,
   IconTag,
+  IconSend,
+  IconTrash,
+  IconCheck,
+  IconX,
+  IconMessage,
 } from '@tabler/icons-react';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -54,6 +61,16 @@ interface Article {
   created_at: string;
 }
 
+interface ArticleComment {
+  id: number;
+  content: string;
+  status: 'approved' | 'pending' | 'rejected';
+  user_name: string;
+  user_email: string;
+  created_at: string;
+  likes_count: number;
+}
+
 export default function ArticleDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -62,13 +79,16 @@ export default function ArticleDetailPage() {
   const isAdmin = currentUser?.role === 'admin';
 
   const [article, setArticle] = useState<Article | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<ArticleComment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingComments, setLoadingComments] = useState(false);
   const [commentContent, setCommentContent] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
   const [liking, setLiking] = useState(false);
 
   useEffect(() => {
     loadArticle();
+    loadComments();
   }, [articleId]);
 
   const loadArticle = async () => {
@@ -87,6 +107,19 @@ export default function ArticleDetailPage() {
       router.push('/cms');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadComments = async () => {
+    try {
+      setLoadingComments(true);
+      const token = getToken();
+      const data = await api.cms.getComments(articleId, token || undefined);
+      setComments(Array.isArray(data) ? data : data?.data || []);
+    } catch {
+      // 評論載入失敗不阻擋頁面顯示
+    } finally {
+      setLoadingComments(false);
     }
   };
 
@@ -125,6 +158,98 @@ export default function ArticleDetailPage() {
       });
     } finally {
       setLiking(false);
+    }
+  };
+
+  const handleSubmitComment = async () => {
+    if (!commentContent.trim()) return;
+    const token = getToken();
+    if (!token) {
+      notifications.show({
+        title: '請先登入',
+        message: '需要登入才能留言',
+        color: 'yellow',
+      });
+      return;
+    }
+    try {
+      setSubmittingComment(true);
+      await api.cms.createComment(articleId, commentContent.trim(), token);
+      setCommentContent('');
+      notifications.show({
+        title: '留言成功',
+        message: '您的留言已送出',
+        color: 'green',
+      });
+      await loadComments();
+    } catch (error) {
+      notifications.show({
+        title: '留言失敗',
+        message: error instanceof Error ? error.message : '無法送出留言',
+        color: 'red',
+      });
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      await api.cms.deleteComment(commentId, token);
+      notifications.show({
+        title: '已刪除',
+        message: '評論已刪除',
+        color: 'green',
+      });
+      await loadComments();
+    } catch (error) {
+      notifications.show({
+        title: '刪除失敗',
+        message: error instanceof Error ? error.message : '無法刪除評論',
+        color: 'red',
+      });
+    }
+  };
+
+  const handleApproveComment = async (commentId: number) => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      await api.cms.approveComment(commentId, token);
+      notifications.show({
+        title: '已通過',
+        message: '評論已審核通過',
+        color: 'green',
+      });
+      await loadComments();
+    } catch (error) {
+      notifications.show({
+        title: '審核失敗',
+        message: error instanceof Error ? error.message : '無法審核評論',
+        color: 'red',
+      });
+    }
+  };
+
+  const handleRejectComment = async (commentId: number) => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      await api.cms.rejectComment(commentId, token);
+      notifications.show({
+        title: '已拒絕',
+        message: '評論已被拒絕',
+        color: 'green',
+      });
+      await loadComments();
+    } catch (error) {
+      notifications.show({
+        title: '操作失敗',
+        message: error instanceof Error ? error.message : '無法拒絕評論',
+        color: 'red',
+      });
     }
   };
 
@@ -292,6 +417,139 @@ export default function ArticleDetailPage() {
                     按讚 ({article.likes_count})
                   </Button>
                 </Group>
+              </Stack>
+            </Paper>
+
+            {/* 評論區 */}
+            <Paper shadow="sm" p="xl" radius="md" withBorder>
+              <Stack gap="lg">
+                <Group gap="xs">
+                  <IconMessage size={22} />
+                  <Title order={3}>
+                    評論 ({comments.filter((c) => c.status === 'approved' || (isAdmin && c.status === 'pending')).length})
+                  </Title>
+                </Group>
+
+                {/* 留言輸入區 */}
+                <Stack gap="sm">
+                  <Textarea
+                    placeholder="撰寫您的評論..."
+                    value={commentContent}
+                    onChange={(e) => setCommentContent(e.currentTarget.value)}
+                    minRows={3}
+                    autosize
+                    maxRows={6}
+                  />
+                  <Group justify="flex-end">
+                    <Button
+                      leftSection={<IconSend size={16} />}
+                      onClick={handleSubmitComment}
+                      loading={submittingComment}
+                      disabled={!commentContent.trim()}
+                      radius="xl"
+                    >
+                      送出留言
+                    </Button>
+                  </Group>
+                </Stack>
+
+                <Divider />
+
+                {/* 評論列表 */}
+                {loadingComments ? (
+                  <Center py="md">
+                    <Loader size="sm" />
+                  </Center>
+                ) : comments.length === 0 ? (
+                  <Text c="dimmed" ta="center" py="lg">
+                    尚無評論，成為第一個留言的人吧！
+                  </Text>
+                ) : (
+                  <Stack gap="md">
+                    {comments.map((comment) => {
+                      // 非管理員只能看到已通過的評論
+                      if (comment.status !== 'approved' && !isAdmin) return null;
+
+                      const isCommentAuthor = currentUser?.email === comment.user_email;
+                      const canDelete = isCommentAuthor || isAdmin;
+
+                      return (
+                        <Card key={comment.id} withBorder radius="md" p="md">
+                          <Stack gap="sm">
+                            <Group justify="space-between">
+                              <Group gap="sm">
+                                <Avatar size="sm" color="indigo" radius="xl">
+                                  {comment.user_name?.charAt(0) || '?'}
+                                </Avatar>
+                                <div>
+                                  <Text size="sm" fw={500}>
+                                    {comment.user_name}
+                                  </Text>
+                                  <Text size="xs" c="dimmed">
+                                    {formatDate(comment.created_at)}
+                                  </Text>
+                                </div>
+                                {comment.status === 'pending' && (
+                                  <Badge variant="light" color="orange" size="sm">
+                                    待審核
+                                  </Badge>
+                                )}
+                                {comment.status === 'rejected' && isAdmin && (
+                                  <Badge variant="light" color="red" size="sm">
+                                    已拒絕
+                                  </Badge>
+                                )}
+                              </Group>
+
+                              <Group gap="xs">
+                                {/* 管理員審核按鈕 */}
+                                {isAdmin && comment.status === 'pending' && (
+                                  <>
+                                    <ActionIcon
+                                      variant="light"
+                                      color="green"
+                                      size="sm"
+                                      title="審核通過"
+                                      onClick={() => handleApproveComment(comment.id)}
+                                    >
+                                      <IconCheck size={14} />
+                                    </ActionIcon>
+                                    <ActionIcon
+                                      variant="light"
+                                      color="red"
+                                      size="sm"
+                                      title="拒絕"
+                                      onClick={() => handleRejectComment(comment.id)}
+                                    >
+                                      <IconX size={14} />
+                                    </ActionIcon>
+                                  </>
+                                )}
+
+                                {/* 刪除按鈕 */}
+                                {canDelete && (
+                                  <ActionIcon
+                                    variant="light"
+                                    color="red"
+                                    size="sm"
+                                    title="刪除評論"
+                                    onClick={() => handleDeleteComment(comment.id)}
+                                  >
+                                    <IconTrash size={14} />
+                                  </ActionIcon>
+                                )}
+                              </Group>
+                            </Group>
+
+                            <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+                              {comment.content}
+                            </Text>
+                          </Stack>
+                        </Card>
+                      );
+                    })}
+                  </Stack>
+                )}
               </Stack>
             </Paper>
           </Stack>

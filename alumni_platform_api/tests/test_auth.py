@@ -1,22 +1,23 @@
 """
 認證 API 測試
-更新於 2025-11-26：配合註冊欄位修改（移除 name 參數）
+更新於 2026-02-18：配合註冊後 pending 審核流程
 """
 import pytest
 
 
 def test_register_user(client):
-    """測試用戶註冊（使用更新後的欄位）"""
+    """測試用戶註冊（註冊後為 pending 狀態，不發放 token）"""
     response = client.post('/api/v2/auth/register', json={
         'email': 'newuser@example.com',
         'password': 'password123'
-        # 注意：name 參數已移除，改用 profile 的 full_name/display_name
     })
-    
+
     assert response.status_code == 201
     data = response.get_json()
-    assert 'access_token' in data
-    assert data['user']['email'] == 'newuser@example.com'
+    # 註冊後為 pending 狀態，不發放 access_token
+    assert data['status'] == 'pending'
+    assert 'user_id' in data
+    assert 'message' in data
 
 
 def test_register_user_with_profile(client):
@@ -29,10 +30,12 @@ def test_register_user_with_profile(client):
         'graduation_year': 2020,
         'class_year': 110
     })
-    
+
     assert response.status_code == 201
     data = response.get_json()
-    assert 'access_token' in data
+    # 註冊後為 pending 狀態，不發放 access_token
+    assert data['status'] == 'pending'
+    assert 'user_id' in data
 
 
 def test_register_duplicate_email(client):
@@ -71,7 +74,11 @@ def test_login_user(client):
         'email': 'loginuser@example.com',
         'password': 'password123'
     })
-    
+
+    # 啟用使用者（註冊後預設為 pending 狀態）
+    from tests.conftest import _activate_user
+    _activate_user(client, 'loginuser@example.com')
+
     # 登入
     response = client.post('/api/v2/auth/login', json={
         'email': 'loginuser@example.com',
@@ -116,11 +123,12 @@ def test_get_current_user(client, auth_token):
         '/api/v2/auth/me',
         headers={'Authorization': f'Bearer {auth_token}'}
     )
-    
+
     assert response.status_code == 200
     data = response.get_json()
-    assert 'user' in data
-    assert data['user']['email'] == 'test@example.com'
+    # /api/v2/auth/me 直接回傳 user.to_dict()，不包裹在 'user' key 中
+    assert 'email' in data
+    assert data['email'] == 'test@example.com'
 
 
 def test_get_current_user_no_token(client):
