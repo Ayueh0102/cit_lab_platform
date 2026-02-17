@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Container,
   Title,
@@ -24,6 +24,7 @@ import {
   Modal,
   NumberInput,
   Switch,
+  Box,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
@@ -46,6 +47,7 @@ import {
   IconUser,
   IconCertificate,
   IconBuilding,
+  IconCamera,
 } from '@tabler/icons-react';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -74,6 +76,7 @@ interface UserProfile {
   github_url?: string;
   personal_website?: string;
   skills?: string[];
+  avatar_url?: string;
 }
 
 interface WorkExperience {
@@ -128,7 +131,12 @@ export default function ProfilePage() {
   const [educations, setEducations] = useState<Education[]>([]);
   const [eduModalOpened, { open: openEduModal, close: closeEduModal }] = useDisclosure(false);
   const [editingEdu, setEditingEdu] = useState<Education | null>(null);
-  
+
+  // 頭像上傳
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const form = useForm<UserProfile>({
     initialValues: {
@@ -208,7 +216,8 @@ export default function ProfilePage() {
       if (userData) {
         setAuth(token, userData);
         setUser(userData);
-      
+        setAvatarUrl(userData?.profile?.avatar_url || null);
+
         if (userData?.profile) {
           formRef.current.setValues({
             full_name: userData.profile.full_name || '',
@@ -354,6 +363,99 @@ export default function ProfilePage() {
   const handleCancel = () => {
     loadProfile();
     setEditing(false);
+  };
+
+  // 頭像上傳
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // 前端檔案大小限制 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      notifications.show({
+        title: '檔案過大',
+        message: '圖片大小不可超過 5MB，請選擇較小的檔案',
+        color: 'red',
+      });
+      return;
+    }
+
+    // 檢查檔案類型
+    if (!file.type.startsWith('image/')) {
+      notifications.show({
+        title: '格式錯誤',
+        message: '請選擇圖片檔案（JPG、PNG、GIF）',
+        color: 'red',
+      });
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const token = getToken();
+      if (!token) {
+        notifications.show({
+          title: '請先登入',
+          message: '您需要登入才能上傳頭像',
+          color: 'orange',
+        });
+        return;
+      }
+
+      // 1. 上傳檔案
+      const uploadResponse = await api.files.upload(file, 'avatar', undefined, token);
+      const fileUrl = uploadResponse.url || uploadResponse.file?.file_path;
+
+      if (!fileUrl) {
+        throw new Error('上傳回應中未包含檔案路徑');
+      }
+
+      // 2. 更新 profile 的 avatar_url
+      const profileResponse = await api.profile.update({ avatar_url: fileUrl }, token);
+
+      // 3. 更新本地 state
+      setAvatarUrl(fileUrl);
+
+      // 4. 更新 localStorage 中的 user 資料
+      if (profileResponse?.user) {
+        updateUser(profileResponse.user);
+        setUser(profileResponse.user);
+      } else {
+        // 手動更新 localStorage
+        const currentUser = getUser();
+        if (currentUser) {
+          const updatedUser = {
+            ...currentUser,
+            profile: {
+              ...currentUser.profile,
+              avatar_url: fileUrl,
+            },
+          };
+          updateUser(updatedUser as User & { id: number; email: string; role: string });
+          setUser(updatedUser as User);
+        }
+      }
+
+      // 5. 同步右上角頭像（updateUser 內部已觸發 user-updated 事件）
+
+      notifications.show({
+        title: '上傳成功',
+        message: '頭像已更新',
+        color: 'green',
+      });
+    } catch (error) {
+      notifications.show({
+        title: '上傳失敗',
+        message: error instanceof Error ? error.message : '無法上傳頭像，請稍後再試',
+        color: 'red',
+      });
+    } finally {
+      setUploading(false);
+      // 重置 file input，讓相同檔案也能再次選擇
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   // 工作經歷相關
@@ -587,9 +689,80 @@ export default function ProfilePage() {
             {/* 個人資訊卡片 */}
             <Paper shadow="sm" p="xl" radius="md" withBorder>
               <Group>
-                <Avatar size={100} radius="xl" color="blue">
-                  {form.values.display_name?.charAt(0) || form.values.full_name?.charAt(0) || 'U'}
-                </Avatar>
+                {/* 頭像上傳區域 */}
+                <Box
+                  pos="relative"
+                  style={{ cursor: 'pointer', borderRadius: '50%' }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Avatar
+                    size={100}
+                    radius="xl"
+                    color="blue"
+                    src={avatarUrl || undefined}
+                  >
+                    {form.values.display_name?.charAt(0) || form.values.full_name?.charAt(0) || 'U'}
+                  </Avatar>
+
+                  {/* 上傳中 Loading Overlay */}
+                  {uploading && (
+                    <Box
+                      pos="absolute"
+                      top={0}
+                      left={0}
+                      right={0}
+                      bottom={0}
+                      style={{
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        zIndex: 2,
+                      }}
+                    >
+                      <Loader size="sm" color="white" />
+                    </Box>
+                  )}
+
+                  {/* Hover 覆蓋層 */}
+                  {!uploading && (
+                    <Box
+                      pos="absolute"
+                      top={0}
+                      left={0}
+                      right={0}
+                      bottom={0}
+                      style={{
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                        opacity: 0,
+                        transition: 'opacity 0.2s ease',
+                        zIndex: 1,
+                      }}
+                      className="avatar-upload-overlay"
+                    >
+                      <Stack gap={2} align="center">
+                        <IconCamera size={24} color="white" />
+                        <Text size="xs" c="white" fw={500}>
+                          更換頭像
+                        </Text>
+                      </Stack>
+                    </Box>
+                  )}
+
+                  {/* 隱藏的 file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif"
+                    style={{ display: 'none' }}
+                    onChange={handleAvatarUpload}
+                  />
+                </Box>
                 <div style={{ flex: 1 }}>
                   <Group gap="xs" mb="xs">
                     <Title order={2}>

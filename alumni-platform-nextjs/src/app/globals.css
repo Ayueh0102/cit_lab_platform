@@ -465,6 +465,13 @@ body {
   background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
 }
 
+.text-gradient-magic {
+  background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* === 動畫 Animation === */
 
 @keyframes spectral-wave-move {
@@ -937,4 +944,14 @@ body {
   .sidebar-nav-item {
     transition: none !important;
   }
+}
+
+/* ===== 頭像上傳覆蓋層 ===== */
+.avatar-upload-overlay {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+*:hover > .avatar-upload-overlay {
+  opacity: 1;
 }

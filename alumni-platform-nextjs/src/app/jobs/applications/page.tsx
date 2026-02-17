@@ -10,12 +10,13 @@ import {
   Group,
   Badge,
   Button,
-  Loader,
-  Center,
   Tabs,
   Divider,
   Modal,
   Textarea,
+  Skeleton,
+  Select,
+  Avatar,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
@@ -27,6 +28,8 @@ import {
   IconUser,
   IconBriefcase,
   IconMail,
+  IconSend,
+  IconInbox,
 } from '@tabler/icons-react';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -38,6 +41,7 @@ interface JobRequest {
   job_id: number;
   requester_id: number;
   message?: string;
+  response_message?: string;
   status: string;
   created_at: string;
   updated_at?: string;
@@ -53,23 +57,40 @@ interface JobRequest {
       display_name?: string;
       full_name?: string;
       phone?: string;
+      avatar_url?: string;
     };
   };
+}
+
+const statusMap: Record<string, { label: string; color: string }> = {
+  PENDING: { label: '待審核', color: 'yellow' },
+  APPROVED: { label: '已接受', color: 'green' },
+  REJECTED: { label: '已拒絕', color: 'red' },
+};
+
+function getStatusInfo(status: string) {
+  const key = status.toUpperCase();
+  return statusMap[key] || { label: status, color: 'gray' };
 }
 
 export default function JobApplicationsPage() {
   const router = useRouter();
   const [requests, setRequests] = useState<JobRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string | null>('all');
+  const [mainTab, setMainTab] = useState<string | null>('received');
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<JobRequest | null>(null);
   const [detailModalOpened, setDetailModalOpened] = useState(false);
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
+    setStatusFilter(null);
+  }, [mainTab]);
+
+  useEffect(() => {
     loadRequests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [mainTab, statusFilter]);
 
   const loadRequests = async () => {
     try {
@@ -80,51 +101,22 @@ export default function JobApplicationsPage() {
         return;
       }
 
-      let status: string | undefined;
-      if (activeTab === 'pending') {
-        status = 'PENDING';
-      } else if (activeTab === 'accepted') {
-        status = 'APPROVED';
-      } else if (activeTab === 'rejected') {
-        status = 'REJECTED';
+      const params: { status?: string; per_page?: number } = { per_page: 50 };
+      if (statusFilter) {
+        params.status = statusFilter;
       }
 
-      const url = status
-        ? `/api/v2/job-requests/received?status=${status}`
-        : '/api/v2/job-requests/received';
+      const response = mainTab === 'sent'
+        ? await api.jobs.getSentRequests(token, params)
+        : await api.jobs.getReceivedRequests(token, params);
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}${url}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('無法載入申請列表');
-      }
-
-      const data = await response.json();
-      const requests = (data.requests || []).map((req: any) => ({
+      const rawRequests = response.requests || [];
+      setRequests(rawRequests.map((req: any) => ({
         ...req,
-        job: req.job || {
-          id: req.job_id,
-          title: req.job_title || `職缺 #${req.job_id}`,
-          company: req.company || '未知公司',
-        },
-        requester: req.requester || {
-          id: req.requester_id,
-          email: req.requester_email || '',
-          profile: {
-            display_name: req.requester_name,
-            full_name: req.requester_name,
-          },
-        },
+        job: req.job || { id: req.job_id, title: req.job_title || `職缺 #${req.job_id}`, company: req.company || '' },
+        requester: req.requester || { id: req.requester_id, email: req.requester_email || '' },
         status: req.status || 'PENDING',
-      }));
-      setRequests(requests);
+      })));
     } catch (error) {
       notifications.show({
         title: '載入失敗',
@@ -141,36 +133,11 @@ export default function JobApplicationsPage() {
       setProcessing(true);
       const token = getToken();
       if (!token) return;
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v2/job-requests/${request.id}/accept`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || '無法接受申請');
-      }
-
-      notifications.show({
-        title: '接受成功',
-        message: '申請已接受',
-        color: 'green',
-      });
-
+      await api.jobs.acceptRequest(request.id, token);
+      notifications.show({ title: '已接受', message: '交流申請已接受，對話已建立', color: 'green' });
       loadRequests();
     } catch (error) {
-      notifications.show({
-        title: '操作失敗',
-        message: error instanceof Error ? error.message : '請稍後再試',
-        color: 'red',
-      });
+      notifications.show({ title: '操作失敗', message: error instanceof Error ? error.message : '請稍後再試', color: 'red' });
     } finally {
       setProcessing(false);
     }
@@ -181,64 +148,139 @@ export default function JobApplicationsPage() {
       setProcessing(true);
       const token = getToken();
       if (!token) return;
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v2/job-requests/${request.id}/reject`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || '無法拒絕申請');
-      }
-
-      notifications.show({
-        title: '拒絕成功',
-        message: '申請已拒絕',
-        color: 'orange',
-      });
-
+      await api.jobs.rejectRequest(request.id, {}, token);
+      notifications.show({ title: '已拒絕', message: '交流申請已拒絕', color: 'orange' });
       loadRequests();
     } catch (error) {
-      notifications.show({
-        title: '操作失敗',
-        message: error instanceof Error ? error.message : '請稍後再試',
-        color: 'red',
-      });
+      notifications.show({ title: '操作失敗', message: error instanceof Error ? error.message : '請稍後再試', color: 'red' });
     } finally {
       setProcessing(false);
     }
   };
 
-  const openDetailModal = (request: JobRequest) => {
-    setSelectedRequest(request);
-    setDetailModalOpened(true);
-  };
+  const isReceived = mainTab === 'received';
 
-  const statusMap: { [key: string]: { label: string; color: string } } = {
-    PENDING: { label: '待審核', color: 'yellow' },
-    ACCEPTED: { label: '已接受', color: 'green' },
-    APPROVED: { label: '已接受', color: 'green' },
-    REJECTED: { label: '已拒絕', color: 'red' },
-  };
+  const renderSkeleton = () => (
+    <Stack gap="md">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i} shadow="sm" padding="lg" radius="md" className="glass-card-soft">
+          <Group justify="space-between" mb="sm">
+            <div style={{ flex: 1 }}>
+              <Skeleton height={20} width="50%" radius="md" mb="xs" />
+              <Skeleton height={14} width="30%" radius="md" />
+            </div>
+            <Skeleton height={24} width={60} radius="xl" />
+          </Group>
+          <Divider my="sm" />
+          <Group gap="md">
+            <Skeleton height={14} width={100} radius="md" />
+            <Skeleton height={14} width={80} radius="md" />
+          </Group>
+          <Skeleton height={14} width="70%" radius="md" mt="sm" />
+        </Card>
+      ))}
+    </Stack>
+  );
 
-  if (loading) {
+  const renderEmptyState = () => (
+    <Card shadow="sm" padding="xl" radius="md" className="glass-card-soft" style={{ border: 'none' }}>
+      <Stack align="center" gap="md" py="xl">
+        {isReceived
+          ? <IconInbox size={56} color="var(--mantine-color-blue-3)" stroke={1.5} />
+          : <IconSend size={56} color="var(--mantine-color-teal-3)" stroke={1.5} />
+        }
+        <Text size="lg" fw={600} c="dimmed">
+          {isReceived ? '目前沒有收到的交流申請' : '您還沒有發送過交流申請'}
+        </Text>
+        <Text size="sm" c="dimmed" ta="center" maw={360}>
+          {isReceived
+            ? '當有人對您發布的職缺感興趣時，會在這裡顯示'
+            : '瀏覽職缺列表，對感興趣的職缺發送交流申請'}
+        </Text>
+        {!isReceived && (
+          <Button
+            variant="light"
+            color="teal"
+            radius="xl"
+            leftSection={<IconBriefcase size={16} />}
+            onClick={() => router.push('/jobs')}
+            mt="xs"
+          >
+            瀏覽職缺
+          </Button>
+        )}
+      </Stack>
+    </Card>
+  );
+
+  const renderRequestCard = (req: JobRequest, index: number) => {
+    const statusInfo = getStatusInfo(req.status);
+    const isPending = req.status.toUpperCase() === 'PENDING';
+
     return (
-      <ProtectedRoute>
-        <SidebarLayout>
-          <Center style={{ minHeight: '60vh' }}>
-            <Loader size="xl" />
-          </Center>
-        </SidebarLayout>
-      </ProtectedRoute>
+      <Card
+        key={req.id}
+        shadow="sm"
+        padding="lg"
+        radius="md"
+        withBorder
+        className="glass-card-soft animate-list-item"
+        style={{ animationDelay: `${Math.min(index, 9) * 0.05}s` }}
+      >
+        <Group justify="space-between" mb="sm" wrap="wrap">
+          <div style={{ flex: 1 }}>
+            <Group gap="xs" mb="xs">
+              <Text fw={600} size="lg">{req.job?.title || `職缺 #${req.job_id}`}</Text>
+              <Badge color={statusInfo.color}>{statusInfo.label}</Badge>
+            </Group>
+            <Text size="sm" c="dimmed">{req.job?.company || ''}</Text>
+          </div>
+          <Group gap="xs">
+            <Button variant="subtle" size="sm" leftSection={<IconEye size={16} />}
+              onClick={() => { setSelectedRequest(req); setDetailModalOpened(true); }}>
+              查看詳情
+            </Button>
+            {isReceived && isPending && (
+              <>
+                <Button color="green" size="sm" radius="xl" leftSection={<IconCheck size={16} />}
+                  onClick={() => handleAccept(req)} loading={processing}>
+                  接受
+                </Button>
+                <Button color="red" size="sm" radius="xl" variant="light" leftSection={<IconX size={16} />}
+                  onClick={() => handleReject(req)} loading={processing}>
+                  拒絕
+                </Button>
+              </>
+            )}
+          </Group>
+        </Group>
+
+        <Divider my="sm" />
+
+        <Group gap="md" wrap="wrap">
+          {isReceived && (
+            <Group gap={4}>
+              <IconUser size={16} />
+              <Text size="sm">
+                {req.requester?.profile?.display_name || req.requester?.profile?.full_name || req.requester?.email || `用戶 #${req.requester_id}`}
+              </Text>
+            </Group>
+          )}
+          <Group gap={4}>
+            <IconCalendar size={16} />
+            <Text size="sm" c="dimmed">{new Date(req.created_at).toLocaleDateString('zh-TW')}</Text>
+          </Group>
+        </Group>
+
+        {req.message && (
+          <>
+            <Divider my="sm" />
+            <Text size="sm" lineClamp={2} c="dimmed">{req.message}</Text>
+          </>
+        )}
+      </Card>
     );
-  }
+  };
 
   return (
     <ProtectedRoute>
@@ -247,329 +289,46 @@ export default function JobApplicationsPage() {
           <Stack gap="xl">
             <Group justify="space-between" align="center">
               <div>
-                <Title order={1} mb="xs">
-                  職缺申請管理
-                </Title>
-                <Text c="dimmed">管理您發布的職缺收到的申請</Text>
+                <Title order={1} mb="xs">職缺交流管理</Title>
+                <Text c="dimmed">管理職缺交流申請</Text>
               </div>
+              <Button variant="subtle" onClick={() => router.push('/jobs')}>
+                ← 回到職缺列表
+              </Button>
             </Group>
 
-            <Tabs value={activeTab} onChange={setActiveTab}>
+            <Tabs value={mainTab} onChange={setMainTab}>
               <Tabs.List>
-                <Tabs.Tab value="all">全部申請</Tabs.Tab>
-                <Tabs.Tab value="pending">待審核</Tabs.Tab>
-                <Tabs.Tab value="accepted">已接受</Tabs.Tab>
-                <Tabs.Tab value="rejected">已拒絕</Tabs.Tab>
+                <Tabs.Tab value="received" leftSection={<IconInbox size={16} />}>
+                  收到的申請
+                </Tabs.Tab>
+                <Tabs.Tab value="sent" leftSection={<IconSend size={16} />}>
+                  我發出的申請
+                </Tabs.Tab>
               </Tabs.List>
-
-              <Tabs.Panel value="all" pt="xl">
-                {requests.length === 0 ? (
-                  <Center py="xl">
-                    <Text c="dimmed">目前沒有申請記錄</Text>
-                  </Center>
-                ) : (
-                  <Stack gap="md">
-                    {requests.map((req) => (
-                      <Card key={req.id} shadow="sm" padding="lg" radius="md" withBorder>
-                        <Group justify="space-between" mb="sm">
-                          <div>
-                            <Group gap="xs" mb="xs">
-                              <Text fw={500} size="lg">
-                                {req.job?.title || `職缺 #${req.job_id}`}
-                              </Text>
-                              <Badge color={statusMap[req.status]?.color || 'gray'}>
-                                {statusMap[req.status]?.label || req.status}
-                              </Badge>
-                            </Group>
-                            <Text size="sm" c="dimmed">
-                              {req.job?.company || '未知公司'}
-                            </Text>
-                          </div>
-                          <Group gap="xs">
-                            <Button
-                              variant="subtle"
-                              size="sm"
-                              leftSection={<IconEye size={16} />}
-                              onClick={() => openDetailModal(req)}
-                            >
-                              查看詳情
-                            </Button>
-                            {(req.status === 'PENDING' || req.status === 'pending' || req.status?.toUpperCase() === 'PENDING') && (
-                              <>
-                                <Button
-                                  color="green"
-                                  size="sm"
-                                  leftSection={<IconCheck size={16} />}
-                                  onClick={() => handleAccept(req)}
-                                  loading={processing}
-                                >
-                                  接受
-                                </Button>
-                                <Button
-                                  color="red"
-                                  size="sm"
-                                  variant="light"
-                                  leftSection={<IconX size={16} />}
-                                  onClick={() => handleReject(req)}
-                                  loading={processing}
-                                >
-                                  拒絕
-                                </Button>
-                              </>
-                            )}
-                          </Group>
-                        </Group>
-
-                        <Divider my="sm" />
-
-                        <Group gap="md">
-                          <Group gap={4}>
-                            <IconUser size={16} />
-                            <Text size="sm">
-                              {req.requester?.profile?.display_name ||
-                                req.requester?.profile?.full_name ||
-                                req.requester?.email ||
-                                `用戶 #${req.requester_id}`}
-                            </Text>
-                          </Group>
-                          <Group gap={4}>
-                            <IconCalendar size={16} />
-                            <Text size="sm" c="dimmed">
-                              {new Date(req.created_at).toLocaleDateString('zh-TW')}
-                            </Text>
-                          </Group>
-                        </Group>
-
-                        {req.message && (
-                          <>
-                            <Divider my="sm" />
-                            <Text size="sm" lineClamp={2} c="dimmed">
-                              {req.message}
-                            </Text>
-                          </>
-                        )}
-                      </Card>
-                    ))}
-                  </Stack>
-                )}
-              </Tabs.Panel>
-
-              <Tabs.Panel value="pending" pt="xl">
-                {requests.length === 0 ? (
-                  <Center py="xl">
-                    <Text c="dimmed">目前沒有待審核的申請</Text>
-                  </Center>
-                ) : (
-                  <Stack gap="md">
-                    {requests.map((req) => (
-                      <Card key={req.id} shadow="sm" padding="lg" radius="md" withBorder>
-                        <Group justify="space-between" mb="sm">
-                          <div>
-                            <Group gap="xs" mb="xs">
-                              <Text fw={500} size="lg">
-                                {req.job?.title || `職缺 #${req.job_id}`}
-                              </Text>
-                              <Badge color="yellow">待審核</Badge>
-                            </Group>
-                            <Text size="sm" c="dimmed">
-                              {req.job?.company || '未知公司'}
-                            </Text>
-                          </div>
-                          <Group gap="xs">
-                            <Button
-                              variant="subtle"
-                              size="sm"
-                              leftSection={<IconEye size={16} />}
-                              onClick={() => openDetailModal(req)}
-                            >
-                              查看詳情
-                            </Button>
-                            <Button
-                              color="green"
-                              size="sm"
-                              leftSection={<IconCheck size={16} />}
-                              onClick={() => handleAccept(req)}
-                              loading={processing}
-                            >
-                              接受
-                            </Button>
-                            <Button
-                              color="red"
-                              size="sm"
-                              variant="light"
-                              leftSection={<IconX size={16} />}
-                              onClick={() => handleReject(req)}
-                              loading={processing}
-                            >
-                              拒絕
-                            </Button>
-                          </Group>
-                        </Group>
-
-                        <Divider my="sm" />
-
-                        <Group gap="md">
-                          <Group gap={4}>
-                            <IconUser size={16} />
-                            <Text size="sm">
-                              {req.requester?.profile?.display_name ||
-                                req.requester?.profile?.full_name ||
-                                req.requester?.email ||
-                                `用戶 #${req.requester_id}`}
-                            </Text>
-                          </Group>
-                          <Group gap={4}>
-                            <IconCalendar size={16} />
-                            <Text size="sm" c="dimmed">
-                              {new Date(req.created_at).toLocaleDateString('zh-TW')}
-                            </Text>
-                          </Group>
-                        </Group>
-
-                        {req.message && (
-                          <>
-                            <Divider my="sm" />
-                            <Text size="sm" lineClamp={2} c="dimmed">
-                              {req.message}
-                            </Text>
-                          </>
-                        )}
-                      </Card>
-                    ))}
-                  </Stack>
-                )}
-              </Tabs.Panel>
-
-              <Tabs.Panel value="accepted" pt="xl">
-                {requests.length === 0 ? (
-                  <Center py="xl">
-                    <Text c="dimmed">目前沒有已接受的申請</Text>
-                  </Center>
-                ) : (
-                  <Stack gap="md">
-                    {requests.map((req) => (
-                      <Card key={req.id} shadow="sm" padding="lg" radius="md" withBorder>
-                        <Group justify="space-between" mb="sm">
-                          <div>
-                            <Group gap="xs" mb="xs">
-                              <Text fw={500} size="lg">
-                                {req.job?.title || `職缺 #${req.job_id}`}
-                              </Text>
-                              <Badge color="green">已接受</Badge>
-                            </Group>
-                            <Text size="sm" c="dimmed">
-                              {req.job?.company || '未知公司'}
-                            </Text>
-                          </div>
-                          <Button
-                            variant="subtle"
-                            size="sm"
-                            leftSection={<IconEye size={16} />}
-                            onClick={() => openDetailModal(req)}
-                          >
-                            查看詳情
-                          </Button>
-                        </Group>
-
-                        <Divider my="sm" />
-
-                        <Group gap="md">
-                          <Group gap={4}>
-                            <IconUser size={16} />
-                            <Text size="sm">
-                              {req.requester?.profile?.display_name ||
-                                req.requester?.profile?.full_name ||
-                                req.requester?.email ||
-                                `用戶 #${req.requester_id}`}
-                            </Text>
-                          </Group>
-                          <Group gap={4}>
-                            <IconCalendar size={16} />
-                            <Text size="sm" c="dimmed">
-                              {new Date(req.created_at).toLocaleDateString('zh-TW')}
-                            </Text>
-                          </Group>
-                        </Group>
-
-                        {req.message && (
-                          <>
-                            <Divider my="sm" />
-                            <Text size="sm" lineClamp={2} c="dimmed">
-                              {req.message}
-                            </Text>
-                          </>
-                        )}
-                      </Card>
-                    ))}
-                  </Stack>
-                )}
-              </Tabs.Panel>
-
-              <Tabs.Panel value="rejected" pt="xl">
-                {requests.length === 0 ? (
-                  <Center py="xl">
-                    <Text c="dimmed">目前沒有已拒絕的申請</Text>
-                  </Center>
-                ) : (
-                  <Stack gap="md">
-                    {requests.map((req) => (
-                      <Card key={req.id} shadow="sm" padding="lg" radius="md" withBorder>
-                        <Group justify="space-between" mb="sm">
-                          <div>
-                            <Group gap="xs" mb="xs">
-                              <Text fw={500} size="lg">
-                                {req.job?.title || `職缺 #${req.job_id}`}
-                              </Text>
-                              <Badge color="red">已拒絕</Badge>
-                            </Group>
-                            <Text size="sm" c="dimmed">
-                              {req.job?.company || '未知公司'}
-                            </Text>
-                          </div>
-                          <Button
-                            variant="subtle"
-                            size="sm"
-                            leftSection={<IconEye size={16} />}
-                            onClick={() => openDetailModal(req)}
-                          >
-                            查看詳情
-                          </Button>
-                        </Group>
-
-                        <Divider my="sm" />
-
-                        <Group gap="md">
-                          <Group gap={4}>
-                            <IconUser size={16} />
-                            <Text size="sm">
-                              {req.requester?.profile?.display_name ||
-                                req.requester?.profile?.full_name ||
-                                req.requester?.email ||
-                                `用戶 #${req.requester_id}`}
-                            </Text>
-                          </Group>
-                          <Group gap={4}>
-                            <IconCalendar size={16} />
-                            <Text size="sm" c="dimmed">
-                              {new Date(req.created_at).toLocaleDateString('zh-TW')}
-                            </Text>
-                          </Group>
-                        </Group>
-
-                        {req.message && (
-                          <>
-                            <Divider my="sm" />
-                            <Text size="sm" lineClamp={2} c="dimmed">
-                              {req.message}
-                            </Text>
-                          </>
-                        )}
-                      </Card>
-                    ))}
-                  </Stack>
-                )}
-              </Tabs.Panel>
             </Tabs>
+
+            <Group>
+              <Select
+                placeholder="篩選狀態"
+                value={statusFilter}
+                onChange={setStatusFilter}
+                clearable
+                data={[
+                  { value: 'PENDING', label: '待審核' },
+                  { value: 'APPROVED', label: '已接受' },
+                  { value: 'REJECTED', label: '已拒絕' },
+                ]}
+                style={{ width: 150 }}
+              />
+            </Group>
+
+            {loading ? renderSkeleton() : requests.length === 0 ? renderEmptyState() : (
+              <Stack gap="md">
+                <Text size="sm" c="dimmed">共 {requests.length} 筆申請</Text>
+                {requests.map((req, index) => renderRequestCard(req, index))}
+              </Stack>
+            )}
           </Stack>
         </Container>
 
@@ -577,110 +336,92 @@ export default function JobApplicationsPage() {
         <Modal
           opened={detailModalOpened}
           onClose={() => setDetailModalOpened(false)}
-          title="申請詳情"
+          title="交流申請詳情"
           size="lg"
         >
           {selectedRequest && (
             <Stack gap="md">
               <div>
-                <Text fw={600} mb="xs">
-                  職缺資訊
-                </Text>
+                <Text fw={600} mb="xs">職缺資訊</Text>
                 <Group gap="xs" mb="sm">
                   <IconBriefcase size={16} />
                   <Text>{selectedRequest.job?.title || `職缺 #${selectedRequest.job_id}`}</Text>
                 </Group>
-                <Text size="sm" c="dimmed" ml={24}>
-                  {selectedRequest.job?.company || '未知公司'}
-                </Text>
+                <Text size="sm" c="dimmed" ml={24}>{selectedRequest.job?.company || ''}</Text>
               </div>
 
               <Divider />
 
-              <div>
-                <Text fw={600} mb="xs">
-                  申請人資訊
-                </Text>
-                <Group gap="xs" mb="xs">
-                  <IconUser size={16} />
-                  <Text>
-                    {selectedRequest.requester?.profile?.display_name ||
-                      selectedRequest.requester?.profile?.full_name ||
-                      selectedRequest.requester?.email ||
-                      `用戶 #${selectedRequest.requester_id}`}
-                  </Text>
-                </Group>
-                {selectedRequest.requester?.email && (
-                  <Group gap="xs" mb="xs">
-                    <IconMail size={16} />
-                    <Text size="sm">{selectedRequest.requester.email}</Text>
-                  </Group>
-                )}
-                {selectedRequest.requester?.profile?.phone && (
-                  <Group gap="xs">
-                    <IconMail size={16} />
-                    <Text size="sm">{selectedRequest.requester.profile.phone}</Text>
-                  </Group>
-                )}
-              </div>
-
-              <Divider />
+              {isReceived && (
+                <>
+                  <div>
+                    <Text fw={600} mb="xs">申請人資訊</Text>
+                    <Group gap="xs" mb="xs">
+                      <IconUser size={16} />
+                      <Text>
+                        {selectedRequest.requester?.profile?.display_name || selectedRequest.requester?.profile?.full_name || selectedRequest.requester?.email || `用戶 #${selectedRequest.requester_id}`}
+                      </Text>
+                    </Group>
+                    {selectedRequest.requester?.email && (
+                      <Group gap="xs" mb="xs">
+                        <IconMail size={16} />
+                        <Text size="sm">{selectedRequest.requester.email}</Text>
+                      </Group>
+                    )}
+                  </div>
+                  <Divider />
+                </>
+              )}
 
               <div>
-                <Text fw={600} mb="xs">
-                  申請訊息
-                </Text>
+                <Text fw={600} mb="xs">申請訊息</Text>
                 <Textarea
-                  value={selectedRequest.message || '無'}
+                  value={selectedRequest.message || '（無附言）'}
                   readOnly
-                  minRows={4}
-                  styles={{ input: { backgroundColor: '#f5f5f5' } }}
+                  minRows={3}
+                  styles={{ input: { backgroundColor: 'var(--mantine-color-gray-0)' } }}
                 />
               </div>
 
+              {selectedRequest.response_message && (
+                <>
+                  <Divider />
+                  <div>
+                    <Text fw={600} mb="xs">回覆訊息</Text>
+                    <Text size="sm" c="dimmed">{selectedRequest.response_message}</Text>
+                  </div>
+                </>
+              )}
+
               <Divider />
 
-              <div>
-                <Text fw={600} mb="xs">
-                  申請狀態
-                </Text>
-                <Badge color={statusMap[selectedRequest.status]?.color || 'gray'} size="lg">
-                  {statusMap[selectedRequest.status]?.label || selectedRequest.status}
-                </Badge>
-              </div>
-
-              <Group gap="xs">
-                <IconCalendar size={16} />
-                <Text size="sm" c="dimmed">
-                  申請時間: {new Date(selectedRequest.created_at).toLocaleString('zh-TW')}
-                </Text>
+              <Group justify="space-between">
+                <div>
+                  <Text fw={600} mb="xs">申請狀態</Text>
+                  <Badge color={getStatusInfo(selectedRequest.status).color} size="lg">
+                    {getStatusInfo(selectedRequest.status).label}
+                  </Badge>
+                </div>
+                <Group gap="xs">
+                  <IconCalendar size={16} />
+                  <Text size="sm" c="dimmed">
+                    {new Date(selectedRequest.created_at).toLocaleString('zh-TW')}
+                  </Text>
+                </Group>
               </Group>
 
-              {(selectedRequest.status === 'PENDING' || selectedRequest.status === 'pending' || selectedRequest.status?.toUpperCase() === 'PENDING') && (
+              {isReceived && selectedRequest.status.toUpperCase() === 'PENDING' && (
                 <>
                   <Divider />
                   <Group justify="flex-end" gap="sm">
-                    <Button
-                      color="green"
-                      leftSection={<IconCheck size={16} />}
-                      onClick={() => {
-                        handleAccept(selectedRequest);
-                        setDetailModalOpened(false);
-                      }}
-                      loading={processing}
-                    >
+                    <Button color="green" radius="xl" leftSection={<IconCheck size={16} />}
+                      onClick={() => { handleAccept(selectedRequest); setDetailModalOpened(false); }}
+                      loading={processing}>
                       接受申請
                     </Button>
-                    <Button
-                      color="red"
-                      variant="light"
-                      leftSection={<IconX size={16} />}
-                      onClick={() => {
-                        handleReject(selectedRequest);
-                        setDetailModalOpened(false);
-                      }}
-                      loading={processing}
-                    >
+                    <Button color="red" radius="xl" variant="light" leftSection={<IconX size={16} />}
+                      onClick={() => { handleReject(selectedRequest); setDetailModalOpened(false); }}
+                      loading={processing}>
                       拒絕申請
                     </Button>
                   </Group>

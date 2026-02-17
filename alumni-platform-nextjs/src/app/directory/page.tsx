@@ -21,6 +21,10 @@ import {
   Modal,
   Divider,
   Timeline,
+  Skeleton,
+  Textarea,
+  ActionIcon,
+  Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -38,9 +42,15 @@ import {
   IconBuilding,
   IconCalendar,
   IconCertificate,
+  IconUsers,
+  IconUserPlus,
+  IconCheck,
+  IconX,
+  IconClock,
+  IconMessage,
 } from '@tabler/icons-react';
 import { api } from '@/lib/api';
-import { getToken } from '@/lib/auth';
+import { getToken, getUser } from '@/lib/auth';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
@@ -115,6 +125,12 @@ export default function DirectoryPage() {
   const [userEducations, setUserEducations] = useState<Education[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
+  // 聯絡申請相關 state
+  const [contactStatus, setContactStatus] = useState<string>('none'); // none/pending_sent/pending_received/accepted/rejected
+  const [contactRequestId, setContactRequestId] = useState<number | null>(null);
+  const [contactMessage, setContactMessage] = useState('');
+  const [sendingRequest, setSendingRequest] = useState(false);
+
   // 防抖處理搜索詞
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -179,24 +195,111 @@ export default function DirectoryPage() {
   const loadUserDetails = async (user: AlumniUser) => {
     setSelectedUser(user);
     setLoadingDetails(true);
+    setContactStatus('none');
+    setContactRequestId(null);
+    setContactMessage('');
     openDetailModal();
-    
+
     try {
       const token = getToken();
-      // 獲取該用戶的職涯經歷和教育背景
+      // 獲取該用戶的職涯經歷、教育背景和聯絡狀態
+      const currentUser = getUser();
+      let statusRes: any = { status: 'self', contact_request: null };
+
       const [workRes, eduRes] = await Promise.all([
         api.career.getUserWorkExperiences(user.id, token || undefined),
         api.career.getUserEducations(user.id, token || undefined),
       ]);
-      
+
+      if (currentUser && user.id !== currentUser.id && token) {
+        try {
+          statusRes = await api.contactRequests.getStatus(user.id, token);
+        } catch {
+          statusRes = { status: 'none', contact_request: null };
+        }
+      }
+
       setUserWorkExperiences((workRes.work_experiences || []).slice(0, 3));
       setUserEducations((eduRes.educations || []).slice(0, 3));
+      setContactStatus(statusRes.status);
+      setContactRequestId(statusRes.contact_request?.id || null);
     } catch (error) {
       console.error('Failed to load user details:', error);
       setUserWorkExperiences([]);
       setUserEducations([]);
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const handleSendContactRequest = async () => {
+    try {
+      setSendingRequest(true);
+      const token = getToken();
+      if (!token) return;
+
+      await api.contactRequests.create({
+        target_id: selectedUser!.id,
+        message: contactMessage.trim() || undefined,
+      }, token);
+
+      setContactStatus('pending_sent');
+      setContactMessage('');
+      notifications.show({
+        title: '申請已送出',
+        message: '聯絡申請已送出，等待對方回覆',
+        color: 'green',
+      });
+    } catch (error) {
+      notifications.show({
+        title: '發送失敗',
+        message: error instanceof Error ? error.message : '無法發送聯絡申請',
+        color: 'red',
+      });
+    } finally {
+      setSendingRequest(false);
+    }
+  };
+
+  const handleAcceptContactRequest = async () => {
+    if (!contactRequestId) return;
+    try {
+      const token = getToken();
+      if (!token) return;
+      await api.contactRequests.accept(contactRequestId, token);
+      setContactStatus('accepted');
+      notifications.show({
+        title: '已接受',
+        message: '您已接受此聯絡申請',
+        color: 'green',
+      });
+    } catch (error) {
+      notifications.show({
+        title: '操作失敗',
+        message: error instanceof Error ? error.message : '操作失敗',
+        color: 'red',
+      });
+    }
+  };
+
+  const handleRejectContactRequest = async () => {
+    if (!contactRequestId) return;
+    try {
+      const token = getToken();
+      if (!token) return;
+      await api.contactRequests.reject(contactRequestId, token);
+      setContactStatus('rejected');
+      notifications.show({
+        title: '已拒絕',
+        message: '您已拒絕此聯絡申請',
+        color: 'orange',
+      });
+    } catch (error) {
+      notifications.show({
+        title: '操作失敗',
+        message: error instanceof Error ? error.message : '操作失敗',
+        color: 'red',
+      });
     }
   };
 
@@ -265,9 +368,47 @@ export default function DirectoryPage() {
     return (
       <ProtectedRoute>
         <SidebarLayout>
-          <Center style={{ minHeight: '60vh' }}>
-            <Loader size="xl" />
-          </Center>
+          <Container size="lg" py="xl">
+            <Stack gap="xl">
+              {/* 標題骨架 */}
+              <div>
+                <Skeleton height={32} width={200} radius="md" mb="xs" />
+                <Skeleton height={18} width={280} radius="md" />
+              </div>
+
+              {/* 搜尋/篩選骨架 */}
+              <Grid>
+                <Grid.Col span={{ base: 12, md: 6 }}>
+                  <Skeleton height={42} radius="md" />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 6 }}>
+                  <Skeleton height={42} radius="md" />
+                </Grid.Col>
+              </Grid>
+
+              {/* 系友卡片列表骨架 */}
+              <Stack gap="md">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Card key={i} shadow="sm" padding="lg" radius="md" className="glass-card-soft">
+                    <Group align="flex-start" wrap="nowrap">
+                      <Skeleton height={80} width={80} radius="md" />
+                      <Stack gap="xs" style={{ flex: 1 }}>
+                        <Skeleton height={20} width="35%" radius="md" />
+                        <Skeleton height={14} width="25%" radius="md" />
+                        <Skeleton height={14} width="45%" radius="md" />
+                        <Skeleton height={14} width="20%" radius="md" />
+                        <Group gap="xs">
+                          <Skeleton height={14} width={70} radius="md" />
+                          <Skeleton height={14} width={60} radius="md" />
+                        </Group>
+                        <Skeleton height={14} width="80%" radius="md" />
+                      </Stack>
+                    </Group>
+                  </Card>
+                ))}
+              </Stack>
+            </Stack>
+          </Container>
         </SidebarLayout>
       </ProtectedRoute>
     );
@@ -312,9 +453,17 @@ export default function DirectoryPage() {
             </Grid>
 
             {users.length === 0 ? (
-              <Center py="xl">
-                <Text c="dimmed">找不到符合條件的系友</Text>
-              </Center>
+              <Card shadow="sm" padding="xl" radius="md" className="glass-card-soft" style={{ border: 'none' }}>
+                <Stack align="center" gap="md" py="xl">
+                  <IconUsers size={56} color="var(--mantine-color-indigo-3)" stroke={1.5} />
+                  <Text size="lg" fw={600} c="dimmed">找不到符合條件的系友</Text>
+                  <Text size="sm" c="dimmed" ta="center" maw={360}>
+                    {debouncedSearchTerm || filterYear
+                      ? '試試調整搜尋條件或篩選條件'
+                      : '目前尚無系友資料'}
+                  </Text>
+                </Stack>
+              </Card>
             ) : (
               <Stack gap="md">
                 {total > 0 && (
@@ -674,6 +823,100 @@ export default function DirectoryPage() {
                       </Anchor>
                     )}
                   </Group>
+                </div>
+              )}
+
+              {/* 聯絡申請互動區塊 */}
+              {contactStatus !== 'self' && (
+                <div>
+                  <Divider label="聯絡申請" labelPosition="left" mb="md" />
+
+                  {contactStatus === 'none' || contactStatus === 'rejected' ? (
+                    <Stack gap="sm">
+                      <Textarea
+                        placeholder="（選填）簡述您希望聯絡的原因..."
+                        value={contactMessage}
+                        onChange={(e) => setContactMessage(e.currentTarget.value)}
+                        minRows={2}
+                        maxRows={4}
+                      />
+                      <Button
+                        leftSection={<IconUserPlus size={16} />}
+                        onClick={handleSendContactRequest}
+                        loading={sendingRequest}
+                        variant="light"
+                        color="indigo"
+                        radius="xl"
+                      >
+                        申請聯絡
+                      </Button>
+                    </Stack>
+                  ) : contactStatus === 'pending_sent' ? (
+                    <Group gap="xs">
+                      <IconClock size={18} color="var(--mantine-color-yellow-6)" />
+                      <Text size="sm" c="dimmed">聯絡申請已送出，等待對方回覆</Text>
+                    </Group>
+                  ) : contactStatus === 'pending_received' ? (
+                    <Stack gap="sm">
+                      <Text size="sm" c="dimmed">對方向您發送了聯絡申請</Text>
+                      <Group gap="sm">
+                        <Button
+                          color="green"
+                          leftSection={<IconCheck size={16} />}
+                          onClick={handleAcceptContactRequest}
+                          size="sm"
+                        >
+                          接受
+                        </Button>
+                        <Button
+                          color="red"
+                          variant="light"
+                          leftSection={<IconX size={16} />}
+                          onClick={handleRejectContactRequest}
+                          size="sm"
+                        >
+                          拒絕
+                        </Button>
+                      </Group>
+                    </Stack>
+                  ) : contactStatus === 'accepted' ? (
+                    <Stack gap="sm">
+                      <Group gap="xs">
+                        <IconCheck size={18} color="var(--mantine-color-green-6)" />
+                        <Text size="sm" c="green" fw={500}>已建立聯絡</Text>
+                      </Group>
+                      {/* 聯絡人可以看到的額外資訊 */}
+                      <Group gap="md">
+                        {selectedUser?.email && (
+                          <Group gap={4}>
+                            <IconMail size={16} />
+                            <Anchor href={`mailto:${selectedUser.email}`} size="sm">
+                              {selectedUser.email}
+                            </Anchor>
+                          </Group>
+                        )}
+                        {selectedUser?.profile?.phone && (
+                          <Group gap={4}>
+                            <IconPhone size={16} />
+                            <Text size="sm">{selectedUser.profile.phone}</Text>
+                          </Group>
+                        )}
+                      </Group>
+                      <Button
+                        variant="light"
+                        color="blue"
+                        leftSection={<IconMessage size={16} />}
+                        onClick={() => {
+                          closeDetailModal();
+                          router.push('/messages');
+                        }}
+                        size="sm"
+                        radius="xl"
+                      >
+                        發送訊息
+                      </Button>
+                    </Stack>
+                  ) : null}
                 </div>
               )}
             </Stack>

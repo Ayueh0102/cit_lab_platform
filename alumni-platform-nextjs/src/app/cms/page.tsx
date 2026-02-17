@@ -23,6 +23,7 @@ import {
   Divider,
   Loader,
   Center,
+  Skeleton,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
@@ -305,26 +306,65 @@ export default function CMSManagePage() {
 
             {/* 文章列表 */}
             {loading ? (
-              <Center py="xl">
-                <Loader size="lg" />
-              </Center>
+              <Grid>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Grid.Col key={i} span={{ base: 12, sm: 6, md: 4 }}>
+                    <Card shadow="sm" padding="lg" radius="md" className="glass-card-soft" h="100%">
+                      <Stack gap="md" h="100%">
+                        {/* 封面圖骨架 */}
+                        <Skeleton height={150} radius="md" />
+                        {/* Badge + 選單 */}
+                        <Group justify="space-between">
+                          <Group gap="xs">
+                            <Skeleton height={20} width={50} radius="xl" />
+                            <Skeleton height={20} width={50} radius="xl" />
+                          </Group>
+                          <Skeleton height={24} width={24} radius="md" />
+                        </Group>
+                        {/* 標題 */}
+                        <Skeleton height={20} width="80%" radius="md" />
+                        {/* 副標題 */}
+                        <Skeleton height={14} width="60%" radius="md" />
+                        {/* 摘要 */}
+                        <Skeleton height={14} width="90%" radius="md" />
+                        <Skeleton height={14} width="70%" radius="md" />
+                        {/* 底部資訊 */}
+                        <div style={{ marginTop: 'auto' }}>
+                          <Skeleton height={1} width="100%" radius="md" mb="sm" />
+                          <Group justify="space-between">
+                            <Skeleton height={12} width={60} radius="md" />
+                            <Skeleton height={12} width={80} radius="md" />
+                          </Group>
+                          <Group gap="md" mt="xs">
+                            <Skeleton height={12} width={50} radius="md" />
+                            <Skeleton height={12} width={50} radius="md" />
+                          </Group>
+                        </div>
+                      </Stack>
+                    </Card>
+                  </Grid.Col>
+                ))}
+              </Grid>
             ) : articles.length === 0 ? (
-              <Paper shadow="sm" p="xl" radius="md" withBorder>
-                <Center>
-                  <Stack align="center" gap="md">
-                    <IconFileText size={48} color="gray" />
-                    <Text c="dimmed">還沒有文章</Text>
-                    {isAdmin && (
-                      <Button
-                        leftSection={<IconPlus size={16} />}
-                        onClick={() => router.push('/cms/create')}
-                      >
-                        發布第一篇文章
-                      </Button>
-                    )}
-                  </Stack>
-                </Center>
-              </Paper>
+              <Card shadow="sm" padding="xl" radius="md" className="glass-card-soft" style={{ border: 'none' }}>
+                <Stack align="center" gap="md" py="xl">
+                  <IconFileText size={56} color="var(--mantine-color-pink-3)" stroke={1.5} />
+                  <Text size="lg" fw={600} c="dimmed">還沒有文章</Text>
+                  <Text size="sm" c="dimmed" ta="center" maw={360}>
+                    分享您的學術研究或產業經驗，與校友們交流
+                  </Text>
+                  <Button
+                    variant="light"
+                    color="pink"
+                    radius="xl"
+                    leftSection={<IconPlus size={16} />}
+                    onClick={() => router.push('/cms/create')}
+                    mt="xs"
+                  >
+                    發布第一篇文章
+                  </Button>
+                </Stack>
+              </Card>
             ) : (
               <>
                 <Grid>

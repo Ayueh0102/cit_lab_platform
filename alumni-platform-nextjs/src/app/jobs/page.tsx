@@ -16,8 +16,9 @@ import {
   Loader,
   Center,
   Tooltip,
+  Skeleton,
 } from '@mantine/core';
-import { IconEye, IconCalendar, IconSearch, IconMapPin } from '@tabler/icons-react';
+import { IconEye, IconCalendar, IconSearch, IconMapPin, IconBriefcase } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -124,9 +125,54 @@ export default function JobsPage() {
     return (
       <ProtectedRoute>
         <SidebarLayout>
-          <Center style={{ minHeight: '60vh' }}>
-            <Loader size="xl" />
-          </Center>
+          <Container size="lg" py="xl">
+            <Stack gap="xl">
+              {/* 標題骨架 */}
+              <Group justify="space-between" align="center">
+                <div>
+                  <Skeleton height={32} width={200} radius="md" mb="xs" />
+                  <Skeleton height={18} width={300} radius="md" />
+                </div>
+                <Skeleton height={40} width={120} radius="xl" />
+              </Group>
+
+              {/* 搜尋/篩選骨架 */}
+              <Grid>
+                <Grid.Col span={{ base: 12, md: 6 }}>
+                  <Skeleton height={42} radius="md" />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 3 }}>
+                  <Skeleton height={42} radius="md" />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 3 }}>
+                  <Skeleton height={42} radius="md" />
+                </Grid.Col>
+              </Grid>
+
+              {/* 卡片列表骨架 */}
+              <Stack gap="md">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Card key={i} shadow="sm" padding="lg" radius="md" className="glass-card-soft">
+                    <Stack gap="md">
+                      <Skeleton height={22} width="60%" radius="md" />
+                      <Skeleton height={16} width="40%" radius="md" />
+                      <Group gap="md">
+                        <Skeleton height={14} width={80} radius="md" />
+                        <Skeleton height={14} width={100} radius="md" />
+                        <Skeleton height={14} width={80} radius="md" />
+                      </Group>
+                      <Skeleton height={14} width="90%" radius="md" />
+                      <Skeleton height={14} width="70%" radius="md" />
+                      <Group gap="xs">
+                        <Skeleton height={22} width={60} radius="xl" />
+                        <Skeleton height={22} width={50} radius="xl" />
+                      </Group>
+                    </Stack>
+                  </Card>
+                ))}
+              </Stack>
+            </Stack>
+          </Container>
         </SidebarLayout>
       </ProtectedRoute>
     );
@@ -145,9 +191,14 @@ export default function JobsPage() {
               <Text c="dimmed">找到您理想的工作機會</Text>
             </div>
             {isAuthenticated() && (
-              <Button onClick={() => router.push('/jobs/create')}>
-                發布職缺
-              </Button>
+              <Group gap="sm">
+                <Button variant="light" onClick={() => router.push('/jobs/applications')}>
+                  管理交流申請
+                </Button>
+                <Button onClick={() => router.push('/jobs/create')}>
+                  發布職缺
+                </Button>
+              </Group>
             )}
           </Group>
 
@@ -190,9 +241,29 @@ export default function JobsPage() {
           </Grid>
 
           {jobs.length === 0 ? (
-            <Center py="xl">
-              <Text c="dimmed">目前沒有職缺</Text>
-            </Center>
+            <Card shadow="sm" padding="xl" radius="md" className="glass-card-soft" style={{ border: 'none' }}>
+              <Stack align="center" gap="md" py="xl">
+                <IconBriefcase size={56} color="var(--mantine-color-teal-3)" stroke={1.5} />
+                <Text size="lg" fw={600} c="dimmed">目前沒有職缺</Text>
+                <Text size="sm" c="dimmed" ta="center" maw={360}>
+                  {debouncedSearchTerm || filterType || filterLocation
+                    ? '試試調整搜尋條件或篩選條件'
+                    : '成為第一個發布職缺的人，幫助校友找到理想工作'}
+                </Text>
+                {isAuthenticated() && !debouncedSearchTerm && !filterType && !filterLocation && (
+                  <Button
+                    variant="light"
+                    color="teal"
+                    radius="xl"
+                    leftSection={<IconBriefcase size={16} />}
+                    onClick={() => router.push('/jobs/create')}
+                    mt="xs"
+                  >
+                    發布第一個職缺
+                  </Button>
+                )}
+              </Stack>
+            </Card>
           ) : (
             <Stack gap="md">
               {total > 0 && (

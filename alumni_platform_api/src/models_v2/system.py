@@ -28,6 +28,9 @@ class NotificationType(enum.Enum):
     USER_REGISTRATION_REQUEST = "user_registration_request"  # 新用戶註冊申請
     USER_REGISTRATION_APPROVED = "user_registration_approved"  # 用戶註冊通過
     USER_REGISTRATION_REJECTED = "user_registration_rejected"  # 用戶註冊拒絕
+    CONTACT_REQUEST = "contact_request"              # 聯絡申請
+    CONTACT_ACCEPTED = "contact_accepted"            # 聯絡申請已接受
+    CONTACT_REJECTED = "contact_rejected"            # 聯絡申請已拒絕
     OTHER = "other"                                # 其他
 
 

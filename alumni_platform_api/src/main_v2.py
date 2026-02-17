@@ -18,7 +18,7 @@ from src.models_v2 import Job, JobCategory, JobRequest
 from src.models_v2 import Event, EventCategory, EventRegistration
 from src.models_v2 import Bulletin, BulletinCategory, BulletinComment, Article
 from src.models_v2 import Conversation, Message
-from src.models_v2 import Notification, SystemSetting
+from src.models_v2 import Notification, SystemSetting, ContactRequest
 
 # Import routes_v2
 from src.routes.auth_v2 import auth_v2_bp
@@ -32,6 +32,7 @@ from src.routes.csv_import_export import csv_bp
 from src.routes.admin_v2 import admin_v2_bp
 from src.routes.cms_v2 import cms_v2_bp
 from src.routes.search_v2 import search_bp
+from src.routes.contact_requests_v2 import contact_requests_v2_bp
 
 # 保留相容舊版的 routes (暫時) - 已註釋以避免模型衝突
 # from src.routes.user import user_bp
@@ -85,6 +86,7 @@ app.register_blueprint(csv_bp)              # /api/csv/*
 app.register_blueprint(admin_v2_bp)          # /api/v2/admin/*
 app.register_blueprint(cms_v2_bp)           # /api/v2/cms/*
 app.register_blueprint(search_bp)            # /api/v2/search/*
+app.register_blueprint(contact_requests_v2_bp)  # /api/v2/contact-requests/*, /api/v2/contacts/*
 
 # Register blueprints - v1 routes (backward compatibility) - 已註釋以避免模型衝突
 # app.register_blueprint(user_bp, url_prefix='/api')

@@ -14,6 +14,7 @@ import {
   Center,
   Button,
   Tabs,
+  Skeleton,
 } from '@mantine/core';
 import { notifications as mantineNotifications } from '@mantine/notifications';
 import {
@@ -36,7 +37,7 @@ import { useRouter } from 'next/navigation';
 
 interface Notification {
   id: number;
-  notification_type: 'job' | 'event' | 'bulletin' | 'message' | 'system' | 'user_registration_request' | 'user_registration_approved' | 'user_registration_rejected' | 'job_request' | 'job_request_approved' | 'job_request_rejected';
+  notification_type: 'job' | 'event' | 'bulletin' | 'message' | 'system' | 'user_registration_request' | 'user_registration_approved' | 'user_registration_rejected' | 'job_request' | 'job_request_approved' | 'job_request_rejected' | 'contact_request' | 'contact_accepted' | 'contact_rejected';
   title: string;
   content: string;
   message?: string;
@@ -66,6 +67,12 @@ const getNotificationIcon = (type: string) => {
       return <IconUserCheck size={20} color="green" />;
     case 'user_registration_rejected':
       return <IconUserX size={20} color="red" />;
+    case 'contact_request':
+      return <IconUserPlus size={20} color="indigo" />;
+    case 'contact_accepted':
+      return <IconUserCheck size={20} color="green" />;
+    case 'contact_rejected':
+      return <IconUserX size={20} color="red" />;
     default:
       return <IconSettings size={20} color="gray" />;
   }
@@ -89,6 +96,12 @@ const getNotificationColor = (type: string) => {
     case 'user_registration_approved':
       return 'green';
     case 'user_registration_rejected':
+      return 'red';
+    case 'contact_request':
+      return 'indigo';
+    case 'contact_accepted':
+      return 'green';
+    case 'contact_rejected':
       return 'red';
     default:
       return 'gray';
@@ -239,6 +252,9 @@ export default function NotificationsPage() {
     if (activeTab === 'unread') return notification.status === 'unread';
     if (activeTab === 'read') return notification.status === 'read';
     if (activeTab === 'archived') return notification.status === 'archived';
+    if (activeTab === 'contact_request') {
+      return ['contact_request', 'contact_accepted', 'contact_rejected'].includes(notification.notification_type);
+    }
     return notification.notification_type === activeTab;
   });
 
@@ -246,9 +262,52 @@ export default function NotificationsPage() {
     return (
       <ProtectedRoute>
         <SidebarLayout>
-          <Center h={400}>
-            <Loader size="xl" />
-          </Center>
+          <Container size="lg" py="xl">
+            <Stack gap="xl">
+              {/* 標題骨架 */}
+              <Group justify="space-between">
+                <div>
+                  <Skeleton height={32} width={180} radius="md" mb="xs" />
+                  <Skeleton height={18} width={240} radius="md" />
+                </div>
+                <Skeleton height={40} width={160} radius="xl" />
+              </Group>
+
+              {/* Tabs 骨架 */}
+              <Group gap="md">
+                <Skeleton height={36} width={80} radius="md" />
+                <Skeleton height={36} width={60} radius="md" />
+                <Skeleton height={36} width={60} radius="md" />
+                <Skeleton height={36} width={60} radius="md" />
+                <Skeleton height={36} width={60} radius="md" />
+              </Group>
+
+              {/* 通知條目骨架 */}
+              <Stack gap="md">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Card key={i} shadow="sm" padding="lg" radius="md" className="glass-card-soft">
+                    <Group justify="space-between" wrap="nowrap">
+                      <Group wrap="nowrap" style={{ flex: 1 }}>
+                        <Skeleton height={40} width={40} circle />
+                        <div style={{ flex: 1 }}>
+                          <Group gap="xs" mb="xs">
+                            <Skeleton height={16} width="50%" radius="md" />
+                            <Skeleton height={18} width={40} radius="xl" />
+                          </Group>
+                          <Skeleton height={14} width="70%" radius="md" mb={6} />
+                          <Skeleton height={12} width={120} radius="md" />
+                        </div>
+                      </Group>
+                      <Group gap="xs" wrap="nowrap">
+                        <Skeleton height={28} width={28} radius="md" />
+                        <Skeleton height={28} width={28} radius="md" />
+                      </Group>
+                    </Group>
+                  </Card>
+                ))}
+              </Stack>
+            </Stack>
+          </Container>
         </SidebarLayout>
       </ProtectedRoute>
     );
@@ -306,6 +365,9 @@ export default function NotificationsPage() {
                 <Tabs.Tab value="bulletin" leftSection={<IconBell size={16} />}>
                   公告
                 </Tabs.Tab>
+                <Tabs.Tab value="contact_request" leftSection={<IconUserPlus size={16} />}>
+                  聯絡
+                </Tabs.Tab>
               </Tabs.List>
             </Tabs>
 
@@ -319,8 +381,18 @@ export default function NotificationsPage() {
                     radius="md"
                     withBorder
                     className="glass-card-soft animate-list-item"
+                    onClick={() => {
+                      const url = notification.action_url || notification.link_url;
+                      if (url) {
+                        if (notification.status === 'unread') {
+                          handleMarkAsRead(notification.id);
+                        }
+                        router.push(url);
+                      }
+                    }}
                     style={{
                       backgroundColor: notification.status === 'unread' ? 'rgba(66, 153, 225, 0.08)' : undefined,
+                      cursor: (notification.action_url || notification.link_url) ? 'pointer' : undefined,
                       animationDelay: `${Math.min(index, 9) * 0.05}s`,
                     }}
                   >
@@ -351,6 +423,9 @@ export default function NotificationsPage() {
                               {notification.notification_type === 'user_registration_request' && '會員申請'}
                               {notification.notification_type === 'user_registration_approved' && '申請通過'}
                               {notification.notification_type === 'user_registration_rejected' && '申請拒絕'}
+                              {notification.notification_type === 'contact_request' && '聯絡申請'}
+                              {notification.notification_type === 'contact_accepted' && '聯絡已接受'}
+                              {notification.notification_type === 'contact_rejected' && '聯絡已拒絕'}
                             </Badge>
                           </Group>
                           <Text size="sm" c="dimmed" mb="xs">

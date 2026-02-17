@@ -16,6 +16,7 @@ import {
   Loader,
   Center,
   Pagination,
+  Skeleton,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
@@ -256,9 +257,74 @@ export default function EventsPage() {
     return (
       <ProtectedRoute>
         <SidebarLayout>
-          <Center style={{ minHeight: '60vh' }}>
-            <Loader size="xl" />
-          </Center>
+          <Container size="lg" py="xl">
+            <Stack gap="xl">
+              {/* 標題骨架 */}
+              <Group justify="space-between" align="center">
+                <div>
+                  <Skeleton height={32} width={200} radius="md" mb="xs" />
+                  <Skeleton height={18} width={300} radius="md" />
+                </div>
+                <Skeleton height={40} width={120} radius="xl" />
+              </Group>
+
+              {/* 搜尋/篩選骨架 */}
+              <Grid>
+                <Grid.Col span={{ base: 12, md: 6 }}>
+                  <Skeleton height={42} radius="md" />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 6 }}>
+                  <Skeleton height={42} radius="md" />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 4 }}>
+                  <Skeleton height={42} radius="md" />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 4 }}>
+                  <Skeleton height={42} radius="md" />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 4 }}>
+                  <Skeleton height={42} radius="md" />
+                </Grid.Col>
+              </Grid>
+
+              {/* 活動卡片骨架 (2 欄 Grid) */}
+              <Grid>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Grid.Col key={i} span={{ base: 12, md: 6 }}>
+                    <Card shadow="sm" padding="lg" radius="md" className="glass-card-soft">
+                      <Stack gap="md">
+                        {/* 封面圖骨架 */}
+                        <Skeleton height={200} radius="md" />
+                        {/* Badge + 標題 */}
+                        <Group gap="xs">
+                          <Skeleton height={22} width={60} radius="xl" />
+                          <Skeleton height={22} width={50} radius="xl" />
+                        </Group>
+                        <Skeleton height={20} width="80%" radius="md" />
+                        {/* 元資訊行 */}
+                        <Stack gap={6}>
+                          <Skeleton height={14} width="70%" radius="md" />
+                          <Skeleton height={14} width="50%" radius="md" />
+                          <Skeleton height={14} width="40%" radius="md" />
+                          <Skeleton height={14} width="55%" radius="md" />
+                          <Skeleton height={14} width={60} radius="md" />
+                        </Stack>
+                        {/* 進度條骨架 */}
+                        <Skeleton height={8} radius="xl" />
+                        {/* 描述 */}
+                        <Skeleton height={14} width="90%" radius="md" />
+                        {/* 底部 */}
+                        <Group justify="space-between">
+                          <Skeleton height={12} width={100} radius="md" />
+                          <Skeleton height={12} width={60} radius="md" />
+                        </Group>
+                      </Stack>
+                    </Card>
+                  </Grid.Col>
+                ))}
+              </Grid>
+            </Stack>
+          </Container>
         </SidebarLayout>
       </ProtectedRoute>
     );
@@ -550,9 +616,29 @@ export default function EventsPage() {
                 )}
               </Stack>
             ) : (
-              <Center py="xl">
-                <Text c="dimmed">目前沒有符合條件的活動</Text>
-              </Center>
+              <Card shadow="sm" padding="xl" radius="md" className="glass-card-soft" style={{ border: 'none' }}>
+                <Stack align="center" gap="md" py="xl">
+                  <IconCalendar size={56} color="var(--mantine-color-orange-3)" stroke={1.5} />
+                  <Text size="lg" fw={600} c="dimmed">目前沒有符合條件的活動</Text>
+                  <Text size="sm" c="dimmed" ta="center" maw={360}>
+                    {searchTerm || filterCategory
+                      ? '試試調整搜尋條件或篩選條件'
+                      : '快來舉辦一場活動，和校友們聚會交流吧'}
+                  </Text>
+                  {isAuthenticated() && !searchTerm && !filterCategory && (
+                    <Button
+                      variant="light"
+                      color="orange"
+                      radius="xl"
+                      leftSection={<IconCalendar size={16} />}
+                      onClick={() => router.push('/events/create')}
+                      mt="xs"
+                    >
+                      建立第一場活動
+                    </Button>
+                  )}
+                </Stack>
+              </Card>
             )}
           </Stack>
         </Container>

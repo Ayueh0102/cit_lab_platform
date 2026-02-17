@@ -9,9 +9,12 @@ import {
   Stack,
   Group,
   Avatar,
+  Button,
   Loader,
   Center,
+  Skeleton,
 } from '@mantine/core';
+import { IconMessage, IconUsers } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -63,9 +66,36 @@ export default function MessagesPage() {
   if (loading) {
     return (
       <ProtectedRoute><SidebarLayout>
-        <Center style={{ minHeight: '60vh' }}>
-          <Loader size="xl" />
-        </Center>
+        <Container size="lg" py="xl">
+          <Stack gap="xl">
+            {/* 標題骨架 */}
+            <div>
+              <Skeleton height={32} width={180} radius="md" mb="xs" />
+              <Skeleton height={18} width={240} radius="md" />
+            </div>
+
+            {/* 對話列表骨架 */}
+            <Stack gap="md">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Card key={i} shadow="sm" padding="lg" radius="md" className="glass-card-soft">
+                  <Group gap="md">
+                    <Skeleton height={50} width={50} circle />
+                    <Stack gap={4} style={{ flex: 1 }}>
+                      <Group justify="space-between">
+                        <Skeleton height={16} width={100} radius="md" />
+                        <Skeleton height={12} width={80} radius="md" />
+                      </Group>
+                      <Group justify="space-between">
+                        <Skeleton height={14} width="60%" radius="md" />
+                        <Skeleton height={24} width={24} circle />
+                      </Group>
+                    </Stack>
+                  </Group>
+                </Card>
+              ))}
+            </Stack>
+          </Stack>
+        </Container>
       </SidebarLayout></ProtectedRoute>
     );
   }
@@ -82,14 +112,25 @@ export default function MessagesPage() {
           </div>
 
           {conversations.length === 0 ? (
-            <Center py="xl">
-              <Stack align="center" gap="md">
-                <Text c="dimmed">尚無對話記錄</Text>
-                <Text size="sm" c="dimmed">
-                  在職缺或活動頁面與其他校友開始對話
+            <Card shadow="sm" padding="xl" radius="md" className="glass-card-soft" style={{ border: 'none' }}>
+              <Stack align="center" gap="md" py="xl">
+                <IconMessage size={56} color="var(--mantine-color-cyan-3)" stroke={1.5} />
+                <Text size="lg" fw={600} c="dimmed">尚無對話記錄</Text>
+                <Text size="sm" c="dimmed" ta="center" maw={360}>
+                  前往系友通訊錄，與校友們開始聊天交流
                 </Text>
+                <Button
+                  variant="light"
+                  color="cyan"
+                  radius="xl"
+                  leftSection={<IconUsers size={16} />}
+                  onClick={() => router.push('/directory')}
+                  mt="xs"
+                >
+                  瀏覽系友通訊錄
+                </Button>
               </Stack>
-            </Center>
+            </Card>
           ) : (
             <Stack gap="md">
               {conversations.map((conv, index) => (

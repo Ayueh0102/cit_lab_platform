@@ -20,6 +20,7 @@ interface JobData {
   salary_range?: string;
   job_type?: string;
   category_id?: number;
+  status?: string;
 }
 
 interface EventData {
@@ -264,6 +265,41 @@ export const api = {
       fetchAPI('/api/v2/job-requests', {
         method: 'POST',
         body: { job_id: jobId, ...data },
+        token,
+      }),
+
+    getReceivedRequests: (token: string, params?: { status?: string; page?: number; per_page?: number }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      const url = queryParams.toString()
+        ? `/api/v2/job-requests/received?${queryParams.toString()}`
+        : '/api/v2/job-requests/received';
+      return fetchAPI(url, { token });
+    },
+
+    getSentRequests: (token: string, params?: { status?: string; page?: number; per_page?: number }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      const url = queryParams.toString()
+        ? `/api/v2/job-requests/sent?${queryParams.toString()}`
+        : '/api/v2/job-requests/sent';
+      return fetchAPI(url, { token });
+    },
+
+    acceptRequest: (requestId: number, token: string) =>
+      fetchAPI(`/api/v2/job-requests/${requestId}/accept`, {
+        method: 'POST',
+        token,
+      }),
+
+    rejectRequest: (requestId: number, data: { reason?: string }, token: string) =>
+      fetchAPI(`/api/v2/job-requests/${requestId}/reject`, {
+        method: 'POST',
+        body: data,
         token,
       }),
   },
@@ -1073,5 +1109,62 @@ export const api = {
         },
       });
     },
+  },
+
+  // 聯絡申請相關
+  contactRequests: {
+    create: (data: { target_id: number; message?: string }, token: string) =>
+      fetchAPI('/api/v2/contact-requests', {
+        method: 'POST',
+        body: data,
+        token,
+      }),
+
+    getSent: (token: string, params?: { status?: string; page?: number; per_page?: number }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      const url = queryParams.toString()
+        ? `/api/v2/contact-requests/sent?${queryParams.toString()}`
+        : '/api/v2/contact-requests/sent';
+      return fetchAPI(url, { token });
+    },
+
+    getReceived: (token: string, params?: { status?: string; page?: number; per_page?: number }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      const url = queryParams.toString()
+        ? `/api/v2/contact-requests/received?${queryParams.toString()}`
+        : '/api/v2/contact-requests/received';
+      return fetchAPI(url, { token });
+    },
+
+    accept: (requestId: number, token: string) =>
+      fetchAPI(`/api/v2/contact-requests/${requestId}/accept`, {
+        method: 'POST',
+        token,
+      }),
+
+    reject: (requestId: number, token: string) =>
+      fetchAPI(`/api/v2/contact-requests/${requestId}/reject`, {
+        method: 'POST',
+        token,
+      }),
+
+    getContacts: (token: string, params?: { page?: number; per_page?: number }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      const url = queryParams.toString()
+        ? `/api/v2/contacts?${queryParams.toString()}`
+        : '/api/v2/contacts';
+      return fetchAPI(url, { token });
+    },
+
+    getStatus: (userId: number, token: string) =>
+      fetchAPI(`/api/v2/contacts/status/${userId}`, { token }),
   },
 };

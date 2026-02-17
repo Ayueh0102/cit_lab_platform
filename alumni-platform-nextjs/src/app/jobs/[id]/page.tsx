@@ -17,6 +17,7 @@ import {
   Textarea,
   Grid,
   Anchor,
+  Skeleton,
 } from '@mantine/core';
 import { IconMail, IconPhone, IconWorld, IconCalendar, IconEye, IconMapPin, IconBriefcase } from '@tabler/icons-react';
 import { useForm } from '@mantine/form';
@@ -144,9 +145,46 @@ export default function JobDetailPage() {
   if (loading) {
     return (
       <ProtectedRoute><SidebarLayout>
-        <Center style={{ minHeight: '60vh' }}>
-          <Loader size="xl" />
-        </Center>
+        <Container size="md" py="xl">
+          <Stack gap="xl">
+            <Skeleton height={36} width={120} radius="md" />
+            <Card shadow="sm" padding="xl" radius="md" className="glass-card-soft">
+              <Stack gap="lg">
+                <Group justify="space-between" wrap="wrap">
+                  <Skeleton height={32} width="60%" radius="md" />
+                  <Group gap="xs">
+                    <Skeleton height={28} width={60} radius="xl" />
+                    <Skeleton height={28} width={50} radius="xl" />
+                  </Group>
+                </Group>
+                <Group gap="md">
+                  <Skeleton height={18} width={120} radius="md" />
+                  <Skeleton height={18} width={100} radius="md" />
+                </Group>
+                <Skeleton height={18} width={140} radius="md" />
+                <Group gap="md">
+                  <Skeleton height={14} width={80} radius="md" />
+                  <Skeleton height={14} width={120} radius="md" />
+                </Group>
+                <Skeleton height={1} width="100%" />
+                <Skeleton height={20} width={100} radius="md" />
+                <Skeleton height={14} width="100%" radius="md" />
+                <Skeleton height={14} width="90%" radius="md" />
+                <Skeleton height={14} width="75%" radius="md" />
+                <Skeleton height={14} width="85%" radius="md" />
+                <Skeleton height={1} width="100%" />
+                <Skeleton height={20} width={100} radius="md" />
+                <Skeleton height={14} width="95%" radius="md" />
+                <Skeleton height={14} width="80%" radius="md" />
+                <Skeleton height={1} width="100%" />
+                <Group justify="space-between">
+                  <Skeleton height={14} width={120} radius="md" />
+                  <Skeleton height={44} width={120} radius="xl" />
+                </Group>
+              </Stack>
+            </Card>
+          </Stack>
+        </Container>
       </SidebarLayout></ProtectedRoute>
     );
   }

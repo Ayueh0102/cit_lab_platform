@@ -11,8 +11,7 @@ import {
   Badge,
   Button,
   ActionIcon,
-  Loader,
-  Center,
+  Skeleton,
   Tabs,
   Modal,
   TextInput,
@@ -240,22 +239,7 @@ export default function MyJobsPage() {
       const token = getToken();
       if (!token) return;
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v2/jobs/${job.id}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ status: 'CLOSED' }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || '無法關閉職缺');
-      }
+      await api.jobs.update(job.id, { status: 'CLOSED' }, token);
 
       notifications.show({
         title: '關閉成功',
@@ -295,9 +279,44 @@ export default function MyJobsPage() {
     return (
       <ProtectedRoute>
         <SidebarLayout>
-          <Center style={{ minHeight: '60vh' }}>
-            <Loader size="xl" />
-          </Center>
+          <Container size="lg" py="xl">
+            <Stack gap="xl">
+              <Group justify="space-between" align="center">
+                <div>
+                  <Skeleton height={32} width={180} radius="md" mb="xs" />
+                  <Skeleton height={18} width={240} radius="md" />
+                </div>
+                <Skeleton height={40} width={120} radius="xl" />
+              </Group>
+              <Group gap="md">
+                <Skeleton height={36} width={100} radius="md" />
+                <Skeleton height={36} width={80} radius="md" />
+                <Skeleton height={36} width={80} radius="md" />
+              </Group>
+              <Stack gap="md">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i} shadow="sm" padding="lg" radius="md" className="glass-card-soft">
+                    <Group justify="space-between" mb="md">
+                      <div style={{ flex: 1 }}>
+                        <Group gap="xs" mb="xs">
+                          <Skeleton height={20} width="45%" radius="md" />
+                          <Skeleton height={22} width={60} radius="xl" />
+                          <Skeleton height={22} width={50} radius="xl" />
+                        </Group>
+                        <Skeleton height={14} width="30%" radius="md" mb="sm" />
+                        <Group gap="md">
+                          <Skeleton height={12} width={80} radius="md" />
+                          <Skeleton height={12} width={60} radius="md" />
+                          <Skeleton height={12} width={100} radius="md" />
+                        </Group>
+                      </div>
+                      <Skeleton height={28} width={28} radius="md" />
+                    </Group>
+                  </Card>
+                ))}
+              </Stack>
+            </Stack>
+          </Container>
         </SidebarLayout>
       </ProtectedRoute>
     );
@@ -338,15 +357,25 @@ export default function MyJobsPage() {
 
               <Tabs.Panel value={activeTab || 'all'} pt="xl">
                 {filteredJobs.length === 0 ? (
-                  <Center py="xl">
-                    <Stack align="center" gap="md">
-                      <IconBriefcase size={48} style={{ opacity: 0.5 }} />
-                      <Text c="dimmed">目前沒有職缺</Text>
-                      <Button onClick={() => router.push('/jobs/create')}>
+                  <Card shadow="sm" padding="xl" radius="md" className="glass-card-soft" style={{ border: 'none' }}>
+                    <Stack align="center" gap="md" py="xl">
+                      <IconBriefcase size={56} color="var(--mantine-color-teal-3)" stroke={1.5} />
+                      <Text size="lg" fw={600} c="dimmed">目前沒有職缺</Text>
+                      <Text size="sm" c="dimmed" ta="center" maw={360}>
+                        {activeTab === 'closed' ? '沒有已關閉的職缺' : '發布您的第一個職缺，幫助系友找到機會'}
+                      </Text>
+                      <Button
+                        variant="light"
+                        color="teal"
+                        radius="xl"
+                        leftSection={<IconPlus size={16} />}
+                        onClick={() => router.push('/jobs/create')}
+                        mt="xs"
+                      >
                         發布第一個職缺
                       </Button>
                     </Stack>
-                  </Center>
+                  </Card>
                 ) : (
                   <Stack gap="md">
                     {filteredJobs.map((job) => (

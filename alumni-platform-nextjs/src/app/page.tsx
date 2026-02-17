@@ -344,7 +344,12 @@ export default function HomePage() {
                     </Paper>
                   ))}
                   {recentJobs.length === 0 && (
-                    <Text c="dimmed" ta="center" py="xl">目前沒有最新職缺</Text>
+                    <Paper p="lg" radius="md" style={{ background: 'rgba(255,255,255,0.3)' }}>
+                      <Stack align="center" gap="xs">
+                        <IconBriefcase size={36} color="var(--mantine-color-teal-3)" stroke={1.5} />
+                        <Text size="sm" c="dimmed" ta="center">目前沒有最新職缺</Text>
+                      </Stack>
+                    </Paper>
                   )}
                 </Stack>
               </Box>
@@ -395,7 +400,12 @@ export default function HomePage() {
                   ))}
                 </SimpleGrid>
                 {recentEvents.length === 0 && (
-                  <Text c="dimmed" ta="center" py="xl">目前沒有近期活動</Text>
+                  <Paper p="lg" radius="md" style={{ background: 'rgba(255,255,255,0.3)' }}>
+                    <Stack align="center" gap="xs">
+                      <IconCalendar size={36} color="var(--mantine-color-orange-3)" stroke={1.5} />
+                      <Text size="sm" c="dimmed" ta="center">目前沒有近期活動</Text>
+                    </Stack>
+                  </Paper>
                 )}
               </Box>
             </Stack>
@@ -449,7 +459,12 @@ export default function HomePage() {
                     </Paper>
                   ))}
                   {recentBulletins.length === 0 && (
-                    <Text c="dimmed" ta="center" py="md">目前沒有公告</Text>
+                    <Paper p="md" radius="md" style={{ background: 'rgba(255,255,255,0.3)' }}>
+                      <Stack align="center" gap="xs">
+                        <IconBell size={28} color="var(--mantine-color-grape-3)" stroke={1.5} />
+                        <Text size="sm" c="dimmed" ta="center">目前沒有公告</Text>
+                      </Stack>
+                    </Paper>
                   )}
                 </Stack>
 

@@ -236,7 +236,7 @@ def create_user_registration_rejected_notification(user_id: int, reason: str = N
     message = "很抱歉，您的系友會會員申請未通過審核。"
     if reason:
         message += f" 原因：{reason}"
-    
+
     return create_notification(
         user_id=user_id,
         notification_type=NotificationType.USER_REGISTRATION_REJECTED,
@@ -245,5 +245,47 @@ def create_user_registration_rejected_notification(user_id: int, reason: str = N
         related_type="user",
         related_id=user_id,
         action_url=None
+    )
+
+
+# ========================================
+# 聯絡申請通知
+# ========================================
+def create_contact_request_notification(target_id: int, requester_name: str, request_id: int):
+    """建立聯絡申請通知給目標使用者"""
+    return create_notification(
+        user_id=target_id,
+        notification_type=NotificationType.CONTACT_REQUEST,
+        title="新的聯絡申請",
+        message=f"{requester_name} 向您發送了聯絡申請",
+        related_type="contact_request",
+        related_id=request_id,
+        action_url="/directory?tab=received"
+    )
+
+
+def create_contact_accepted_notification(requester_id: int, target_name: str, request_id: int, target_user_id: int):
+    """建立聯絡申請已接受通知給申請者"""
+    return create_notification(
+        user_id=requester_id,
+        notification_type=NotificationType.CONTACT_ACCEPTED,
+        title="聯絡申請已接受",
+        message=f"{target_name} 已接受您的聯絡申請",
+        related_type="contact_request",
+        related_id=request_id,
+        action_url=f"/directory/{target_user_id}"
+    )
+
+
+def create_contact_rejected_notification(requester_id: int, target_name: str, request_id: int):
+    """建立聯絡申請已拒絕通知給申請者"""
+    return create_notification(
+        user_id=requester_id,
+        notification_type=NotificationType.CONTACT_REJECTED,
+        title="聯絡申請已拒絕",
+        message=f"{target_name} 婉拒了您的聯絡申請",
+        related_type="contact_request",
+        related_id=request_id,
+        action_url="/directory"
     )
 

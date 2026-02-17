@@ -213,9 +213,17 @@ export default function BulletinsPage() {
             </Group>
 
             {bulletins.length === 0 ? (
-              <Center py="xl">
-                <Text c="dimmed">目前沒有公告</Text>
-              </Center>
+              <Card shadow="sm" padding="xl" radius="md" className="glass-card-soft" style={{ border: 'none' }}>
+                <Stack align="center" gap="md" py="xl">
+                  <IconStar size={56} color="var(--mantine-color-grape-3)" stroke={1.5} />
+                  <Text size="lg" fw={600} c="dimmed">目前沒有公告</Text>
+                  <Text size="sm" c="dimmed" ta="center" maw={360}>
+                    {debouncedSearchTerm || filterType || filterCategory
+                      ? '試試調整搜尋條件或篩選條件'
+                      : '校園公告將在這裡顯示，請稍後再來查看'}
+                  </Text>
+                </Stack>
+              </Card>
             ) : (
               <Stack gap="md">
                 {total > 0 && (

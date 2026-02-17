@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Container,
   Title,
@@ -25,6 +25,13 @@ import {
   Progress,
   Tooltip,
   Pagination,
+  Menu,
+  Skeleton,
+  Alert,
+  Divider,
+  ThemeIcon,
+  List,
+  Code,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -50,6 +57,11 @@ import {
   IconSchool,
   IconMail,
   IconPhone,
+  IconChevronDown,
+  IconFileTypeCsv,
+  IconInfoCircle,
+  IconAlertCircle,
+  IconFileDownload,
 } from '@tabler/icons-react';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -103,6 +115,40 @@ interface User {
   created_at: string;
 }
 
+interface ImportResult {
+  imported?: number;
+  created?: number;
+  updated?: number;
+  failed?: number;
+  errors?: string[];
+  count?: number;
+  total?: number;
+}
+
+// CSV 欄位說明
+const CSV_FIELD_DESCRIPTIONS: Record<string, { fields: string[]; required: string[]; description: string }> = {
+  users: {
+    fields: ['email', 'name', 'display_name', 'phone', 'graduation_year', 'class_year', 'degree', 'major', 'student_id', 'advisor_1', 'advisor_2', 'thesis_title'],
+    required: ['email', 'name'],
+    description: '匯入使用者資料。email 必須唯一，已存在的 email 將更新資料。',
+  },
+  jobs: {
+    fields: ['title', 'company', 'location', 'description', 'requirements', 'salary_range', 'job_type', 'contact_email'],
+    required: ['title', 'company'],
+    description: '匯入職缺資料。job_type 可選值：full_time, part_time, internship, contract。',
+  },
+  events: {
+    fields: ['title', 'description', 'start_time', 'end_time', 'location', 'max_participants', 'is_online', 'event_type'],
+    required: ['title', 'start_time'],
+    description: '匯入活動資料。時間格式為 YYYY-MM-DD HH:mm。is_online 填 true 或 false。',
+  },
+  bulletins: {
+    fields: ['title', 'content', 'bulletin_type', 'category', 'is_pinned'],
+    required: ['title', 'content'],
+    description: '匯入公告資料。bulletin_type 可選值：announcement, news, event。',
+  },
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -116,7 +162,7 @@ export default function AdminPage() {
     pending_users: 0,
     pending_jobs: 0,
   });
-  
+
   // 待審核用戶狀態
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [pendingUsersLoading, setPendingUsersLoading] = useState(false);
@@ -125,16 +171,17 @@ export default function AdminPage() {
   const [rejectModalOpened, setRejectModalOpened] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [users, setUsers] = useState<User[]>([]);
+  const [usersSearch, setUsersSearch] = useState('');
   const [editUserModalOpened, setEditUserModalOpened] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editUserRole, setEditUserRole] = useState<string>('');
   const [editUserStatus, setEditUserStatus] = useState<string>('');
-  const [exportOpened, { open: openExport, close: closeExport }] = useDisclosure(false);
   const [importOpened, { open: openImport, close: closeImport }] = useDisclosure(false);
   const [importType, setImportType] = useState<string>('users');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+
   // 職缺管理狀態
   const [jobs, setJobs] = useState<any[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
@@ -142,7 +189,7 @@ export default function AdminPage() {
   const [jobsStatusFilter, setJobsStatusFilter] = useState<string | null>(null);
   const [jobsPage, setJobsPage] = useState(1);
   const [jobsTotal, setJobsTotal] = useState(0);
-  
+
   // 活動管理狀態
   const [events, setEvents] = useState<any[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
@@ -150,7 +197,7 @@ export default function AdminPage() {
   const [eventsStatusFilter, setEventsStatusFilter] = useState<string | null>(null);
   const [eventsPage, setEventsPage] = useState(1);
   const [eventsTotal, setEventsTotal] = useState(0);
-  
+
   // 公告管理狀態
   const [bulletins, setBulletins] = useState<any[]>([]);
   const [bulletinsLoading, setBulletinsLoading] = useState(false);
@@ -158,6 +205,9 @@ export default function AdminPage() {
   const [bulletinsStatusFilter, setBulletinsStatusFilter] = useState<string | null>(null);
   const [bulletinsPage, setBulletinsPage] = useState(1);
   const [bulletinsTotal, setBulletinsTotal] = useState(0);
+
+  // 匯出中的狀態
+  const [exportingType, setExportingType] = useState<string | null>(null);
 
   const currentUser = getUser();
 
@@ -239,11 +289,11 @@ export default function AdminPage() {
         router.push('/auth/login');
         return;
       }
-      
+
       // 載入統計數據
       const statsData = await api.admin.getStatistics(token);
       const stats_info = statsData.statistics;
-      
+
       setStats({
         total_users: stats_info.users.total,
         total_jobs: stats_info.jobs.total,
@@ -285,22 +335,28 @@ export default function AdminPage() {
 
   const handleExportCSV = async (type: string) => {
     try {
+      setExportingType(type);
       const token = getToken();
       if (!token) return;
 
       let blob: Blob;
+      let typeName: string;
       switch (type) {
         case 'users':
           blob = await api.csv.exportUsers(token);
+          typeName = '使用者';
           break;
         case 'jobs':
           blob = await api.csv.exportJobs(token);
+          typeName = '職缺';
           break;
         case 'events':
           blob = await api.csv.exportEvents(token);
+          typeName = '活動';
           break;
         case 'bulletins':
           blob = await api.csv.exportBulletins(token);
+          typeName = '公告';
           break;
         default:
           throw new Error('不支援的匯出類型');
@@ -317,8 +373,9 @@ export default function AdminPage() {
 
       notifications.show({
         title: '匯出成功',
-        message: `${type} 資料已匯出`,
+        message: `${typeName}資料已成功匯出為 CSV 檔案`,
         color: 'green',
+        icon: <IconCheck size={16} />,
       });
     } catch (error) {
       notifications.show({
@@ -326,9 +383,49 @@ export default function AdminPage() {
         message: error instanceof Error ? error.message : '無法匯出資料',
         color: 'red',
       });
+    } finally {
+      setExportingType(null);
+    }
+  };
+
+  const handleDownloadTemplate = (type: string) => {
+    const fieldInfo = CSV_FIELD_DESCRIPTIONS[type];
+    if (!fieldInfo) return;
+
+    // 產生 CSV 範本（只有標題行 + 一行範例）
+    const header = fieldInfo.fields.join(',');
+    let exampleRow = '';
+    switch (type) {
+      case 'users':
+        exampleRow = 'alumni@example.com,王小明,小明,0912345678,2020,108,master,資訊工程,,,,';
+        break;
+      case 'jobs':
+        exampleRow = '軟體工程師,台積電,新竹市,負責系統開發,3年以上經驗,80K-120K,full_time,hr@example.com';
+        break;
+      case 'events':
+        exampleRow = '校友聚餐,年度校友聚餐活動,2026-06-15 18:00,2026-06-15 21:00,台北市信義區,50,false,reunion';
+        break;
+      case 'bulletins':
+        exampleRow = '系統公告,這是一則系統公告的內容,announcement,一般,false';
+        break;
     }
 
-    closeExport();
+    const csvContent = `\uFEFF${header}\n${exampleRow}`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${type}_template.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    notifications.show({
+      title: '範本已下載',
+      message: '請依照範本格式填寫資料後匯入',
+      color: 'blue',
+    });
   };
 
   const handleImportCSV = async () => {
@@ -341,8 +438,19 @@ export default function AdminPage() {
       return;
     }
 
+    // 驗證檔案類型
+    if (!importFile.name.toLowerCase().endsWith('.csv')) {
+      notifications.show({
+        title: '檔案格式錯誤',
+        message: '請選擇 .csv 格式的檔案',
+        color: 'red',
+      });
+      return;
+    }
+
     try {
       setUploading(true);
+      setImportResult(null);
       const token = getToken();
       if (!token) return;
 
@@ -364,13 +472,35 @@ export default function AdminPage() {
           throw new Error('不支援的匯入類型');
       }
 
-      notifications.show({
-        title: '匯入成功',
-        message: `成功匯入 ${result.imported || result.count || 0} 筆資料`,
-        color: 'green',
-      });
-      
-      closeImport();
+      // 解析匯入結果
+      const importResultData: ImportResult = {
+        imported: result.imported || result.count || result.total || 0,
+        created: result.created || 0,
+        updated: result.updated || 0,
+        failed: result.failed || result.errors?.length || 0,
+        errors: result.errors || [],
+      };
+
+      setImportResult(importResultData);
+
+      const totalSuccess = importResultData.imported || (importResultData.created || 0) + (importResultData.updated || 0);
+
+      if (importResultData.failed && importResultData.failed > 0) {
+        notifications.show({
+          title: '匯入完成（部分失敗）',
+          message: `成功 ${totalSuccess} 筆，失敗 ${importResultData.failed} 筆`,
+          color: 'orange',
+          icon: <IconAlertCircle size={16} />,
+        });
+      } else {
+        notifications.show({
+          title: '匯入成功',
+          message: `成功匯入 ${totalSuccess} 筆資料`,
+          color: 'green',
+          icon: <IconCheck size={16} />,
+        });
+      }
+
       setImportFile(null);
       loadDashboardData();
     } catch (error) {
@@ -384,6 +514,12 @@ export default function AdminPage() {
     }
   };
 
+  const handleCloseImport = useCallback(() => {
+    closeImport();
+    setImportFile(null);
+    setImportResult(null);
+  }, [closeImport]);
+
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setEditUserRole(user.role);
@@ -395,7 +531,7 @@ export default function AdminPage() {
     if (!editingUser) return;
 
     const currentUser = getUser();
-    
+
     // 檢查是否在修改自己的權限
     if (editingUser.id === currentUser?.id) {
       // 如果將自己從管理員改為普通用戶，需要確認
@@ -404,7 +540,7 @@ export default function AdminPage() {
           return;
         }
       }
-      
+
       // 如果將自己設為停用，需要確認
       if (editUserStatus === 'inactive' || editUserStatus === 'suspended') {
         if (!confirm('警告：您即將停用自己的帳號，這將導致您無法登入。確定要繼續嗎？')) {
@@ -497,7 +633,7 @@ export default function AdminPage() {
 
       await api.admin.deleteUser(userId, token);
       setUsers(users.filter((u) => u.id !== userId));
-      
+
       // 重新載入統計數據
       const statsData = await api.admin.getStatistics(token);
       const stats_info = statsData.statistics;
@@ -518,7 +654,7 @@ export default function AdminPage() {
         bulletins_this_month: stats_info.bulletins.new_this_month,
         bulletins_this_week: stats_info.bulletins.new_this_week,
       });
-      
+
       notifications.show({
         title: '刪除成功',
         message: '用戶已刪除',
@@ -574,7 +710,7 @@ export default function AdminPage() {
       await api.admin.approveJob(jobId, token);
       await loadJobs();
       await loadDashboardData(); // 更新統計數據
-      
+
       notifications.show({
         title: '審核成功',
         message: '職缺已通過審核',
@@ -601,7 +737,7 @@ export default function AdminPage() {
       await api.jobs.delete(jobId, token);
       await loadJobs();
       await loadDashboardData();
-      
+
       notifications.show({
         title: '刪除成功',
         message: '職缺已刪除',
@@ -657,7 +793,7 @@ export default function AdminPage() {
       await api.admin.approveEvent(eventId, token);
       await loadEvents();
       await loadDashboardData();
-      
+
       notifications.show({
         title: '審核成功',
         message: '活動已通過審核',
@@ -684,7 +820,7 @@ export default function AdminPage() {
       await api.events.delete(eventId, token);
       await loadEvents();
       await loadDashboardData();
-      
+
       notifications.show({
         title: '刪除成功',
         message: '活動已刪除',
@@ -740,7 +876,7 @@ export default function AdminPage() {
       await api.admin.approveBulletin(bulletinId, token);
       await loadBulletins();
       await loadDashboardData();
-      
+
       notifications.show({
         title: '審核成功',
         message: '公告已通過審核',
@@ -767,7 +903,7 @@ export default function AdminPage() {
       await api.bulletins.delete(bulletinId, token);
       await loadBulletins();
       await loadDashboardData();
-      
+
       notifications.show({
         title: '刪除成功',
         message: '公告已刪除',
@@ -813,7 +949,7 @@ export default function AdminPage() {
       if (!token) return;
 
       await api.admin.approveUser(userId, token);
-      
+
       notifications.show({
         title: '審核成功',
         message: '用戶已通過審核，系統已發送通知郵件',
@@ -847,7 +983,7 @@ export default function AdminPage() {
       if (!token) return;
 
       await api.admin.rejectUser(selectedUser.id, rejectReason, token);
-      
+
       notifications.show({
         title: '已拒絕',
         message: '用戶申請已拒絕，系統已發送通知郵件',
@@ -869,13 +1005,69 @@ export default function AdminPage() {
     }
   };
 
+  // 過濾用戶列表
+  const filteredUsers = usersSearch.trim()
+    ? users.filter(
+        (u) =>
+          u.full_name.toLowerCase().includes(usersSearch.toLowerCase()) ||
+          u.email.toLowerCase().includes(usersSearch.toLowerCase())
+      )
+    : users;
+
+  // Dashboard 骨架屏
+  const DashboardSkeleton = () => (
+    <>
+      <Grid>
+        {[1, 2, 3, 4].map((i) => (
+          <Grid.Col span={{ base: 12, sm: 6, md: 4 }} key={i}>
+            <Card className="glass-card-soft" padding="lg" radius="lg">
+              <Group justify="space-between" mb="xs">
+                <Skeleton height={16} width="40%" radius="xl" />
+                <Skeleton height={20} width={20} circle />
+              </Group>
+              <Skeleton height={32} width="30%" radius="xl" mt="sm" />
+              <Skeleton height={12} width="70%" radius="xl" mt="md" />
+              <Skeleton height={6} radius="xl" mt="sm" />
+            </Card>
+          </Grid.Col>
+        ))}
+      </Grid>
+      <Paper className="glass-card-soft" p="xl" radius="lg" mt="xl">
+        <Skeleton height={24} width="20%" radius="xl" mb="md" />
+        <Grid>
+          {[1, 2, 3, 4].map((i) => (
+            <Grid.Col span={{ base: 12, sm: 6, md: 3 }} key={i}>
+              <Skeleton height={36} radius="xl" />
+            </Grid.Col>
+          ))}
+        </Grid>
+      </Paper>
+    </>
+  );
+
   if (loading) {
     return (
       <ProtectedRoute>
         <SidebarLayout>
-          <Center h={400}>
-            <Loader size="xl" />
-          </Center>
+          <Container size="xl" py="xl">
+            <Stack gap="xl">
+              <Group justify="space-between">
+                <div>
+                  <Group gap="xs" mb="xs">
+                    <Skeleton height={32} width={32} circle />
+                    <Skeleton height={32} width={200} radius="xl" />
+                  </Group>
+                  <Skeleton height={16} width={160} radius="xl" />
+                </div>
+                <Group>
+                  <Skeleton height={36} width={120} radius="xl" />
+                  <Skeleton height={36} width={120} radius="xl" />
+                </Group>
+              </Group>
+              <Skeleton height={42} radius="md" />
+              <DashboardSkeleton />
+            </Stack>
+          </Container>
         </SidebarLayout>
       </ProtectedRoute>
     );
@@ -889,22 +1081,72 @@ export default function AdminPage() {
             <Group justify="space-between">
               <div>
                 <Group gap="xs" mb="xs">
-                  <IconShieldCheck size={32} />
-                  <Title order={1}>管理後台</Title>
+                  <ThemeIcon
+                    size={40}
+                    radius="xl"
+                    variant="gradient"
+                    gradient={{ from: '#a18cd1', to: '#fbc2eb', deg: 135 }}
+                  >
+                    <IconShieldCheck size={22} />
+                  </ThemeIcon>
+                  <Title order={1} className="text-gradient-magic">管理後台</Title>
                 </Group>
                 <Text c="dimmed">系統管理與數據分析</Text>
               </div>
               <Group>
+                {/* 匯出下拉選單 */}
+                <Menu shadow="md" width={220} position="bottom-end">
+                  <Menu.Target>
+                    <Button
+                      variant="gradient"
+                      gradient={{ from: '#a18cd1', to: '#fbc2eb', deg: 135 }}
+                      leftSection={<IconDownload size={16} />}
+                      rightSection={<IconChevronDown size={14} />}
+                      radius="xl"
+                      loading={exportingType !== null}
+                    >
+                      匯出資料
+                    </Button>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Label>選擇匯出類型</Menu.Label>
+                    <Menu.Item
+                      leftSection={<IconUsers size={16} />}
+                      onClick={() => handleExportCSV('users')}
+                      disabled={exportingType !== null}
+                    >
+                      匯出使用者
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconBriefcase size={16} />}
+                      onClick={() => handleExportCSV('jobs')}
+                      disabled={exportingType !== null}
+                    >
+                      匯出職缺
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconCalendarEvent size={16} />}
+                      onClick={() => handleExportCSV('events')}
+                      disabled={exportingType !== null}
+                    >
+                      匯出活動
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconBell size={16} />}
+                      onClick={() => handleExportCSV('bulletins')}
+                      disabled={exportingType !== null}
+                    >
+                      匯出公告
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
+
                 <Button
                   variant="light"
-                  leftSection={<IconDownload size={16} />}
-                  onClick={openExport}
-                >
-                  匯出資料
-                </Button>
-                <Button
+                  color="grape"
                   leftSection={<IconUpload size={16} />}
                   onClick={openImport}
+                  radius="xl"
                 >
                   匯入資料
                 </Button>
@@ -916,8 +1158,8 @@ export default function AdminPage() {
                 <Tabs.Tab value="dashboard" leftSection={<IconChartBar size={16} />}>
                   儀表板
                 </Tabs.Tab>
-                <Tabs.Tab 
-                  value="pending" 
+                <Tabs.Tab
+                  value="pending"
                   leftSection={<IconUserCheck size={16} />}
                   rightSection={stats.pending_users > 0 ? (
                     <Badge size="sm" variant="filled" color="red">{stats.pending_users}</Badge>
@@ -942,12 +1184,14 @@ export default function AdminPage() {
               <Tabs.Panel value="dashboard" pt="xl">
                 <Grid>
                   <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                    <Card shadow="sm" padding="lg" radius="md" withBorder>
+                    <Card className="glass-card-soft" padding="lg" radius="lg">
                       <Group justify="space-between" mb="xs">
                         <Text size="sm" c="dimmed" fw={500}>
                           總用戶數
                         </Text>
-                        <IconUsers size={20} color="blue" />
+                        <ThemeIcon variant="light" color="blue" size="md" radius="xl">
+                          <IconUsers size={18} />
+                        </ThemeIcon>
                       </Group>
                       <Text size="xl" fw={700}>
                         {stats.total_users}
@@ -959,17 +1203,20 @@ export default function AdminPage() {
                         value={stats.total_users > 0 ? (stats.active_users / stats.total_users) * 100 : 0}
                         mt="xs"
                         size="sm"
+                        radius="xl"
                       />
                     </Card>
                   </Grid.Col>
 
                   <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                    <Card shadow="sm" padding="lg" radius="md" withBorder>
+                    <Card className="glass-card-soft" padding="lg" radius="lg">
                       <Group justify="space-between" mb="xs">
                         <Text size="sm" c="dimmed" fw={500}>
                           職缺總數
                         </Text>
-                        <IconBriefcase size={20} color="green" />
+                        <ThemeIcon variant="light" color="green" size="md" radius="xl">
+                          <IconBriefcase size={18} />
+                        </ThemeIcon>
                       </Group>
                       <Text size="xl" fw={700}>
                         {stats.total_jobs}
@@ -982,40 +1229,45 @@ export default function AdminPage() {
                         mt="xs"
                         size="sm"
                         color="green"
+                        radius="xl"
                       />
                     </Card>
                   </Grid.Col>
 
                   <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                    <Card shadow="sm" padding="lg" radius="md" withBorder>
+                    <Card className="glass-card-soft" padding="lg" radius="lg">
                       <Group justify="space-between" mb="xs">
                         <Text size="sm" c="dimmed" fw={500}>
                           活動總數
                         </Text>
-                        <IconCalendarEvent size={20} color="orange" />
+                        <ThemeIcon variant="light" color="orange" size="md" radius="xl">
+                          <IconCalendarEvent size={18} />
+                        </ThemeIcon>
                       </Group>
                       <Text size="xl" fw={700}>
                         {stats.total_events}
                       </Text>
                       <Text size="xs" c="dimmed" mt="xs">
-                        本月新增: {stats.events_this_month || 0}
+                        即將到來: {stats.upcoming_events || 0} | 本月新增: {stats.events_this_month || 0}
                       </Text>
                     </Card>
                   </Grid.Col>
 
                   <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                    <Card shadow="sm" padding="lg" radius="md" withBorder>
+                    <Card className="glass-card-soft" padding="lg" radius="lg">
                       <Group justify="space-between" mb="xs">
                         <Text size="sm" c="dimmed" fw={500}>
                           公告總數
                         </Text>
-                        <IconBell size={20} color="purple" />
+                        <ThemeIcon variant="light" color="grape" size="md" radius="xl">
+                          <IconBell size={18} />
+                        </ThemeIcon>
                       </Group>
                       <Text size="xl" fw={700}>
                         {stats.total_bulletins}
                       </Text>
                       <Text size="xs" c="dimmed" mt="xs">
-                        本週新增: {stats.bulletins_this_week || 0}
+                        已發布: {stats.published_bulletins || 0} | 本週新增: {stats.bulletins_this_week || 0}
                       </Text>
                     </Card>
                   </Grid.Col>
@@ -1023,11 +1275,10 @@ export default function AdminPage() {
                   {/* 待審核用戶卡片 */}
                   {stats.pending_users > 0 && (
                     <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                      <Card 
-                        shadow="sm" 
-                        padding="lg" 
-                        radius="md" 
-                        withBorder
+                      <Card
+                        className="glass-card-soft"
+                        padding="lg"
+                        radius="lg"
                         style={{ borderColor: 'var(--mantine-color-orange-5)', cursor: 'pointer' }}
                         onClick={() => setActiveTab('pending')}
                       >
@@ -1035,7 +1286,9 @@ export default function AdminPage() {
                           <Text size="sm" c="orange" fw={500}>
                             待審核會員
                           </Text>
-                          <IconUserCheck size={20} color="orange" />
+                          <ThemeIcon variant="light" color="orange" size="md" radius="xl">
+                            <IconUserCheck size={18} />
+                          </ThemeIcon>
                         </Group>
                         <Text size="xl" fw={700} c="orange">
                           {stats.pending_users}
@@ -1048,29 +1301,53 @@ export default function AdminPage() {
                   )}
                 </Grid>
 
-                <Paper shadow="sm" p="xl" radius="md" withBorder mt="xl">
+                <Paper className="glass-card-soft" p="xl" radius="lg" mt="xl">
                   <Title order={3} size="h4" mb="md">
                     快速操作
                   </Title>
                   <Grid>
                     <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-                      <Button fullWidth variant="light" leftSection={<IconUsers size={16} />}>
-                        新增用戶
+                      <Button
+                        fullWidth
+                        variant="light"
+                        leftSection={<IconUsers size={16} />}
+                        radius="xl"
+                        onClick={() => setActiveTab('users')}
+                      >
+                        管理用戶
                       </Button>
                     </Grid.Col>
                     <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-                      <Button fullWidth variant="light" leftSection={<IconBriefcase size={16} />}>
-                        發布職缺
+                      <Button
+                        fullWidth
+                        variant="light"
+                        leftSection={<IconBriefcase size={16} />}
+                        radius="xl"
+                        onClick={() => setActiveTab('jobs')}
+                      >
+                        管理職缺
                       </Button>
                     </Grid.Col>
                     <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-                      <Button fullWidth variant="light" leftSection={<IconCalendarEvent size={16} />}>
-                        建立活動
+                      <Button
+                        fullWidth
+                        variant="light"
+                        leftSection={<IconCalendarEvent size={16} />}
+                        radius="xl"
+                        onClick={() => setActiveTab('events')}
+                      >
+                        管理活動
                       </Button>
                     </Grid.Col>
                     <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-                      <Button fullWidth variant="light" leftSection={<IconBell size={16} />}>
-                        發布公告
+                      <Button
+                        fullWidth
+                        variant="light"
+                        leftSection={<IconBell size={16} />}
+                        radius="xl"
+                        onClick={() => setActiveTab('bulletins')}
+                      >
+                        管理公告
                       </Button>
                     </Grid.Col>
                   </Grid>
@@ -1079,7 +1356,7 @@ export default function AdminPage() {
 
               {/* 待審核用戶 */}
               <Tabs.Panel value="pending" pt="xl">
-                <Paper shadow="sm" p="xl" radius="md" withBorder>
+                <Paper className="glass-card-soft" p="xl" radius="lg">
                   <Group justify="space-between" mb="lg">
                     <Title order={3} size="h4">
                       <Group gap="xs">
@@ -1095,9 +1372,19 @@ export default function AdminPage() {
                   </Group>
 
                   {pendingUsersLoading ? (
-                    <Center h={200}>
-                      <Loader size="lg" />
-                    </Center>
+                    <Stack gap="sm">
+                      {[1, 2, 3].map((i) => (
+                        <Group key={i} gap="md" p="sm">
+                          <Skeleton height={16} width="15%" radius="xl" />
+                          <Skeleton height={16} width="25%" radius="xl" />
+                          <Skeleton height={16} width="10%" radius="xl" />
+                          <Skeleton height={16} width="10%" radius="xl" />
+                          <Skeleton height={16} width="15%" radius="xl" />
+                          <Skeleton height={16} width="12%" radius="xl" />
+                          <Skeleton height={24} width={80} radius="xl" />
+                        </Group>
+                      ))}
+                    </Stack>
                   ) : pendingUsers.length === 0 ? (
                     <Center h={200}>
                       <Stack align="center" gap="xs">
@@ -1127,7 +1414,7 @@ export default function AdminPage() {
                             <Table.Td>{user.email}</Table.Td>
                             <Table.Td>{user.profile?.graduation_year || '-'}</Table.Td>
                             <Table.Td>
-                              {user.profile?.degree === 'master' ? '碩士' : 
+                              {user.profile?.degree === 'master' ? '碩士' :
                                user.profile?.degree === 'phd' ? '博士' : '-'}
                             </Table.Td>
                             <Table.Td>{user.profile?.advisor_1 || '-'}</Table.Td>
@@ -1174,62 +1461,100 @@ export default function AdminPage() {
               </Tabs.Panel>
 
               <Tabs.Panel value="users" pt="xl">
-                <Paper shadow="sm" p="md" radius="md" withBorder>
-                  <Table striped highlightOnHover>
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th>ID</Table.Th>
-                        <Table.Th>電子郵件</Table.Th>
-                        <Table.Th>姓名</Table.Th>
-                        <Table.Th>角色</Table.Th>
-                        <Table.Th>狀態</Table.Th>
-                        <Table.Th>註冊日期</Table.Th>
-                        <Table.Th>操作</Table.Th>
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {users.map((user) => (
-                        <Table.Tr key={user.id}>
-                          <Table.Td>{user.id}</Table.Td>
-                          <Table.Td>{user.email}</Table.Td>
-                          <Table.Td>{user.full_name}</Table.Td>
-                          <Table.Td>
-                            <Badge color={user.role === 'admin' ? 'red' : 'blue'}>
-                              {user.role === 'admin' ? '管理員' : '系友'}
-                            </Badge>
-                          </Table.Td>
-                          <Table.Td>
-                            <Badge color={user.is_active ? 'green' : 'gray'}>
-                              {user.is_active ? '活躍' : '停用'}
-                            </Badge>
-                          </Table.Td>
-                          <Table.Td>
-                            {new Date(user.created_at).toLocaleDateString('zh-TW')}
-                          </Table.Td>
-                          <Table.Td>
-                            <Group gap="xs">
-                              <ActionIcon 
-                                variant="light" 
-                                color="blue"
-                                onClick={() => handleEditUser(user)}
-                                title="編輯權限"
-                              >
-                                <IconEdit size={16} />
-                              </ActionIcon>
-                              <ActionIcon
-                                variant="light"
-                                color="red"
-                                onClick={() => handleDeleteUser(user.id)}
-                              >
-                                <IconTrash size={16} />
-                              </ActionIcon>
-                            </Group>
-                          </Table.Td>
+                <Stack gap="md">
+                  <Group>
+                    <TextInput
+                      placeholder="搜尋用戶（姓名或 Email）..."
+                      leftSection={<IconSearch size={16} />}
+                      value={usersSearch}
+                      onChange={(e) => setUsersSearch(e.currentTarget.value)}
+                      style={{ flex: 1 }}
+                    />
+                    <Text size="sm" c="dimmed">
+                      共 {filteredUsers.length} 筆
+                    </Text>
+                  </Group>
+                  <Paper className="glass-card-soft" p="md" radius="lg">
+                    <Table striped highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>ID</Table.Th>
+                          <Table.Th>姓名</Table.Th>
+                          <Table.Th>電子郵件</Table.Th>
+                          <Table.Th>角色</Table.Th>
+                          <Table.Th>狀態</Table.Th>
+                          <Table.Th>註冊日期</Table.Th>
+                          <Table.Th>操作</Table.Th>
                         </Table.Tr>
-                      ))}
-                    </Table.Tbody>
-                  </Table>
-                </Paper>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {filteredUsers.map((user) => (
+                          <Table.Tr key={user.id}>
+                            <Table.Td>{user.id}</Table.Td>
+                            <Table.Td>
+                              <Text fw={500}>{user.full_name}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{user.email}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Badge
+                                color={user.role === 'admin' ? 'grape' : 'blue'}
+                                variant="light"
+                              >
+                                {user.role === 'admin' ? '管理員' : '系友'}
+                              </Badge>
+                            </Table.Td>
+                            <Table.Td>
+                              <Badge
+                                color={user.is_active ? 'green' : 'gray'}
+                                variant="light"
+                              >
+                                {user.is_active ? '活躍' : '停用'}
+                              </Badge>
+                            </Table.Td>
+                            <Table.Td>
+                              {new Date(user.created_at).toLocaleDateString('zh-TW')}
+                            </Table.Td>
+                            <Table.Td>
+                              <Group gap="xs">
+                                <Tooltip label="編輯權限">
+                                  <ActionIcon
+                                    variant="light"
+                                    color="blue"
+                                    onClick={() => handleEditUser(user)}
+                                  >
+                                    <IconEdit size={16} />
+                                  </ActionIcon>
+                                </Tooltip>
+                                <Tooltip label="刪除用戶">
+                                  <ActionIcon
+                                    variant="light"
+                                    color="red"
+                                    onClick={() => handleDeleteUser(user.id)}
+                                  >
+                                    <IconTrash size={16} />
+                                  </ActionIcon>
+                                </Tooltip>
+                              </Group>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))}
+                        {filteredUsers.length === 0 && (
+                          <Table.Tr>
+                            <Table.Td colSpan={7}>
+                              <Center py="xl">
+                                <Text c="dimmed">
+                                  {usersSearch.trim() ? '找不到符合條件的用戶' : '尚無用戶資料'}
+                                </Text>
+                              </Center>
+                            </Table.Td>
+                          </Table.Tr>
+                        )}
+                      </Table.Tbody>
+                    </Table>
+                  </Paper>
+                </Stack>
               </Tabs.Panel>
 
               <Tabs.Panel value="jobs" pt="xl">
@@ -1262,7 +1587,7 @@ export default function AdminPage() {
                     </Center>
                   ) : (
                     <>
-                      <Paper shadow="sm" p="md" radius="md" withBorder>
+                      <Paper className="glass-card-soft" p="md" radius="lg">
                         <Table striped highlightOnHover>
                           <Table.Thead>
                             <Table.Tr>
@@ -1294,7 +1619,7 @@ export default function AdminPage() {
                                 <Table.Td>{job.location || '未提供'}</Table.Td>
                                 <Table.Td>
                                   <Badge size="sm" variant="light">
-                                    {job.job_type === 'full_time' ? '全職' : 
+                                    {job.job_type === 'full_time' ? '全職' :
                                      job.job_type === 'part_time' ? '兼職' :
                                      job.job_type === 'internship' ? '實習' : job.job_type}
                                   </Badge>
@@ -1305,14 +1630,15 @@ export default function AdminPage() {
                                       job.status === 'ACTIVE' ? 'green' :
                                       job.status === 'PENDING' ? 'orange' : 'gray'
                                     }
+                                    variant="light"
                                   >
                                     {job.status === 'ACTIVE' ? '已發布' :
                                      job.status === 'PENDING' ? '待審核' : '已關閉'}
                                   </Badge>
                                 </Table.Td>
                                 <Table.Td>
-                                  {job.user?.profile?.display_name || 
-                                   job.user?.profile?.full_name || 
+                                  {job.user?.profile?.display_name ||
+                                   job.user?.profile?.full_name ||
                                    job.poster_name || '未知'}
                                 </Table.Td>
                                 <Table.Td>
@@ -1400,7 +1726,7 @@ export default function AdminPage() {
                     </Center>
                   ) : (
                     <>
-                      <Paper shadow="sm" p="md" radius="md" withBorder>
+                      <Paper className="glass-card-soft" p="md" radius="lg">
                         <Table striped highlightOnHover>
                           <Table.Thead>
                             <Table.Tr>
@@ -1435,13 +1761,13 @@ export default function AdminPage() {
                                 </Table.Td>
                                 <Table.Td>
                                   {event.is_online ? (
-                                    <Badge size="sm" color="blue">線上</Badge>
+                                    <Badge size="sm" color="blue" variant="light">線上</Badge>
                                   ) : (
                                     event.location || '未提供'
                                   )}
                                 </Table.Td>
                                 <Table.Td>
-                                  {event.current_participants || 0} / {event.max_participants || '∞'}
+                                  {event.current_participants || 0} / {event.max_participants || '\u221E'}
                                 </Table.Td>
                                 <Table.Td>
                                   <Badge
@@ -1449,6 +1775,7 @@ export default function AdminPage() {
                                       event.status === 'published' ? 'green' :
                                       event.status === 'draft' ? 'gray' : 'red'
                                     }
+                                    variant="light"
                                   >
                                     {event.status === 'published' ? '已發布' :
                                      event.status === 'draft' ? '草稿' : '已取消'}
@@ -1542,7 +1869,7 @@ export default function AdminPage() {
                     </Center>
                   ) : (
                     <>
-                      <Paper shadow="sm" p="md" radius="md" withBorder>
+                      <Paper className="glass-card-soft" p="md" radius="lg">
                         <Table striped highlightOnHover>
                           <Table.Thead>
                             <Table.Tr>
@@ -1588,6 +1915,7 @@ export default function AdminPage() {
                                       bulletin.status === 'published' ? 'green' :
                                       bulletin.status === 'draft' ? 'gray' : 'orange'
                                     }
+                                    variant="light"
                                   >
                                     {bulletin.status === 'published' ? '已發布' :
                                      bulletin.status === 'draft' ? '草稿' : '已封存'}
@@ -1595,7 +1923,7 @@ export default function AdminPage() {
                                 </Table.Td>
                                 <Table.Td>
                                   {bulletin.is_pinned ? (
-                                    <Badge size="sm" color="orange">已釘選</Badge>
+                                    <Badge size="sm" color="orange" variant="light">已釘選</Badge>
                                   ) : (
                                     <Text size="sm" c="dimmed">-</Text>
                                   )}
@@ -1662,76 +1990,167 @@ export default function AdminPage() {
           </Stack>
         </Container>
 
-        {/* 匯出模態框 */}
-        <Modal opened={exportOpened} onClose={closeExport} title="匯出資料" centered>
-          <Stack gap="md">
-            <Text size="sm" c="dimmed">
-              選擇要匯出的資料類型
-            </Text>
-            <Button
-              fullWidth
-              variant="light"
-              leftSection={<IconUsers size={16} />}
-              onClick={() => handleExportCSV('users')}
-            >
-              匯出用戶資料
-            </Button>
-            <Button
-              fullWidth
-              variant="light"
-              leftSection={<IconBriefcase size={16} />}
-              onClick={() => handleExportCSV('jobs')}
-            >
-              匯出職缺資料
-            </Button>
-            <Button
-              fullWidth
-              variant="light"
-              leftSection={<IconCalendarEvent size={16} />}
-              onClick={() => handleExportCSV('events')}
-            >
-              匯出活動資料
-            </Button>
-            <Button
-              fullWidth
-              variant="light"
-              leftSection={<IconBell size={16} />}
-              onClick={() => handleExportCSV('bulletins')}
-            >
-              匯出公告資料
-            </Button>
-          </Stack>
-        </Modal>
-
-        {/* 匯入模態框 */}
-        <Modal opened={importOpened} onClose={closeImport} title="匯入資料" centered>
+        {/* 匯入模態框 - 增強版 */}
+        <Modal
+          opened={importOpened}
+          onClose={handleCloseImport}
+          title={
+            <Group gap="xs">
+              <IconUpload size={20} />
+              <Text fw={600}>匯入資料</Text>
+            </Group>
+          }
+          centered
+          size="lg"
+        >
           <Stack gap="md">
             <Select
               label="資料類型"
               placeholder="選擇要匯入的資料類型"
               data={[
-                { value: 'users', label: '用戶資料' },
+                { value: 'users', label: '使用者資料' },
                 { value: 'jobs', label: '職缺資料' },
                 { value: 'events', label: '活動資料' },
                 { value: 'bulletins', label: '公告資料' },
               ]}
               value={importType}
-              onChange={(value) => setImportType(value || 'users')}
+              onChange={(value) => {
+                setImportType(value || 'users');
+                setImportResult(null);
+              }}
             />
+
+            {/* CSV 欄位說明 */}
+            <Alert
+              variant="light"
+              color="blue"
+              title="CSV 格式說明"
+              icon={<IconInfoCircle size={16} />}
+              radius="md"
+            >
+              <Text size="sm" mb="xs">
+                {CSV_FIELD_DESCRIPTIONS[importType]?.description}
+              </Text>
+              <Divider my="xs" />
+              <Text size="xs" fw={600} mb={4}>欄位清單：</Text>
+              <Group gap={4} wrap="wrap">
+                {CSV_FIELD_DESCRIPTIONS[importType]?.fields.map((field) => (
+                  <Code
+                    key={field}
+                    color={CSV_FIELD_DESCRIPTIONS[importType]?.required.includes(field) ? 'red' : undefined}
+                  >
+                    {field}{CSV_FIELD_DESCRIPTIONS[importType]?.required.includes(field) ? '*' : ''}
+                  </Code>
+                ))}
+              </Group>
+              <Text size="xs" c="dimmed" mt="xs">
+                標示 * 的為必填欄位
+              </Text>
+            </Alert>
+
+            {/* 下載範本按鈕 */}
+            <Button
+              variant="subtle"
+              color="blue"
+              leftSection={<IconFileDownload size={16} />}
+              onClick={() => handleDownloadTemplate(importType)}
+              size="sm"
+            >
+              下載 CSV 範本（{importType === 'users' ? '使用者' : importType === 'jobs' ? '職缺' : importType === 'events' ? '活動' : '公告'}）
+            </Button>
+
             <FileInput
               label="選擇 CSV 檔案"
-              placeholder="點擊選擇檔案"
+              placeholder="點擊選擇 .csv 檔案"
               accept=".csv"
               value={importFile}
-              onChange={setImportFile}
+              onChange={(file) => {
+                setImportFile(file);
+                setImportResult(null);
+              }}
+              leftSection={<IconFileTypeCsv size={16} />}
+              description="僅支援 .csv 格式，建議使用 UTF-8 編碼"
             />
+
+            {/* 匯入結果摘要 */}
+            {importResult && (
+              <Alert
+                variant="light"
+                color={importResult.failed && importResult.failed > 0 ? 'orange' : 'green'}
+                title="匯入結果"
+                icon={importResult.failed && importResult.failed > 0 ? <IconAlertCircle size={16} /> : <IconCheck size={16} />}
+                radius="md"
+              >
+                <Stack gap="xs">
+                  <Group gap="xl">
+                    {(importResult.created !== undefined && importResult.created > 0) && (
+                      <div>
+                        <Text size="xs" c="dimmed">新增</Text>
+                        <Text fw={700} c="green">{importResult.created} 筆</Text>
+                      </div>
+                    )}
+                    {(importResult.updated !== undefined && importResult.updated > 0) && (
+                      <div>
+                        <Text size="xs" c="dimmed">更新</Text>
+                        <Text fw={700} c="blue">{importResult.updated} 筆</Text>
+                      </div>
+                    )}
+                    {importResult.imported !== undefined && importResult.imported > 0 && !importResult.created && !importResult.updated && (
+                      <div>
+                        <Text size="xs" c="dimmed">成功匯入</Text>
+                        <Text fw={700} c="green">{importResult.imported} 筆</Text>
+                      </div>
+                    )}
+                    {(importResult.failed !== undefined && importResult.failed > 0) && (
+                      <div>
+                        <Text size="xs" c="dimmed">失敗</Text>
+                        <Text fw={700} c="red">{importResult.failed} 筆</Text>
+                      </div>
+                    )}
+                  </Group>
+                  {importResult.errors && importResult.errors.length > 0 && (
+                    <>
+                      <Divider />
+                      <Text size="xs" fw={600} c="red">錯誤詳情：</Text>
+                      <List size="xs" spacing={2}>
+                        {importResult.errors.slice(0, 5).map((err, idx) => (
+                          <List.Item key={idx}>
+                            <Text size="xs" c="red">{err}</Text>
+                          </List.Item>
+                        ))}
+                        {importResult.errors.length > 5 && (
+                          <List.Item>
+                            <Text size="xs" c="dimmed">
+                              ... 還有 {importResult.errors.length - 5} 項錯誤
+                            </Text>
+                          </List.Item>
+                        )}
+                      </List>
+                    </>
+                  )}
+                </Stack>
+              </Alert>
+            )}
+
+            <Divider />
+
             <Group justify="flex-end">
-              <Button variant="light" onClick={closeImport}>
-                取消
+              <Button variant="light" onClick={handleCloseImport}>
+                {importResult ? '關閉' : '取消'}
               </Button>
-              <Button onClick={handleImportCSV} loading={uploading} disabled={!importFile}>
-                開始匯入
-              </Button>
+              {!importResult && (
+                <Button
+                  onClick={handleImportCSV}
+                  loading={uploading}
+                  disabled={!importFile}
+                  leftSection={<IconUpload size={16} />}
+                  variant="gradient"
+                  gradient={{ from: '#a18cd1', to: '#fbc2eb', deg: 135 }}
+                  radius="xl"
+                >
+                  開始匯入
+                </Button>
+              )}
             </Group>
           </Stack>
         </Modal>
@@ -1749,7 +2168,7 @@ export default function AdminPage() {
         >
           {selectedUser && (
             <Stack gap="md">
-              <Paper p="md" withBorder>
+              <Paper p="md" withBorder radius="md">
                 <Group gap="xs" mb="sm">
                   <IconMail size={18} color="gray" />
                   <Text size="sm" c="dimmed">電子郵件</Text>
@@ -1759,7 +2178,7 @@ export default function AdminPage() {
 
               <Grid>
                 <Grid.Col span={6}>
-                  <Paper p="md" withBorder>
+                  <Paper p="md" withBorder radius="md">
                     <Group gap="xs" mb="sm">
                       <IconUser size={18} color="gray" />
                       <Text size="sm" c="dimmed">姓名</Text>
@@ -1768,7 +2187,7 @@ export default function AdminPage() {
                   </Paper>
                 </Grid.Col>
                 <Grid.Col span={6}>
-                  <Paper p="md" withBorder>
+                  <Paper p="md" withBorder radius="md">
                     <Group gap="xs" mb="sm">
                       <IconPhone size={18} color="gray" />
                       <Text size="sm" c="dimmed">聯絡電話</Text>
@@ -1778,7 +2197,7 @@ export default function AdminPage() {
                 </Grid.Col>
               </Grid>
 
-              <Paper p="md" withBorder bg="blue.0">
+              <Paper p="md" withBorder bg="blue.0" radius="md">
                 <Group gap="xs" mb="sm">
                   <IconSchool size={18} color="blue" />
                   <Text size="sm" fw={600} c="blue">學籍資料</Text>
@@ -1795,7 +2214,7 @@ export default function AdminPage() {
                   <Grid.Col span={4}>
                     <Text size="xs" c="dimmed">學位</Text>
                     <Text fw={500}>
-                      {selectedUser.profile?.degree === 'master' ? '碩士' : 
+                      {selectedUser.profile?.degree === 'master' ? '碩士' :
                        selectedUser.profile?.degree === 'phd' ? '博士' : '-'}
                     </Text>
                   </Grid.Col>
@@ -1810,7 +2229,7 @@ export default function AdminPage() {
                 </Grid>
               </Paper>
 
-              <Paper p="md" withBorder>
+              <Paper p="md" withBorder radius="md">
                 <Text size="sm" c="dimmed" mb="xs">指導教授</Text>
                 <Text fw={500}>
                   {selectedUser.profile?.advisor_1 || '-'}
@@ -1819,13 +2238,13 @@ export default function AdminPage() {
               </Paper>
 
               {selectedUser.profile?.thesis_title && (
-                <Paper p="md" withBorder>
+                <Paper p="md" withBorder radius="md">
                   <Text size="sm" c="dimmed" mb="xs">論文題目</Text>
                   <Text fw={500}>{selectedUser.profile.thesis_title}</Text>
                 </Paper>
               )}
 
-              <Paper p="md" withBorder bg="gray.0">
+              <Paper p="md" withBorder bg="gray.0" radius="md">
                 <Text size="sm" c="dimmed" mb="xs">申請時間</Text>
                 <Text fw={500}>
                   {selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleString('zh-TW') : '-'}
@@ -1838,6 +2257,7 @@ export default function AdminPage() {
                   color="red"
                   leftSection={<IconX size={16} />}
                   onClick={() => handleOpenRejectModal(selectedUser)}
+                  radius="xl"
                 >
                   拒絕申請
                 </Button>
@@ -1845,6 +2265,7 @@ export default function AdminPage() {
                   color="green"
                   leftSection={<IconCheck size={16} />}
                   onClick={() => handleApproveUser(selectedUser.id)}
+                  radius="xl"
                 >
                   通過審核
                 </Button>
@@ -1874,10 +2295,10 @@ export default function AdminPage() {
               minRows={3}
             />
             <Group justify="flex-end">
-              <Button variant="light" onClick={() => setRejectModalOpened(false)}>
+              <Button variant="light" onClick={() => setRejectModalOpened(false)} radius="xl">
                 取消
               </Button>
-              <Button color="red" onClick={handleRejectUser}>
+              <Button color="red" onClick={handleRejectUser} radius="xl">
                 確認拒絕
               </Button>
             </Group>
@@ -1929,10 +2350,11 @@ export default function AdminPage() {
                     setEditUserModalOpened(false);
                     setEditingUser(null);
                   }}
+                  radius="xl"
                 >
                   取消
                 </Button>
-                <Button onClick={handleUpdateUser}>
+                <Button onClick={handleUpdateUser} radius="xl">
                   儲存
                 </Button>
               </Group>
@@ -1943,5 +2365,3 @@ export default function AdminPage() {
     </ProtectedRoute>
   );
 }
-
-
