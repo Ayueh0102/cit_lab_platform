@@ -25,12 +25,12 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8
-      
+          version: 9
+
       - name: Install dependencies
         working-directory: ./alumni-platform-nextjs
         run: pnpm install
-      
+
       - name: Run ESLint
         working-directory: ./alumni-platform-nextjs
         run: pnpm lint
@@ -53,12 +53,12 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8
-      
+          version: 9
+
       - name: Install dependencies
         working-directory: ./alumni-platform-nextjs
         run: pnpm install
-      
+
       - name: Run TypeScript check
         working-directory: ./alumni-platform-nextjs
         run: pnpm exec tsc --noEmit
@@ -84,10 +84,11 @@ jobs:
       - name: Run flake8
         working-directory: ./alumni_platform_api
         run: |
-          flake8 src/ --max-line-length=120 --extend-ignore=E203,W503 || true
-      
+          flake8 src/ --max-line-length=120 --extend-ignore=E501,E203,W503,W504,E722,F401
+
       - name: Check code formatting with black
         working-directory: ./alumni_platform_api
         run: |
-          black --check src/ || true
+          black --diff src/
+        continue-on-error: true
 

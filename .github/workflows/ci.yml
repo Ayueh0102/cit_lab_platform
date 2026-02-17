@@ -25,19 +25,33 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8
-      
+          version: 9
+
       - name: Install dependencies
         working-directory: ./alumni-platform-nextjs
         run: pnpm install
-      
+
       - name: Run linter
         working-directory: ./alumni-platform-nextjs
         run: pnpm lint --max-warnings 0
-      
+
+      - name: Run TypeScript check
+        working-directory: ./alumni-platform-nextjs
+        run: pnpm exec tsc --noEmit
+
       - name: Run tests
         working-directory: ./alumni-platform-nextjs
         run: pnpm test --coverage --watchAll=false
+
+      - name: Check coverage threshold
+        working-directory: ./alumni-platform-nextjs
+        run: |
+          coverage_percent=$(node -e "const fs = require('fs'); const coverage = JSON.parse(fs.readFileSync('./coverage/coverage-summary.json', 'utf8')); console.log(coverage.total.lines.pct);")
+          echo "Frontend coverage: $coverage_percent%"
+          if (( $(echo "$coverage_percent < 70" | bc -l) )); then
+            echo "Coverage is below 70% threshold!"
+            exit 1
+          fi
       
       - name: Build application
         working-directory: ./alumni-platform-nextjs
@@ -68,7 +82,7 @@ jobs:
       
       - name: Run tests
         working-directory: ./alumni_platform_api
-        run: pytest tests/ -v --cov=src --cov-report=xml --cov-report=html
+        run: pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --cov-fail-under=50
         env:
           SECRET_KEY: test-secret-key
           JWT_SECRET_KEY: test-jwt-secret-key
@@ -95,12 +109,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      
+
       - name: Install dependencies
         run: |
           cd alumni_platform_api && pip install -r requirements.txt
