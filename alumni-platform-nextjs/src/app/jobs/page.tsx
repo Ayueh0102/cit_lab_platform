@@ -213,7 +213,7 @@ export default function JobsPage() {
                     padding="lg"
                     radius="md"
                     withBorder
-                    className="hover-translate-y gradient-border-top glass-card-soft animate-list-item"
+                    className="hover-translate-y gradient-border-top glass-card-soft animate-list-item cursor-glow"
                     style={{
                       cursor: 'pointer',
                       position: 'relative',
@@ -223,6 +223,7 @@ export default function JobsPage() {
                     tabIndex={0}
                     role="link"
                     onClick={() => router.push(`/jobs/${job.id}`)}
+                    onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--glow-x', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--glow-y', `${e.clientY - r.top}px`); }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/jobs/${job.id}`); } }}
                   >
                     <Stack gap="md">

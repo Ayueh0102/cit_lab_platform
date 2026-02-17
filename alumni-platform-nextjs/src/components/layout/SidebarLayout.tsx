@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   AppShell,
   Burger,
@@ -50,6 +50,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const prevCountRef = useRef(0);
 
   // 載入未讀通知計數
   const loadUnreadNotificationCount = async () => {
@@ -103,6 +105,21 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     });
     router.push('/auth/login');
   };
+
+  // 鈴鐺搖晃動畫 — 當未讀數增加時觸發
+  useEffect(() => {
+    if (unreadNotificationCount > 0 && unreadNotificationCount > prevCountRef.current) {
+      const icon = bellRef.current?.querySelector('svg');
+      if (icon) {
+        icon.classList.remove('bell-notify');
+        void (icon as unknown as HTMLElement).offsetWidth; // force reflow
+        icon.classList.add('bell-notify');
+        const tid = setTimeout(() => icon.classList.remove('bell-notify'), 600);
+        return () => clearTimeout(tid);
+      }
+    }
+    prevCountRef.current = unreadNotificationCount;
+  }, [unreadNotificationCount]);
 
   // 導航項目配置 - 分組結構
   const navGroups = [
@@ -209,9 +226,10 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                 disabled={unreadNotificationCount === 0}
                 offset={4}
               >
-                <ActionIcon 
-                  variant="subtle" 
-                  color="gray" 
+                <ActionIcon
+                  ref={bellRef}
+                  variant="subtle"
+                  color="gray"
                   size="lg"
                   radius="xl"
                   onClick={() => router.push('/notifications')}

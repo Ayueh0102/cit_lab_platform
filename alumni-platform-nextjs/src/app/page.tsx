@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCountUp } from '@/hooks/useInteractiveEffects';
 import {
   Container,
   Title,
@@ -146,6 +147,12 @@ export default function HomePage() {
     }
   };
 
+  // 數字跳動動畫
+  const animatedAlumni = useCountUp(stats.totalAlumni);
+  const animatedJobs = useCountUp(stats.totalJobs);
+  const animatedEvents = useCountUp(stats.totalEvents);
+  const animatedNewThisWeek = useCountUp(stats.newThisWeek);
+
   if (loading) {
     return (
       <SidebarLayout>
@@ -197,7 +204,7 @@ export default function HomePage() {
                 <Group justify="space-between" align="flex-start">
                   <div>
                     <Text size="sm" fw={700} tt="uppercase" style={{ opacity: 0.8 }}>CIT Network</Text>
-                    <Title order={2} fz={48} fw={800} mt={4}>{stats.totalAlumni}</Title>
+                    <Title order={2} fz={48} fw={800} mt={4}>{animatedAlumni}</Title>
                     <Text size="sm" mt={4} style={{ opacity: 0.9 }}>位活躍系友正在連線</Text>
                   </div>
                   <ThemeIcon size={48} radius="xl" color="white" variant="white" style={{ color: '#4facfe' }}>
@@ -224,10 +231,11 @@ export default function HomePage() {
             <Paper
               p="lg"
               radius="lg"
-              className="glass-card card-hover-effect"
+              className="glass-card card-hover-effect cursor-glow"
               h="100%"
               onClick={() => router.push('/jobs')}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push('/jobs'); } }}
+              onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--glow-x', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--glow-y', `${e.clientY - r.top}px`); }}
               tabIndex={0}
               role="link"
               style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
@@ -243,7 +251,7 @@ export default function HomePage() {
                   </ThemeIcon>
                   <Text size="sm" fw={600} c="dimmed" mt="md">職缺機會</Text>
                   <Group align="baseline" gap={4}>
-                    <Text fz={32} fw={700} className="text-gradient-fresh">{stats.totalJobs}</Text>
+                    <Text fz={32} fw={700} className="text-gradient-fresh">{animatedJobs}</Text>
                     <Text size="xs" c="dimmed">個職缺</Text>
                   </Group>
                 </div>
@@ -253,7 +261,7 @@ export default function HomePage() {
                     color="teal"
                     leftSection={<IconTrendingUp size={12} />}
                   >
-                    本週 +{stats.newThisWeek}
+                    本週 +{animatedNewThisWeek}
                   </Badge>
                 </Group>
               </Stack>
@@ -265,10 +273,11 @@ export default function HomePage() {
             <Paper
               p="lg"
               radius="lg"
-              className="glass-card card-hover-effect"
+              className="glass-card card-hover-effect cursor-glow"
               h="100%"
               onClick={() => router.push('/events')}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push('/events'); } }}
+              onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--glow-x', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--glow-y', `${e.clientY - r.top}px`); }}
               tabIndex={0}
               role="link"
               style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
@@ -284,7 +293,7 @@ export default function HomePage() {
                   </ThemeIcon>
                   <Text size="sm" fw={600} c="dimmed" mt="md">活動聚會</Text>
                   <Group align="baseline" gap={4}>
-                    <Text fz={32} fw={700} className="text-gradient-warm">{stats.totalEvents}</Text>
+                    <Text fz={32} fw={700} className="text-gradient-warm">{animatedEvents}</Text>
                     <Text size="xs" c="dimmed">場活動</Text>
                   </Group>
                 </div>
