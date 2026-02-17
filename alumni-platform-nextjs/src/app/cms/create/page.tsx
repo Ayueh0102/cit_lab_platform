@@ -30,6 +30,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { api } from '@/lib/api';
 import { getToken, getUser } from '@/lib/auth';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 export default function CMSCreatePage() {
   const router = useRouter();
@@ -324,9 +325,9 @@ export default function CMSCreatePage() {
                 {/* 內容編輯 - 完整版編輯器 */}
                 <Paper shadow="sm" p="xl" radius="md" withBorder>
                   <Stack gap="md">
-                    <Group justify="space-between" align="center">
+                    <Group justify="space-between" align="center" wrap="wrap" gap="md">
                       <Title order={3}>文章內容</Title>
-                      <Group gap="xs">
+                      <Group gap="xs" wrap="wrap">
                         <Select
                           placeholder="分類（選填）"
                           data={categories
@@ -339,7 +340,7 @@ export default function CMSCreatePage() {
                           onChange={(value) => form.setFieldValue('category_id', value ? parseInt(value) : undefined)}
                           clearable
                           size="sm"
-                          style={{ width: 150 }}
+                          style={{ minWidth: 130, flex: '0 1 auto' }}
                         />
                         <Select
                           placeholder="狀態"
@@ -364,7 +365,7 @@ export default function CMSCreatePage() {
                             }
                           }}
                           size="sm"
-                          style={{ width: 200 }}
+                          style={{ minWidth: 180, flex: '0 1 auto' }}
                         />
                       </Group>
                     </Group>
@@ -420,7 +421,7 @@ export default function CMSCreatePage() {
                   fontSize: 'var(--mantine-font-size-md)',
                   lineHeight: 1.8,
                 }}
-                dangerouslySetInnerHTML={{ __html: form.values.content || '<p>（無內容）</p>' }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.values.content || '<p>（無內容）</p>') }}
               />
             </Modal>
           </Stack>

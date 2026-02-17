@@ -33,6 +33,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { FileUpload } from '@/components/ui/file-upload';
 import { api } from '@/lib/api';
 import { getToken, getUser } from '@/lib/auth';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 export default function CMSEditPage() {
   const router = useRouter();
@@ -380,7 +381,7 @@ export default function CMSEditPage() {
                     fontSize: 'var(--mantine-font-size-md)',
                     lineHeight: 1.8,
                   }}
-                  dangerouslySetInnerHTML={{ __html: form.values.content || '<p>（無內容）</p>' }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.values.content || '<p>（無內容）</p>') }}
                 />
               </Stack>
             </Modal>

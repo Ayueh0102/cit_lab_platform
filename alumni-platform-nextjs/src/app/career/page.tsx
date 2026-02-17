@@ -189,7 +189,7 @@ export default function CareerPage() {
     try {
       const token = getToken();
       const response = await api.career.getSkills(token);
-      setAllSkills(response.skills || response || []);
+      setAllSkills(response.skills || []);
     } catch (error) {
       // 靜默失敗
     }

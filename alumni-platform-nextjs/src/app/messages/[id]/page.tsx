@@ -36,6 +36,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { api } from '@/lib/api';
 import { getToken, getUser } from '@/lib/auth';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { useWebSocket } from '@/hooks/use-websocket';
 
 interface Message {
@@ -65,6 +66,12 @@ export default function MessageDetailPage() {
   const params = useParams();
   const conversationId = parseInt(params.id as string);
   const currentUser = getUser();
+
+  useEffect(() => {
+    if (isNaN(conversationId)) {
+      router.push('/messages');
+    }
+  }, [conversationId, router]);
   
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -457,7 +464,7 @@ export default function MessageDetailPage() {
                                     whiteSpace: 'pre-wrap',
                                     wordBreak: 'break-word',
                                   }}
-                                  dangerouslySetInnerHTML={{ __html: message.content }}
+                                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.content) }}
                                 />
                               </Card>
                             <Group gap={4}>

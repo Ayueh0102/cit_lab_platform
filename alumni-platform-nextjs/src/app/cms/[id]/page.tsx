@@ -32,6 +32,7 @@ import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { api } from '@/lib/api';
 import { getToken, getUser } from '@/lib/auth';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 interface Article {
   id: number;
@@ -276,7 +277,7 @@ export default function ArticleDetailPage() {
                     fontSize: 'var(--mantine-font-size-md)',
                     lineHeight: 1.8,
                   }}
-                  dangerouslySetInnerHTML={{ __html: article.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(article.content) }}
                 />
 
                 {/* 操作按鈕 */}

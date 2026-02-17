@@ -48,7 +48,7 @@ export default function MessagesPage() {
         return;
       }
       const response = await api.messages.getConversations(token);
-      setConversations(response.conversations || response);
+      setConversations(response.conversations || []);
     } catch (error) {
       notifications.show({
         title: '載入失敗',
