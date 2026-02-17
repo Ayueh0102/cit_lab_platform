@@ -115,7 +115,7 @@ export default function ArticleDetailPage() {
       setLoadingComments(true);
       const token = getToken();
       const data = await api.cms.getComments(articleId, token || undefined);
-      setComments(Array.isArray(data) ? data : data?.data || []);
+      setComments(Array.isArray(data) ? data : data?.comments || data?.data || []);
     } catch {
       // 評論載入失敗不阻擋頁面顯示
     } finally {

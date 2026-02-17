@@ -448,17 +448,37 @@ def delete_article_category(current_user, category_id):
 # ========================================
 @cms_v2_bp.route('/api/v2/cms/articles/<int:article_id>/comments', methods=['GET'])
 def get_article_comments(article_id):
-    """取得文章評論（公開，僅顯示已審核的評論）"""
+    """取得文章評論（管理員可看全部，一般用戶只看已審核）"""
     try:
         article = Article.query.get(article_id)
         if not article:
             return jsonify({'message': 'Article not found'}), 404
 
-        # 只顯示已審核的評論
-        comments = ArticleComment.query.filter_by(
-            article_id=article_id,
-            status=CommentStatus.APPROVED
-        ).order_by(ArticleComment.created_at.desc()).all()
+        # 檢查是否為管理員（可看所有評論含 pending）
+        current_user = None
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            try:
+                from flask import current_app
+                import jwt
+                token = auth_header.split(' ')[1]
+                data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+                current_user = User.query.get(data['user_id'])
+            except Exception:
+                pass
+
+        if current_user and current_user.role == 'admin':
+            # 管理員可看全部（排除已拒絕）
+            comments = ArticleComment.query.filter(
+                ArticleComment.article_id == article_id,
+                ArticleComment.status != CommentStatus.REJECTED
+            ).order_by(ArticleComment.created_at.desc()).all()
+        else:
+            # 一般用戶只看已審核
+            comments = ArticleComment.query.filter_by(
+                article_id=article_id,
+                status=CommentStatus.APPROVED
+            ).order_by(ArticleComment.created_at.desc()).all()
 
         return jsonify({
             'comments': [comment.to_dict() for comment in comments]
@@ -482,13 +502,14 @@ def create_article_comment(current_user, article_id):
         if not data.get('content'):
             return jsonify({'message': 'Comment content is required'}), 400
 
-        # 建立評論（預設為待審核狀態）
+        # 管理員評論自動核准，一般用戶需審核
+        auto_approve = current_user.role == 'admin'
         comment = ArticleComment(
             article_id=article_id,
             user_id=current_user.id,
             parent_id=data.get('parent_id'),
             content=data['content'],
-            status=CommentStatus.PENDING  # 預設待審核
+            status=CommentStatus.APPROVED if auto_approve else CommentStatus.PENDING
         )
 
         db.session.add(comment)
