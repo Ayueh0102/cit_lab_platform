@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  frontend:
+    build: ./alumni-platform-nextjs
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:5001
+    depends_on:
+      - backend
+    volumes:
+      - ./alumni-platform-nextjs:/app
+      - /app/node_modules
+      - /app/.next
+
+  backend:
+    build: ./alumni_platform_api
+    ports:
+      - "5001:5001"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-jwt-secret-change-in-production}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///src/database/app_v2.db}
+      - ALLOWED_ORIGINS=http://localhost:3000,http://frontend:3000
+    volumes:
+      - ./alumni_platform_api:/app
+      - backend-data:/app/src/database
+      - backend-uploads:/app/src/static/uploads
+
+volumes:
+  backend-data:
+  backend-uploads:

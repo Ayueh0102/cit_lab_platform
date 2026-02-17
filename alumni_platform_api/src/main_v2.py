@@ -411,11 +411,28 @@ def index():
 
 
 @app.route('/api/health')
-def health():
+def health_check():
+    """健康檢查端點 - 驗證應用程式和資料庫狀態"""
+    try:
+        # 驗證資料庫連線
+        db.session.execute(db.text('SELECT 1'))
+        db_status = 'connected'
+        db_code = 200
+    except Exception as e:
+        db_status = 'disconnected'
+        db_code = 503
+        return jsonify({
+            'status': 'unhealthy',
+            'database': db_status,
+            'version': '2.0.0',
+            'error': str(e)
+        }), db_code
+
     return jsonify({
         'status': 'healthy',
-        'database': 'connected',
-        'version': '2.0.0'
+        'database': db_status,
+        'version': '2.0.0',
+        'timestamp': datetime.utcnow().isoformat()
     }), 200
 
 

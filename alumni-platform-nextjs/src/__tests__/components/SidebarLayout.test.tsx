@@ -102,6 +102,8 @@ describe('SidebarLayout', () => {
         full_name: '一般用戶',
         display_name: '小明',
         graduation_year: 2022,
+        current_company: '',
+        current_position: '',
       },
     };
     setMockAuth(regularUser, mockToken);
