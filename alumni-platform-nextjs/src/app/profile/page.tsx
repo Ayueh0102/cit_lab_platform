@@ -320,12 +320,12 @@ export default function ProfilePage() {
         // 如果 API 沒有回傳完整用戶資料，手動建構
         const userData = getUser();
         if (userData) {
-          const updatedUser = {
+          const updatedUser: User = {
             ...userData,
             profile: {
               ...userData.profile,
               ...updateData,
-            },
+            } as UserProfile,
           };
           updateUser(updatedUser);
           setUser(updatedUser);

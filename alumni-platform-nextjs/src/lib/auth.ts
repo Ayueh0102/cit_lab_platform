@@ -19,7 +19,14 @@ export interface UserProfile {
   current_location?: string | null;
   industry?: string | null;
   email?: string;
-  [key: string]: any;
+  phone?: string | null;
+  student_id?: string | null;
+  class_year?: number | null;
+  degree?: string | null;
+  major?: string | null;
+  thesis_title?: string | null;
+  advisor_1?: string | null;
+  advisor_2?: string | null;
 }
 
 export interface User {
@@ -33,6 +40,7 @@ export interface User {
   profile?: UserProfile;
   // 向後兼容的欄位
   name?: string;
+  full_name?: string;
   student_id?: string;
   graduation_year?: number;
 }
@@ -40,7 +48,7 @@ export interface User {
 /**
  * 儲存認證資訊
  */
-export function setAuth(token: string, user: any): void {
+export function setAuth(token: string, user: Partial<User> & { id: number; email: string; role: string; profile?: UserProfile }): void {
   if (typeof window === 'undefined') return;
   
   // 確保用戶對象格式正確
@@ -50,7 +58,7 @@ export function setAuth(token: string, user: any): void {
     role: user.role,
     status: user.status || 'active',
     email_verified: user.email_verified || false,
-    created_at: user.created_at,
+    created_at: user.created_at || '',
     last_login_at: user.last_login_at,
     profile: user.profile,
     // 向後兼容：從 profile 中提取 name
@@ -58,7 +66,7 @@ export function setAuth(token: string, user: any): void {
     student_id: user.profile?.student_id || user.student_id,
     graduation_year: user.profile?.graduation_year || user.graduation_year,
   };
-  
+
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(userData));
 }
@@ -92,7 +100,7 @@ export function getUser(): User | null {
  * 更新用戶資訊（不更新 token）
  * 用於用戶更新個人資料後同步 localStorage
  */
-export function updateUser(user: any): void {
+export function updateUser(user: Partial<User> & { id: number; email: string; role: string; profile?: UserProfile }): void {
   if (typeof window === 'undefined') return;
   
   // 確保用戶對象格式正確
@@ -102,7 +110,7 @@ export function updateUser(user: any): void {
     role: user.role,
     status: user.status || 'active',
     email_verified: user.email_verified || false,
-    created_at: user.created_at,
+    created_at: user.created_at || '',
     last_login_at: user.last_login_at,
     profile: user.profile,
     // 向後兼容：從 profile 中提取欄位

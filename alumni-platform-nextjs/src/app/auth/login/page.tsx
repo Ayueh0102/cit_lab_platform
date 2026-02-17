@@ -65,8 +65,6 @@ export default function LoginPage() {
     try {
       const response = await api.auth.login(values.email, values.password);
       
-      console.log('Login response:', response); // Debug log
-
       // V2 API 返回 access_token
       if (response && typeof response === 'object' && response.access_token && response.user) {
         setAuth(response.access_token, response.user);

@@ -183,7 +183,10 @@ export default function HomePage() {
                 border: 'none',
                 color: 'white'
               }}
+              tabIndex={0}
+              role="link"
               onClick={() => router.push('/directory')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push('/directory'); } }}
             >
               {/* 背景裝飾：光譜波形與浮動光點 */}
               <SpectralWaves style={{ bottom: 0, opacity: 0.3 }} />
@@ -224,6 +227,9 @@ export default function HomePage() {
               className="glass-card card-hover-effect"
               h="100%"
               onClick={() => router.push('/jobs')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push('/jobs'); } }}
+              tabIndex={0}
+              role="link"
               style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
             >
               {/* 裝飾：稜鏡分光 */}
@@ -262,6 +268,9 @@ export default function HomePage() {
               className="glass-card card-hover-effect"
               h="100%"
               onClick={() => router.push('/events')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push('/events'); } }}
+              tabIndex={0}
+              role="link"
               style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
             >
               {/* 裝飾：CIE 色度圖 */}
@@ -306,6 +315,9 @@ export default function HomePage() {
                       radius="md"
                       className="glass-card card-hover-effect"
                       onClick={() => router.push(`/jobs/${job.id}`)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/jobs/${job.id}`); } }}
+                      tabIndex={0}
+                      role="link"
                       style={{ cursor: 'pointer' }}
                     >
                       <Group wrap="nowrap">
@@ -343,6 +355,9 @@ export default function HomePage() {
                       radius="md"
                       className="glass-card card-hover-effect"
                       onClick={() => router.push(`/events/${event.id}`)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/events/${event.id}`); } }}
+                      tabIndex={0}
+                      role="link"
                       style={{ cursor: 'pointer', overflow: 'hidden' }}
                     >
                       <div style={{ height: '120px', background: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%)', position: 'relative' }}>

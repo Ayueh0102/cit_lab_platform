@@ -4,7 +4,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface FetchOptions {
   method?: string;
-  body?: BodyInit | any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  body?: BodyInit | Record<string, any> | null;
   token?: string;
   headers?: HeadersInit;
 }
@@ -178,12 +179,20 @@ export const api = {
       email: string;
       password: string;
       name: string;
+      display_name?: string;
+      phone?: string;
       student_id?: string;
       graduation_year?: number;
+      class_year?: number;
+      degree?: string;
+      major?: string;
+      thesis_title?: string;
+      advisor_1?: string;
+      advisor_2?: string;
     }) =>
       fetchAPI('/api/v2/auth/register', {
         method: 'POST',
-        body: data, // 傳遞對象，讓 fetchAPI 處理 JSON.stringify
+        body: data,
       }),
 
     getCurrentUser: (token: string) =>
@@ -470,7 +479,7 @@ export const api = {
 
   // 個人資料相關
   profile: {
-    update: (data: any, token: string) =>
+    update: (data: Record<string, unknown>, token: string) =>
       fetchAPI('/api/v2/auth/profile', {
         method: 'PUT',
         body: data,
@@ -560,14 +569,14 @@ export const api = {
     getUserWorkExperiences: (userId: number, token?: string) =>
       fetchAPI(`/api/career/users/${userId}/work-experiences`, { token }),
 
-    addWorkExperience: (data: any, token: string) =>
+    addWorkExperience: (data: Record<string, unknown>, token: string) =>
       fetchAPI('/api/career/work-experiences', {
         method: 'POST',
         body: data,
         token,
       }),
 
-    updateWorkExperience: (id: number, data: any, token: string) =>
+    updateWorkExperience: (id: number, data: Record<string, unknown>, token: string) =>
       fetchAPI(`/api/career/work-experiences/${id}`, {
         method: 'PUT',
         body: data,
@@ -587,14 +596,14 @@ export const api = {
     getUserEducations: (userId: number, token?: string) =>
       fetchAPI(`/api/career/users/${userId}/educations`, { token }),
 
-    addEducation: (data: any, token: string) =>
+    addEducation: (data: Record<string, unknown>, token: string) =>
       fetchAPI('/api/career/educations', {
         method: 'POST',
         body: data,
         token,
       }),
 
-    updateEducation: (id: number, data: any, token: string) =>
+    updateEducation: (id: number, data: Record<string, unknown>, token: string) =>
       fetchAPI(`/api/career/educations/${id}`, {
         method: 'PUT',
         body: data,
@@ -754,6 +763,38 @@ export const api = {
     approveBulletin: (bulletinId: number, token: string) =>
       fetchAPI(`/api/v2/admin/bulletins/${bulletinId}/approve`, {
         method: 'POST',
+        token,
+      }),
+
+    // 用戶審核相關
+    getPendingUsers: (token: string, params?: {
+      page?: number;
+      per_page?: number;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+
+      const url = queryParams.toString()
+        ? `/api/v2/admin/pending-users?${queryParams.toString()}`
+        : '/api/v2/admin/pending-users';
+
+      return fetchAPI(url, { token });
+    },
+
+    getUserDetails: (userId: number, token: string) =>
+      fetchAPI(`/api/v2/admin/users/${userId}/details`, { token }),
+
+    approveUser: (userId: number, token: string) =>
+      fetchAPI(`/api/v2/admin/users/${userId}/approve`, {
+        method: 'POST',
+        token,
+      }),
+
+    rejectUser: (userId: number, reason: string, token: string) =>
+      fetchAPI(`/api/v2/admin/users/${userId}/reject`, {
+        method: 'POST',
+        body: { reason },
         token,
       }),
   },

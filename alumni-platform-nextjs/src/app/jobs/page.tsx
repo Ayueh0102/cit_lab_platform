@@ -76,14 +76,13 @@ export default function JobsPage() {
   // 當搜索條件改變時，重新載入數據
   useEffect(() => {
     loadJobs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearchTerm, filterType, filterLocation]);
+  }, [debouncedSearchTerm, filterType, filterLocation, currentPage]);
 
   const loadJobs = async () => {
     try {
       setLoading(true);
       const token = getToken();
-      const params: any = {
+      const params: Record<string, string | number> = {
         status: 'ACTIVE',
         page: currentPage,
         per_page: 20,
@@ -201,7 +200,7 @@ export default function JobsPage() {
                   找到 {total} 個職缺
                 </Text>
               )}
-              {jobs.map((job) => {
+              {jobs.map((job, index) => {
                 const companyName = job.company || job.company_name || '未知公司';
                 const salaryText = job.salary_text || job.salary_range;
                 const jobTypeLabel = jobTypes.find(t => t.value === job.job_type)?.label || job.job_type;
@@ -214,13 +213,17 @@ export default function JobsPage() {
                     padding="lg"
                     radius="md"
                     withBorder
-                    className="hover-translate-y gradient-border-top"
-                    style={{ 
+                    className="hover-translate-y gradient-border-top glass-card-lite animate-list-item"
+                    style={{
                       cursor: 'pointer',
                       position: 'relative',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      animationDelay: `${Math.min(index, 9) * 0.05}s`,
                     }}
+                    tabIndex={0}
+                    role="link"
                     onClick={() => router.push(`/jobs/${job.id}`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/jobs/${job.id}`); } }}
                   >
                     <Stack gap="md">
                       <div>

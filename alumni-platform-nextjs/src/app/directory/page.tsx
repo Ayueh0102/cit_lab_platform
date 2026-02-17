@@ -335,7 +335,10 @@ export default function DirectoryPage() {
                       withBorder
                       className="hover-translate-y"
                       style={{ cursor: 'pointer' }}
+                      tabIndex={0}
+                      role="button"
                       onClick={() => loadUserDetails(user)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loadUserDetails(user); } }}
                     >
                       <Group align="flex-start" wrap="nowrap">
                         <Avatar
