@@ -705,19 +705,18 @@ body {
 }
 
 /* --- B1: 頁面過場動畫 --- */
+/* 注意：不使用 transform，因為父層 transform 會破壞子元素 position:fixed（如 AppShell header） */
 @keyframes page-fade-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 .animate-page-enter {
-  animation: page-fade-in 0.35s cubic-bezier(0.33, 1, 0.68, 1) both;
+  animation: page-fade-in 0.3s ease-out both;
 }
 
 /* --- B2: 交錯列表入場動畫 --- */
