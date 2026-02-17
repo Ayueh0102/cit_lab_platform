@@ -19,7 +19,33 @@ jest.mock('next/navigation', () => ({
   useSearchParams() {
     return new URLSearchParams();
   },
+  usePathname() {
+    return '/';
+  },
 }));
+
+// Mock next/image
+jest.mock('next/image', () => {
+  const React = require('react');
+  return {
+    __esModule: true,
+    default: function MockImage(props: Record<string, unknown>) {
+      const { fill, priority, ...rest } = props;
+      return React.createElement('img', rest);
+    },
+  };
+});
+
+// Mock ResizeObserver (required by Mantine ScrollArea/Select)
+class ResizeObserverMock {
+  observe = jest.fn();
+  unobserve = jest.fn();
+  disconnect = jest.fn();
+}
+Object.defineProperty(window, 'ResizeObserver', {
+  writable: true,
+  value: ResizeObserverMock,
+});
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
