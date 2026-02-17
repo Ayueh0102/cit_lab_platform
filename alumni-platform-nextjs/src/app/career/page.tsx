@@ -188,7 +188,7 @@ export default function CareerPage() {
   const loadAllSkills = async () => {
     try {
       const token = getToken();
-      const response = await api.career.getSkills(token);
+      const response = await api.career.getSkills(token ?? undefined);
       setAllSkills(response.skills || []);
     } catch (error) {
       // 靜默失敗

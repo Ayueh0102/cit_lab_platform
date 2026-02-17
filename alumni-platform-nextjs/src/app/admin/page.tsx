@@ -17,6 +17,7 @@ import {
   Tabs,
   Modal,
   TextInput,
+  Textarea,
   Select,
   Loader,
   Center,
@@ -30,6 +31,7 @@ import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
 import {
   IconUsers,
+  IconUser,
   IconBriefcase,
   IconCalendarEvent,
   IconBell,
@@ -44,6 +46,10 @@ import {
   IconX,
   IconEye,
   IconPinned,
+  IconUserCheck,
+  IconSchool,
+  IconMail,
+  IconPhone,
 } from '@tabler/icons-react';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -56,6 +62,7 @@ interface Statistics {
   total_events: number;
   total_bulletins: number;
   active_users: number;
+  pending_users: number;
   pending_jobs: number;
   active_users_30d?: number;
   active_jobs?: number;
@@ -65,6 +72,26 @@ interface Statistics {
   events_this_month?: number;
   bulletins_this_month?: number;
   bulletins_this_week?: number;
+}
+
+interface PendingUser {
+  id: number;
+  email: string;
+  status: string;
+  created_at: string;
+  profile: {
+    full_name?: string;
+    display_name?: string;
+    phone?: string;
+    graduation_year?: number;
+    class_year?: number;
+    degree?: string;
+    major?: string;
+    student_id?: string;
+    thesis_title?: string;
+    advisor_1?: string;
+    advisor_2?: string;
+  };
 }
 
 interface User {
@@ -86,8 +113,17 @@ export default function AdminPage() {
     total_events: 0,
     total_bulletins: 0,
     active_users: 0,
+    pending_users: 0,
     pending_jobs: 0,
   });
+  
+  // 待審核用戶狀態
+  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
+  const [pendingUsersLoading, setPendingUsersLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<PendingUser | null>(null);
+  const [userDetailModalOpened, setUserDetailModalOpened] = useState(false);
+  const [rejectModalOpened, setRejectModalOpened] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [editUserModalOpened, setEditUserModalOpened] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -149,6 +185,8 @@ export default function AdminPage() {
       loadEvents();
     } else if (activeTab === 'bulletins') {
       loadBulletins();
+    } else if (activeTab === 'pending') {
+      loadPendingUsers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, jobsPage, jobsStatusFilter, eventsPage, eventsStatusFilter, bulletinsPage, bulletinsStatusFilter]);
@@ -212,6 +250,7 @@ export default function AdminPage() {
         total_events: stats_info.events.total,
         total_bulletins: stats_info.bulletins.total,
         active_users: stats_info.users.active,
+        pending_users: stats_info.users.pending || 0,
         pending_jobs: stats_info.jobs.pending,
         active_users_30d: stats_info.users.active_30d,
         active_jobs: stats_info.jobs.active,
@@ -424,6 +463,7 @@ export default function AdminPage() {
         total_events: stats_info.events.total,
         total_bulletins: stats_info.bulletins.total,
         active_users: stats_info.users.active,
+        pending_users: stats_info.users.pending || 0,
         pending_jobs: stats_info.jobs.pending,
         active_users_30d: stats_info.users.active_30d,
         active_jobs: stats_info.jobs.active,
@@ -467,6 +507,7 @@ export default function AdminPage() {
         total_events: stats_info.events.total,
         total_bulletins: stats_info.bulletins.total,
         active_users: stats_info.users.active,
+        pending_users: stats_info.users.pending || 0,
         pending_jobs: stats_info.jobs.pending,
         active_users_30d: stats_info.users.active_30d,
         active_jobs: stats_info.jobs.active,
@@ -741,6 +782,93 @@ export default function AdminPage() {
     }
   };
 
+  // 待審核用戶功能
+  const loadPendingUsers = async () => {
+    try {
+      setPendingUsersLoading(true);
+      const token = getToken();
+      if (!token) return;
+
+      const data = await api.admin.getPendingUsers(token, { page: 1, per_page: 50 });
+      setPendingUsers(data.users || []);
+    } catch (error) {
+      notifications.show({
+        title: '載入失敗',
+        message: error instanceof Error ? error.message : '無法載入待審核用戶列表',
+        color: 'red',
+      });
+    } finally {
+      setPendingUsersLoading(false);
+    }
+  };
+
+  const handleViewUserDetails = (user: PendingUser) => {
+    setSelectedUser(user);
+    setUserDetailModalOpened(true);
+  };
+
+  const handleApproveUser = async (userId: number) => {
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      await api.admin.approveUser(userId, token);
+      
+      notifications.show({
+        title: '審核成功',
+        message: '用戶已通過審核，系統已發送通知郵件',
+        color: 'green',
+      });
+
+      setUserDetailModalOpened(false);
+      setSelectedUser(null);
+      await loadPendingUsers();
+      await loadDashboardData();
+    } catch (error) {
+      notifications.show({
+        title: '操作失敗',
+        message: error instanceof Error ? error.message : '無法審核用戶',
+        color: 'red',
+      });
+    }
+  };
+
+  const handleOpenRejectModal = (user: PendingUser) => {
+    setSelectedUser(user);
+    setRejectReason('');
+    setRejectModalOpened(true);
+  };
+
+  const handleRejectUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      await api.admin.rejectUser(selectedUser.id, rejectReason, token);
+      
+      notifications.show({
+        title: '已拒絕',
+        message: '用戶申請已拒絕，系統已發送通知郵件',
+        color: 'orange',
+      });
+
+      setRejectModalOpened(false);
+      setUserDetailModalOpened(false);
+      setSelectedUser(null);
+      setRejectReason('');
+      await loadPendingUsers();
+      await loadDashboardData();
+    } catch (error) {
+      notifications.show({
+        title: '操作失敗',
+        message: error instanceof Error ? error.message : '無法拒絕用戶',
+        color: 'red',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <ProtectedRoute>
@@ -787,6 +915,15 @@ export default function AdminPage() {
               <Tabs.List>
                 <Tabs.Tab value="dashboard" leftSection={<IconChartBar size={16} />}>
                   儀表板
+                </Tabs.Tab>
+                <Tabs.Tab 
+                  value="pending" 
+                  leftSection={<IconUserCheck size={16} />}
+                  rightSection={stats.pending_users > 0 ? (
+                    <Badge size="sm" variant="filled" color="red">{stats.pending_users}</Badge>
+                  ) : null}
+                >
+                  待審核用戶
                 </Tabs.Tab>
                 <Tabs.Tab value="users" leftSection={<IconUsers size={16} />}>
                   用戶管理
@@ -882,6 +1019,33 @@ export default function AdminPage() {
                       </Text>
                     </Card>
                   </Grid.Col>
+
+                  {/* 待審核用戶卡片 */}
+                  {stats.pending_users > 0 && (
+                    <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                      <Card 
+                        shadow="sm" 
+                        padding="lg" 
+                        radius="md" 
+                        withBorder
+                        style={{ borderColor: 'var(--mantine-color-orange-5)', cursor: 'pointer' }}
+                        onClick={() => setActiveTab('pending')}
+                      >
+                        <Group justify="space-between" mb="xs">
+                          <Text size="sm" c="orange" fw={500}>
+                            待審核會員
+                          </Text>
+                          <IconUserCheck size={20} color="orange" />
+                        </Group>
+                        <Text size="xl" fw={700} c="orange">
+                          {stats.pending_users}
+                        </Text>
+                        <Text size="xs" c="dimmed" mt="xs">
+                          點擊前往審核
+                        </Text>
+                      </Card>
+                    </Grid.Col>
+                  )}
                 </Grid>
 
                 <Paper shadow="sm" p="xl" radius="md" withBorder mt="xl">
@@ -910,6 +1074,102 @@ export default function AdminPage() {
                       </Button>
                     </Grid.Col>
                   </Grid>
+                </Paper>
+              </Tabs.Panel>
+
+              {/* 待審核用戶 */}
+              <Tabs.Panel value="pending" pt="xl">
+                <Paper shadow="sm" p="xl" radius="md" withBorder>
+                  <Group justify="space-between" mb="lg">
+                    <Title order={3} size="h4">
+                      <Group gap="xs">
+                        <IconUserCheck size={24} />
+                        待審核會員申請
+                      </Group>
+                    </Title>
+                    {pendingUsers.length > 0 && (
+                      <Badge size="lg" variant="light" color="orange">
+                        {pendingUsers.length} 筆待審核
+                      </Badge>
+                    )}
+                  </Group>
+
+                  {pendingUsersLoading ? (
+                    <Center h={200}>
+                      <Loader size="lg" />
+                    </Center>
+                  ) : pendingUsers.length === 0 ? (
+                    <Center h={200}>
+                      <Stack align="center" gap="xs">
+                        <IconCheck size={48} color="gray" />
+                        <Text c="dimmed">目前沒有待審核的會員申請</Text>
+                      </Stack>
+                    </Center>
+                  ) : (
+                    <Table striped highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>姓名</Table.Th>
+                          <Table.Th>電子郵件</Table.Th>
+                          <Table.Th>畢業年份</Table.Th>
+                          <Table.Th>學位</Table.Th>
+                          <Table.Th>指導教授</Table.Th>
+                          <Table.Th>申請時間</Table.Th>
+                          <Table.Th>操作</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {pendingUsers.map((user) => (
+                          <Table.Tr key={user.id}>
+                            <Table.Td>
+                              <Text fw={500}>{user.profile?.full_name || '-'}</Text>
+                            </Table.Td>
+                            <Table.Td>{user.email}</Table.Td>
+                            <Table.Td>{user.profile?.graduation_year || '-'}</Table.Td>
+                            <Table.Td>
+                              {user.profile?.degree === 'master' ? '碩士' : 
+                               user.profile?.degree === 'phd' ? '博士' : '-'}
+                            </Table.Td>
+                            <Table.Td>{user.profile?.advisor_1 || '-'}</Table.Td>
+                            <Table.Td>
+                              {user.created_at ? new Date(user.created_at).toLocaleDateString('zh-TW') : '-'}
+                            </Table.Td>
+                            <Table.Td>
+                              <Group gap="xs">
+                                <Tooltip label="查看詳情">
+                                  <ActionIcon
+                                    variant="light"
+                                    color="blue"
+                                    onClick={() => handleViewUserDetails(user)}
+                                  >
+                                    <IconEye size={16} />
+                                  </ActionIcon>
+                                </Tooltip>
+                                <Tooltip label="通過">
+                                  <ActionIcon
+                                    variant="light"
+                                    color="green"
+                                    onClick={() => handleApproveUser(user.id)}
+                                  >
+                                    <IconCheck size={16} />
+                                  </ActionIcon>
+                                </Tooltip>
+                                <Tooltip label="拒絕">
+                                  <ActionIcon
+                                    variant="light"
+                                    color="red"
+                                    onClick={() => handleOpenRejectModal(user)}
+                                  >
+                                    <IconX size={16} />
+                                  </ActionIcon>
+                                </Tooltip>
+                              </Group>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  )}
                 </Paper>
               </Tabs.Panel>
 
@@ -1471,6 +1731,154 @@ export default function AdminPage() {
               </Button>
               <Button onClick={handleImportCSV} loading={uploading} disabled={!importFile}>
                 開始匯入
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
+
+        {/* 用戶詳情審核 Modal */}
+        <Modal
+          opened={userDetailModalOpened}
+          onClose={() => {
+            setUserDetailModalOpened(false);
+            setSelectedUser(null);
+          }}
+          title="會員申請詳情"
+          size="lg"
+          centered
+        >
+          {selectedUser && (
+            <Stack gap="md">
+              <Paper p="md" withBorder>
+                <Group gap="xs" mb="sm">
+                  <IconMail size={18} color="gray" />
+                  <Text size="sm" c="dimmed">電子郵件</Text>
+                </Group>
+                <Text fw={500}>{selectedUser.email}</Text>
+              </Paper>
+
+              <Grid>
+                <Grid.Col span={6}>
+                  <Paper p="md" withBorder>
+                    <Group gap="xs" mb="sm">
+                      <IconUser size={18} color="gray" />
+                      <Text size="sm" c="dimmed">姓名</Text>
+                    </Group>
+                    <Text fw={500}>{selectedUser.profile?.full_name || '-'}</Text>
+                  </Paper>
+                </Grid.Col>
+                <Grid.Col span={6}>
+                  <Paper p="md" withBorder>
+                    <Group gap="xs" mb="sm">
+                      <IconPhone size={18} color="gray" />
+                      <Text size="sm" c="dimmed">聯絡電話</Text>
+                    </Group>
+                    <Text fw={500}>{selectedUser.profile?.phone || '-'}</Text>
+                  </Paper>
+                </Grid.Col>
+              </Grid>
+
+              <Paper p="md" withBorder bg="blue.0">
+                <Group gap="xs" mb="sm">
+                  <IconSchool size={18} color="blue" />
+                  <Text size="sm" fw={600} c="blue">學籍資料</Text>
+                </Group>
+                <Grid>
+                  <Grid.Col span={4}>
+                    <Text size="xs" c="dimmed">畢業年份</Text>
+                    <Text fw={500}>{selectedUser.profile?.graduation_year || '-'}</Text>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Text size="xs" c="dimmed">屆數</Text>
+                    <Text fw={500}>{selectedUser.profile?.class_year ? `第 ${selectedUser.profile.class_year} 屆` : '-'}</Text>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Text size="xs" c="dimmed">學位</Text>
+                    <Text fw={500}>
+                      {selectedUser.profile?.degree === 'master' ? '碩士' : 
+                       selectedUser.profile?.degree === 'phd' ? '博士' : '-'}
+                    </Text>
+                  </Grid.Col>
+                  <Grid.Col span={6}>
+                    <Text size="xs" c="dimmed">學號</Text>
+                    <Text fw={500}>{selectedUser.profile?.student_id || '-'}</Text>
+                  </Grid.Col>
+                  <Grid.Col span={6}>
+                    <Text size="xs" c="dimmed">主修</Text>
+                    <Text fw={500}>{selectedUser.profile?.major || '-'}</Text>
+                  </Grid.Col>
+                </Grid>
+              </Paper>
+
+              <Paper p="md" withBorder>
+                <Text size="sm" c="dimmed" mb="xs">指導教授</Text>
+                <Text fw={500}>
+                  {selectedUser.profile?.advisor_1 || '-'}
+                  {selectedUser.profile?.advisor_2 && ` / ${selectedUser.profile.advisor_2}`}
+                </Text>
+              </Paper>
+
+              {selectedUser.profile?.thesis_title && (
+                <Paper p="md" withBorder>
+                  <Text size="sm" c="dimmed" mb="xs">論文題目</Text>
+                  <Text fw={500}>{selectedUser.profile.thesis_title}</Text>
+                </Paper>
+              )}
+
+              <Paper p="md" withBorder bg="gray.0">
+                <Text size="sm" c="dimmed" mb="xs">申請時間</Text>
+                <Text fw={500}>
+                  {selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleString('zh-TW') : '-'}
+                </Text>
+              </Paper>
+
+              <Group justify="flex-end" mt="md">
+                <Button
+                  variant="light"
+                  color="red"
+                  leftSection={<IconX size={16} />}
+                  onClick={() => handleOpenRejectModal(selectedUser)}
+                >
+                  拒絕申請
+                </Button>
+                <Button
+                  color="green"
+                  leftSection={<IconCheck size={16} />}
+                  onClick={() => handleApproveUser(selectedUser.id)}
+                >
+                  通過審核
+                </Button>
+              </Group>
+            </Stack>
+          )}
+        </Modal>
+
+        {/* 拒絕原因 Modal */}
+        <Modal
+          opened={rejectModalOpened}
+          onClose={() => {
+            setRejectModalOpened(false);
+            setRejectReason('');
+          }}
+          title="拒絕會員申請"
+          centered
+        >
+          <Stack gap="md">
+            <Text size="sm" c="dimmed">
+              請輸入拒絕原因（將發送給申請人）：
+            </Text>
+            <Textarea
+              placeholder="例如：無法驗證您的系友身份，請提供更多證明..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.currentTarget.value)}
+              minRows={3}
+            />
+            <Group justify="flex-end">
+              <Button variant="light" onClick={() => setRejectModalOpened(false)}>
+                取消
+              </Button>
+              <Button color="red" onClick={handleRejectUser}>
+                確認拒絕
               </Button>
             </Group>
           </Stack>

@@ -439,7 +439,7 @@ export default function MessageDetailPage() {
                               radius="md"
                               color="blue"
                             >
-                              {message.sender_name.charAt(0)}
+                              {message.sender_name?.charAt(0) ?? '?'}
                             </Avatar>
                           )}
                           <Stack gap={4} style={{ maxWidth: '70%' }}>

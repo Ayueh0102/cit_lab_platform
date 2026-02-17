@@ -61,7 +61,6 @@ interface Event {
   organizer_name?: string;
   views_count?: number;
   is_full?: boolean;
-  image_url?: string;
 }
 
 const PAGE_SIZE = 6;

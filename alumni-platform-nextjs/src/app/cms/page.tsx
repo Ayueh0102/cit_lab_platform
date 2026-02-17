@@ -112,8 +112,14 @@ export default function CMSManagePage() {
         per_page: 12,
       };
 
-      if (statusFilter !== 'all') {
-        params.status = statusFilter;
+      // 一般系友只能看到已發布的文章，管理員可以看到所有狀態
+      if (isAdmin) {
+        if (statusFilter !== 'all') {
+          params.status = statusFilter;
+        }
+      } else {
+        // 非管理員只能看到已發布的文章
+        params.status = 'published';
       }
 
       if (categoryFilter !== 'all') {
@@ -234,10 +240,6 @@ export default function CMSManagePage() {
     });
   };
 
-  if (!isAdmin) {
-    return null;
-  }
-
   return (
     <ProtectedRoute>
       <SidebarLayout>
@@ -251,12 +253,14 @@ export default function CMSManagePage() {
                   分享系友活動、記錄與文章，記錄系友會的美好時光
                 </Text>
               </div>
-              <Button
-                leftSection={<IconPlus size={16} />}
-                onClick={() => router.push('/cms/create')}
-              >
-                發布新文章
-              </Button>
+              {isAdmin && (
+                <Button
+                  leftSection={<IconPlus size={16} />}
+                  onClick={() => router.push('/cms/create')}
+                >
+                  發布新文章
+                </Button>
+              )}
             </Group>
 
             {/* 搜尋和篩選 */}
@@ -269,18 +273,20 @@ export default function CMSManagePage() {
                   onChange={(e) => setSearchQuery(e.currentTarget.value)}
                   style={{ flex: 1 }}
                 />
-                <Select
-                  placeholder="狀態篩選"
-                  value={statusFilter}
-                  onChange={(value) => setStatusFilter(value || 'all')}
-                  data={[
-                    { value: 'all', label: '全部' },
-                    { value: 'published', label: '已發布' },
-                    { value: 'draft', label: '草稿' },
-                    { value: 'archived', label: '已封存' },
-                  ]}
-                  style={{ width: 150 }}
-                />
+                {isAdmin && (
+                  <Select
+                    placeholder="狀態篩選"
+                    value={statusFilter}
+                    onChange={(value) => setStatusFilter(value || 'all')}
+                    data={[
+                      { value: 'all', label: '全部' },
+                      { value: 'published', label: '已發布' },
+                      { value: 'draft', label: '草稿' },
+                      { value: 'archived', label: '已封存' },
+                    ]}
+                    style={{ width: 150 }}
+                  />
+                )}
                 <Select
                   placeholder="分類篩選"
                   value={categoryFilter}
@@ -308,12 +314,14 @@ export default function CMSManagePage() {
                   <Stack align="center" gap="md">
                     <IconFileText size={48} color="gray" />
                     <Text c="dimmed">還沒有文章</Text>
-                    <Button
-                      leftSection={<IconPlus size={16} />}
-                      onClick={() => router.push('/cms/create')}
-                    >
-                      發布第一篇文章
-                    </Button>
+                    {isAdmin && (
+                      <Button
+                        leftSection={<IconPlus size={16} />}
+                        onClick={() => router.push('/cms/create')}
+                      >
+                        發布第一篇文章
+                      </Button>
+                    )}
                   </Stack>
                 </Center>
               </Paper>
@@ -346,58 +354,62 @@ export default function CMSManagePage() {
                                     {article.category_name}
                                   </Badge>
                                 )}
-                                <Badge size="sm" color="blue">
-                                  {getStatusBadge(article.status)}
-                                </Badge>
+                                {getStatusBadge(article.status)}
                               </Group>
-                              <Menu shadow="md" width={200}>
-                                <Menu.Target>
-                                  <ActionIcon variant="subtle">
-                                    <IconDots size={16} />
-                                  </ActionIcon>
-                                </Menu.Target>
-                                <Menu.Dropdown>
-                                  <Menu.Item
-                                    leftSection={<IconEye size={14} />}
-                                    onClick={() => router.push(`/cms/${article.id}`)}
-                                  >
-                                    查看
-                                  </Menu.Item>
-                                  <Menu.Item
-                                    leftSection={<IconEdit size={14} />}
-                                    onClick={() => router.push(`/cms/${article.id}/edit`)}
-                                  >
-                                    編輯
-                                  </Menu.Item>
-                                  {article.status === 'draft' && (
+                              {isAdmin ? (
+                                <Menu shadow="md" width={200}>
+                                  <Menu.Target>
+                                    <ActionIcon variant="subtle">
+                                      <IconDots size={16} />
+                                    </ActionIcon>
+                                  </Menu.Target>
+                                  <Menu.Dropdown>
                                     <Menu.Item
-                                      leftSection={<IconCheck size={14} />}
-                                      onClick={() => handlePublish(article.id)}
+                                      leftSection={<IconEye size={14} />}
+                                      onClick={() => router.push(`/cms/${article.id}`)}
                                     >
-                                      發布
+                                      查看
                                     </Menu.Item>
-                                  )}
-                                  {article.status === 'published' && (
                                     <Menu.Item
-                                      leftSection={<IconArchive size={14} />}
-                                      onClick={() => handleArchive(article.id)}
+                                      leftSection={<IconEdit size={14} />}
+                                      onClick={() => router.push(`/cms/${article.id}/edit`)}
                                     >
-                                      封存
+                                      編輯
                                     </Menu.Item>
-                                  )}
-                                  <Menu.Divider />
-                                  <Menu.Item
-                                    color="red"
-                                    leftSection={<IconTrash size={14} />}
-                                    onClick={() => {
-                                      setArticleToDelete(article.id);
-                                      setDeleteModalOpened(true);
-                                    }}
-                                  >
-                                    刪除
-                                  </Menu.Item>
-                                </Menu.Dropdown>
-                              </Menu>
+                                    {article.status === 'draft' && (
+                                      <Menu.Item
+                                        leftSection={<IconCheck size={14} />}
+                                        onClick={() => handlePublish(article.id)}
+                                      >
+                                        發布
+                                      </Menu.Item>
+                                    )}
+                                    {article.status === 'published' && (
+                                      <Menu.Item
+                                        leftSection={<IconArchive size={14} />}
+                                        onClick={() => handleArchive(article.id)}
+                                      >
+                                        封存
+                                      </Menu.Item>
+                                    )}
+                                    <Menu.Divider />
+                                    <Menu.Item
+                                      color="red"
+                                      leftSection={<IconTrash size={14} />}
+                                      onClick={() => {
+                                        setArticleToDelete(article.id);
+                                        setDeleteModalOpened(true);
+                                      }}
+                                    >
+                                      刪除
+                                    </Menu.Item>
+                                  </Menu.Dropdown>
+                                </Menu>
+                              ) : (
+                                <ActionIcon variant="subtle" onClick={() => router.push(`/cms/${article.id}`)}>
+                                  <IconEye size={16} />
+                                </ActionIcon>
+                              )}
                             </Group>
                             
                             <Title order={4} mb="xs" lineClamp={2}>

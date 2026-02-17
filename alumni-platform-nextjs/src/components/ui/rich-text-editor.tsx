@@ -319,11 +319,12 @@ export function RichTextEditor({
             borderTopRightRadius: 'var(--mantine-radius-md)',
             padding: 'var(--mantine-spacing-xs)',
             backgroundColor: 'var(--mantine-color-gray-0)',
+            overflow: 'hidden',
           }}
         >
           <Stack gap="xs">
-            {/* 第一行工具欄 */}
-            <Group gap={4} wrap="nowrap">
+            {/* 工具欄 - 允許換行以適應不同螢幕寬度 */}
+            <Group gap={4} wrap="wrap">
               {/* 格式化 */}
               <ActionIcon
                 variant={editor.isActive('bold') ? 'filled' : 'subtle'}
