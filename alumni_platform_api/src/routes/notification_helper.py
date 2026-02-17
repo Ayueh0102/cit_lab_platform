@@ -193,3 +193,57 @@ def notify_all_event_participants(event_id: int, notification_type: Notification
     
     return notifications
 
+
+def create_user_registration_notification_to_admins(applicant_name: str, applicant_email: str, user_id: int):
+    """建立新用戶註冊申請通知給所有管理員"""
+    from src.models_v2 import User
+    
+    # 找出所有管理員
+    admins = User.query.filter_by(role='admin', status='active').all()
+    
+    notifications = []
+    for admin in admins:
+        notification = create_notification(
+            user_id=admin.id,
+            notification_type=NotificationType.USER_REGISTRATION_REQUEST,
+            title="新會員申請待審核",
+            message=f"新用戶 {applicant_name or applicant_email} 提交了會員註冊申請，請前往管理後台審核。",
+            related_type="user",
+            related_id=user_id,
+            action_url="/admin?tab=pending"
+        )
+        if notification:
+            notifications.append(notification)
+    
+    return notifications
+
+
+def create_user_registration_approved_notification(user_id: int):
+    """建立用戶註冊通過通知"""
+    return create_notification(
+        user_id=user_id,
+        notification_type=NotificationType.USER_REGISTRATION_APPROVED,
+        title="會員申請已通過",
+        message="恭喜！您的系友會會員申請已通過審核，歡迎加入！",
+        related_type="user",
+        related_id=user_id,
+        action_url="/profile"
+    )
+
+
+def create_user_registration_rejected_notification(user_id: int, reason: str = None):
+    """建立用戶註冊拒絕通知"""
+    message = "很抱歉，您的系友會會員申請未通過審核。"
+    if reason:
+        message += f" 原因：{reason}"
+    
+    return create_notification(
+        user_id=user_id,
+        notification_type=NotificationType.USER_REGISTRATION_REJECTED,
+        title="會員申請未通過",
+        message=message,
+        related_type="user",
+        related_id=user_id,
+        action_url=None
+    )
+

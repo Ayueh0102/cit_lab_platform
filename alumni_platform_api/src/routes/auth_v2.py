@@ -95,7 +95,10 @@ def admin_required(f):
 # ========================================
 @auth_v2_bp.route('/api/v2/auth/register', methods=['POST'])
 def register():
-    """使用者註冊"""
+    """
+    使用者註冊
+    新用戶註冊後狀態為 pending，需等待管理員審核
+    """
     try:
         data = request.get_json()
 
@@ -114,53 +117,175 @@ def register():
             return jsonify({'message': 'Password must be at least 6 characters'}), 400
 
         # 檢查使用者是否已存在
-        if User.query.filter_by(email=data['email']).first():
-            return jsonify({'message': 'Email already registered'}), 400
+        existing_user = User.query.filter_by(email=data['email']).first()
+        
+        if existing_user:
+            # 如果用戶狀態是 inactive（已被刪除/停用）或 rejected（被拒絕），允許重新申請
+            if existing_user.status in ['inactive', 'rejected']:
+                # 重新啟用用戶，設為 pending 等待審核
+                existing_user.status = 'pending'
+                existing_user.set_password(data['password'])
+                
+                # 更新個人檔案
+                profile = existing_user.profile
+                if profile:
+                    profile.full_name = data.get('name')
+                    profile.display_name = data.get('display_name') or data.get('name')
+                    profile.phone = data.get('phone')
+                    profile.graduation_year = data.get('graduation_year')
+                    profile.class_year = data.get('class_year')
+                    profile.degree = data.get('degree')
+                    profile.major = data.get('major', '色彩與照明科技研究所')
+                    profile.student_id = data.get('student_id')
+                    profile.thesis_title = data.get('thesis_title')
+                    profile.advisor_1 = data.get('advisor_1')
+                    profile.advisor_2 = data.get('advisor_2')
+                else:
+                    # 如果沒有 profile，創建新的
+                    profile = UserProfile(
+                        user_id=existing_user.id,
+                        full_name=data.get('name'),
+                        display_name=data.get('display_name') or data.get('name'),
+                        phone=data.get('phone'),
+                        graduation_year=data.get('graduation_year'),
+                        class_year=data.get('class_year'),
+                        degree=data.get('degree'),
+                        major=data.get('major', '色彩與照明科技研究所'),
+                        student_id=data.get('student_id'),
+                        thesis_title=data.get('thesis_title'),
+                        advisor_1=data.get('advisor_1'),
+                        advisor_2=data.get('advisor_2'),
+                    )
+                    db.session.add(profile)
+                
+                db.session.commit()
+                
+                # 發送郵件通知（重新申請）
+                try:
+                    from src.utils.email import (
+                        send_registration_notification_to_admin,
+                        send_registration_confirmation_to_applicant
+                    )
+                    
+                    user_data = {
+                        'email': data['email'],
+                        'full_name': data.get('name'),
+                        'display_name': data.get('display_name') or data.get('name'),
+                        'phone': data.get('phone'),
+                        'graduation_year': data.get('graduation_year'),
+                        'class_year': data.get('class_year'),
+                        'degree': data.get('degree'),
+                        'student_id': data.get('student_id'),
+                        'thesis_title': data.get('thesis_title'),
+                        'advisor_1': data.get('advisor_1'),
+                        'advisor_2': data.get('advisor_2'),
+                    }
+                    
+                    send_registration_notification_to_admin(user_data)
+                    send_registration_confirmation_to_applicant(data['email'], data.get('name'))
+                except Exception as e:
+                    print(f"Email notification error: {e}")
+                
+                # 發送站內通知給管理員
+                try:
+                    from src.routes.notification_helper import create_user_registration_notification_to_admins
+                    create_user_registration_notification_to_admins(
+                        applicant_name=data.get('name'),
+                        applicant_email=data['email'],
+                        user_id=existing_user.id
+                    )
+                except Exception as notification_error:
+                    print(f"Admin notification failed: {str(notification_error)}")
+                
+                return jsonify({
+                    'message': '重新申請成功！請等待管理員審核。',
+                    'user': {
+                        'id': existing_user.id,
+                        'email': existing_user.email,
+                        'status': existing_user.status
+                    }
+                }), 201
+            else:
+                # 用戶狀態是 active 或 pending，不允許重複註冊
+                return jsonify({'message': 'Email already registered'}), 400
 
-        # 建立新使用者 (User 模型不含 name 欄位，name 是從 profile 取得的 property)
+        # 建立新使用者 - 狀態為 pending（等待審核）
         user = User(
             email=data['email'],
-            role=data.get('role', 'user')  # 預設為一般使用者
+            role=data.get('role', 'user'),  # 預設為一般使用者
+            status='pending'  # 新用戶需要審核
         )
         user.set_password(data['password'])
 
         db.session.add(user)
         db.session.flush()  # 取得 user.id
 
-        # 建立使用者個人檔案 (使用正確的欄位名稱)
+        # 建立使用者個人檔案 (包含完整學籍資料)
         profile = UserProfile(
             user_id=user.id,
             full_name=data.get('name'),  # 從 name 參數存到 full_name
             display_name=data.get('display_name') or data.get('name'),  # 顯示名稱
+            phone=data.get('phone'),
             graduation_year=data.get('graduation_year'),
-            class_year=data.get('class_year'),  # 修正：class_name -> class_year
-            phone=data.get('phone')
+            class_year=data.get('class_year'),
+            degree=data.get('degree'),
+            major=data.get('major', '色彩與照明科技研究所'),  # 預設為色彩所
+            student_id=data.get('student_id'),
+            thesis_title=data.get('thesis_title'),
+            advisor_1=data.get('advisor_1'),
+            advisor_2=data.get('advisor_2'),
         )
         db.session.add(profile)
         db.session.commit()
 
-        # 產生 JWT Token
-        token = jwt.encode({
-            'user_id': user.id,
-            'exp': datetime.utcnow() + timedelta(days=7)
-        }, _get_jwt_secret(), algorithm='HS256')
+        # 發送郵件通知
+        try:
+            from src.utils.email import (
+                send_registration_notification_to_admin,
+                send_registration_confirmation_to_applicant
+            )
+            
+            # 準備用戶資料
+            user_data = {
+                'email': data['email'],
+                'full_name': data.get('name'),
+                'display_name': data.get('display_name') or data.get('name'),
+                'phone': data.get('phone'),
+                'graduation_year': data.get('graduation_year'),
+                'class_year': data.get('class_year'),
+                'degree': data.get('degree'),
+                'student_id': data.get('student_id'),
+                'thesis_title': data.get('thesis_title'),
+                'advisor_1': data.get('advisor_1'),
+                'advisor_2': data.get('advisor_2'),
+            }
+            
+            # 發送通知給管理員
+            send_registration_notification_to_admin(user_data)
+            
+            # 發送確認郵件給申請人
+            send_registration_confirmation_to_applicant(user_data)
+            
+        except Exception as email_error:
+            # 郵件發送失敗不影響註冊流程
+            print(f"Email notification failed: {str(email_error)}")
 
-        # 建立登入會話
-        session = UserSession(
-            user_id=user.id,
-            session_token=token,
-            ip_address=request.remote_addr,
-            user_agent=request.headers.get('User-Agent', '')[:500],
-            expires_at=datetime.utcnow() + timedelta(days=7)
-        )
-        db.session.add(session)
-        db.session.commit()
+        # 發送站內通知給管理員
+        try:
+            from src.routes.notification_helper import create_user_registration_notification_to_admins
+            create_user_registration_notification_to_admins(
+                applicant_name=data.get('name'),
+                applicant_email=data['email'],
+                user_id=user.id
+            )
+        except Exception as notification_error:
+            print(f"Admin notification failed: {str(notification_error)}")
 
+        # 註冊成功，但不發放 Token（因為需要等待審核）
         return jsonify({
-            'message': 'User registered successfully',
-            'access_token': token,
+            'message': '註冊申請已送出，請等待管理員審核',
+            'status': 'pending',
             'user_id': user.id,
-            'user': user.to_dict(include_private=True)
         }), 201
 
     except Exception as e:

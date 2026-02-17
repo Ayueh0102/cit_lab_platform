@@ -25,6 +25,7 @@ def get_statistics(current_user):
         # 用戶統計
         total_users = User.query.count()
         active_users = User.query.filter_by(status='active').count()
+        pending_users = User.query.filter_by(status='pending').count()
         
         # 最近 30 天活躍用戶
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
@@ -64,6 +65,7 @@ def get_statistics(current_user):
                 'users': {
                     'total': total_users,
                     'active': active_users,
+                    'pending': pending_users,
                     'active_30d': active_users_30d,
                     'new_this_month': users_this_month,
                 },
@@ -311,4 +313,221 @@ def approve_bulletin(current_user, bulletin_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Failed to approve bulletin: {str(e)}'}), 500
+
+
+# ========================================
+# 用戶審核 API
+# ========================================
+@admin_v2_bp.route('/api/v2/admin/pending-users', methods=['GET'])
+@token_required
+@admin_required
+def get_pending_users(current_user):
+    """取得待審核用戶列表"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        
+        if per_page > 100:
+            per_page = 100
+        
+        query = User.query.filter_by(status='pending')
+        query = query.order_by(User.created_at.desc())
+        
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        
+        users = []
+        for user in pagination.items:
+            user_data = {
+                'id': user.id,
+                'email': user.email,
+                'role': user.role,
+                'status': user.status,
+                'created_at': user.created_at.isoformat() if user.created_at else None,
+            }
+            
+            # 加入詳細的個人資料
+            if user.profile:
+                user_data['profile'] = {
+                    'full_name': user.profile.full_name,
+                    'display_name': user.profile.display_name,
+                    'phone': user.profile.phone,
+                    'graduation_year': user.profile.graduation_year,
+                    'class_year': user.profile.class_year,
+                    'degree': user.profile.degree,
+                    'major': user.profile.major,
+                    'student_id': user.profile.student_id,
+                    'thesis_title': user.profile.thesis_title,
+                    'advisor_1': user.profile.advisor_1,
+                    'advisor_2': user.profile.advisor_2,
+                }
+            else:
+                user_data['profile'] = {
+                    'full_name': user.email.split('@')[0],
+                }
+            
+            users.append(user_data)
+        
+        return jsonify({
+            'users': users,
+            'total': pagination.total,
+            'page': page,
+            'per_page': per_page,
+            'pages': pagination.pages
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'Get pending users failed: {str(e)}')
+        return jsonify({'message': f'Failed to get pending users: {str(e)}'}), 500
+
+
+@admin_v2_bp.route('/api/v2/admin/users/<int:user_id>/approve', methods=['POST'])
+@token_required
+@admin_required
+def approve_user(current_user, user_id):
+    """審核通過用戶註冊"""
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+        
+        if user.status != 'pending':
+            return jsonify({'message': 'User is not pending approval'}), 400
+        
+        # 更新狀態為 active
+        user.status = 'active'
+        db.session.commit()
+        
+        # 發送審核通過郵件
+        try:
+            from src.utils.email import send_approval_notification
+            
+            user_data = {
+                'email': user.email,
+                'full_name': user.profile.full_name if user.profile else user.email.split('@')[0],
+            }
+            send_approval_notification(user_data, approved=True)
+            
+        except Exception as email_error:
+            print(f"Email notification failed: {str(email_error)}")
+        
+        # 發送站內通知給用戶
+        try:
+            from src.routes.notification_helper import create_user_registration_approved_notification
+            create_user_registration_approved_notification(user_id)
+        except Exception as notification_error:
+            print(f"User notification failed: {str(notification_error)}")
+        
+        return jsonify({
+            'message': 'User approved successfully',
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'status': user.status,
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Approve user failed: {str(e)}')
+        return jsonify({'message': f'Failed to approve user: {str(e)}'}), 500
+
+
+@admin_v2_bp.route('/api/v2/admin/users/<int:user_id>/reject', methods=['POST'])
+@token_required
+@admin_required
+def reject_user(current_user, user_id):
+    """拒絕用戶註冊"""
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+        
+        if user.status != 'pending':
+            return jsonify({'message': 'User is not pending approval'}), 400
+        
+        data = request.get_json() or {}
+        reason = data.get('reason', '')
+        
+        # 更新狀態為 rejected
+        user.status = 'rejected'
+        db.session.commit()
+        
+        # 發送審核拒絕郵件
+        try:
+            from src.utils.email import send_approval_notification
+            
+            user_data = {
+                'email': user.email,
+                'full_name': user.profile.full_name if user.profile else user.email.split('@')[0],
+            }
+            send_approval_notification(user_data, approved=False, reason=reason)
+            
+        except Exception as email_error:
+            print(f"Email notification failed: {str(email_error)}")
+        
+        # 發送站內通知給用戶
+        try:
+            from src.routes.notification_helper import create_user_registration_rejected_notification
+            create_user_registration_rejected_notification(user_id, reason)
+        except Exception as notification_error:
+            print(f"User notification failed: {str(notification_error)}")
+        
+        return jsonify({
+            'message': 'User rejected successfully',
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'status': user.status,
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Reject user failed: {str(e)}')
+        return jsonify({'message': f'Failed to reject user: {str(e)}'}), 500
+
+
+@admin_v2_bp.route('/api/v2/admin/users/<int:user_id>/details', methods=['GET'])
+@token_required
+@admin_required
+def get_user_details(current_user, user_id):
+    """取得用戶詳細資料（用於審核）"""
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+        
+        user_data = {
+            'id': user.id,
+            'email': user.email,
+            'role': user.role,
+            'status': user.status,
+            'email_verified': user.email_verified,
+            'created_at': user.created_at.isoformat() if user.created_at else None,
+            'last_login_at': user.last_login_at.isoformat() if user.last_login_at else None,
+        }
+        
+        if user.profile:
+            user_data['profile'] = {
+                'full_name': user.profile.full_name,
+                'display_name': user.profile.display_name,
+                'phone': user.profile.phone,
+                'graduation_year': user.profile.graduation_year,
+                'class_year': user.profile.class_year,
+                'degree': user.profile.degree,
+                'major': user.profile.major,
+                'student_id': user.profile.student_id,
+                'thesis_title': user.profile.thesis_title,
+                'advisor_1': user.profile.advisor_1,
+                'advisor_2': user.profile.advisor_2,
+                'current_company': user.profile.current_company,
+                'current_position': user.profile.current_position,
+                'bio': user.profile.bio,
+            }
+        
+        return jsonify({'user': user_data}), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'Get user details failed: {str(e)}')
+        return jsonify({'message': f'Failed to get user details: {str(e)}'}), 500
 

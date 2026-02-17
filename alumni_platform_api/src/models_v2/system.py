@@ -25,6 +25,9 @@ class NotificationType(enum.Enum):
     COMMENT_REPLY = "comment_reply"                # 留言回覆
     BULLETIN_PUBLISHED = "bulletin_published"      # 公告發布
     SYSTEM_ANNOUNCEMENT = "system_announcement"    # 系統公告
+    USER_REGISTRATION_REQUEST = "user_registration_request"  # 新用戶註冊申請
+    USER_REGISTRATION_APPROVED = "user_registration_approved"  # 用戶註冊通過
+    USER_REGISTRATION_REJECTED = "user_registration_rejected"  # 用戶註冊拒絕
     OTHER = "other"                                # 其他
 
 
