@@ -14,6 +14,9 @@ import {
   rem,
   ThemeIcon,
   ScrollArea,
+  ActionIcon,
+  Indicator,
+  Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -31,8 +34,9 @@ import {
   IconChevronRight,
 } from '@tabler/icons-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { clearAuth, getUser } from '@/lib/auth';
+import { clearAuth, getUser, getToken } from '@/lib/auth';
 import { notifications } from '@mantine/notifications';
+import { api } from '@/lib/api';
 import Image from 'next/image';
 
 interface SidebarLayoutProps {
@@ -45,6 +49,20 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+
+  // 載入未讀通知計數
+  const loadUnreadNotificationCount = async () => {
+    try {
+      const token = getToken();
+      if (!token) return;
+      
+      const response = await api.notifications.getUnreadCount(token);
+      setUnreadNotificationCount(response.unread_count || 0);
+    } catch (error) {
+      // 靜默失敗
+    }
+  };
 
   // 載入用戶資料的函數
   const loadUserData = () => {
@@ -56,6 +74,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     setMounted(true);
     // 初始載入用戶資訊
     loadUserData();
+    // 載入未讀通知計數
+    loadUnreadNotificationCount();
     
     // 監聽用戶資料更新事件
     const handleUserUpdated = () => {
@@ -64,9 +84,13 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     
     window.addEventListener('user-updated', handleUserUpdated);
     
+    // 定期刷新通知計數（每30秒）
+    const notificationInterval = setInterval(loadUnreadNotificationCount, 30000);
+    
     // 清理監聽器
     return () => {
       window.removeEventListener('user-updated', handleUserUpdated);
+      clearInterval(notificationInterval);
     };
   }, []);
 
@@ -80,20 +104,40 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     router.push('/auth/login');
   };
 
-  // 導航項目配置 - 增加顏色標識
-  const navItems = [
-    { label: '首頁總覽', icon: IconHome, link: '/', color: 'blue' },
-    { label: '系友通訊錄', icon: IconUsers, link: '/directory', color: 'indigo' },
-    { label: '職缺機會', icon: IconBriefcase, link: '/jobs', color: 'teal' },
-    { label: '活動聚會', icon: IconCalendarEvent, link: '/events', color: 'orange' },
-    { label: '校園公告', icon: IconBell, link: '/bulletins', color: 'grape' },
-    { label: '系友動態', icon: IconSchool, link: '/cms', color: 'pink' },
-    { label: '訊息中心', icon: IconMessage, link: '/messages', color: 'cyan' },
+  // 導航項目配置 - 分組結構
+  const navGroups = [
+    {
+      groupLabel: '總覽',
+      items: [
+        { label: '首頁總覽', icon: IconHome, link: '/', color: 'blue' },
+      ],
+    },
+    {
+      groupLabel: '探索',
+      items: [
+        { label: '系友通訊錄', icon: IconUsers, link: '/directory', color: 'indigo' },
+        { label: '職缺機會', icon: IconBriefcase, link: '/jobs', color: 'teal' },
+        { label: '活動聚會', icon: IconCalendarEvent, link: '/events', color: 'orange' },
+        { label: '校園公告', icon: IconBell, link: '/bulletins', color: 'grape' },
+      ],
+    },
+    {
+      groupLabel: '社交',
+      items: [
+        { label: '系友動態', icon: IconSchool, link: '/cms', color: 'pink' },
+        { label: '訊息中心', icon: IconMessage, link: '/messages', color: 'cyan' },
+      ],
+    },
   ];
 
-  // 管理員專屬項目
+  // 管理員專屬群組
   if (user?.role === 'admin') {
-    navItems.push({ label: '管理後台', icon: IconShieldLock, link: '/admin', color: 'red' });
+    navGroups.push({
+      groupLabel: '管理',
+      items: [
+        { label: '管理後台', icon: IconShieldLock, link: '/admin', color: 'red' },
+      ],
+    });
   }
 
   return (
@@ -155,7 +199,28 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
             </Group>
           </Group>
 
-          <Group>
+          <Group gap="md">
+            {/* 通知鈴鐺按鈕 */}
+            <Tooltip label="通知中心" position="bottom">
+              <Indicator 
+                color="red" 
+                size={18} 
+                label={unreadNotificationCount > 99 ? '99+' : unreadNotificationCount} 
+                disabled={unreadNotificationCount === 0}
+                offset={4}
+              >
+                <ActionIcon 
+                  variant="subtle" 
+                  color="gray" 
+                  size="lg"
+                  radius="xl"
+                  onClick={() => router.push('/notifications')}
+                >
+                  <IconBell size={22} />
+                </ActionIcon>
+              </Indicator>
+            </Tooltip>
+
             <Menu shadow="md" width={200} transitionProps={{ transition: 'pop-top-right' }} radius="md">
               <Menu.Target>
                 <UnstyledButton className="sidebar-nav-item" p={4} px={8} style={{ borderRadius: '30px' }}>
@@ -232,44 +297,56 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       >
         <ScrollArea h="100%">
           <Box mb="md">
-            <Text size="xs" fw={700} c="dimmed" mb="xs" px="xs" tt="uppercase" style={{ letterSpacing: '1px' }}>
-              Main Menu
-            </Text>
-            {navItems.map((item) => {
-              const isActive = pathname === item.link || pathname?.startsWith(`${item.link}/`);
-              return (
-                <NavLink
-                  key={item.label}
-                  label={
-                    <Text size="sm" fw={isActive ? 700 : 500} c={isActive ? 'dark' : 'dimmed'}>
-                      {item.label}
-                    </Text>
-                  }
-                  leftSection={
-                    <ThemeIcon 
-                      variant={isActive ? 'gradient' : 'light'} 
-                      gradient={isActive ? { from: item.color, to: 'cyan', deg: 135 } : undefined}
-                      color={item.color}
-                      size="md" 
-                      radius="md"
-                    >
-                      <item.icon size={18} stroke={2} />
-                    </ThemeIcon>
-                  }
-                  rightSection={
-                    isActive && <IconChevronRight size={14} style={{ opacity: 0.5 }} />
-                  }
-                  onClick={() => {
-                    router.push(item.link);
-                    toggle();
-                  }}
-                  active={isActive}
-                  className="sidebar-nav-item"
-                  mb={4}
-                  py={10}
-                />
-              );
-            })}
+            {navGroups.map((group, groupIndex) => (
+              <Box key={group.groupLabel} mt={groupIndex > 0 ? 'md' : 0}>
+                <Text
+                  size="xs"
+                  fw={700}
+                  c="dimmed"
+                  mb={6}
+                  px="xs"
+                  tt="uppercase"
+                  style={{ letterSpacing: '1px', fontSize: '0.65rem' }}
+                >
+                  {group.groupLabel}
+                </Text>
+                {group.items.map((item) => {
+                  const isActive = pathname === item.link || (item.link !== '/' && pathname?.startsWith(`${item.link}/`));
+                  return (
+                    <NavLink
+                      key={item.label}
+                      label={
+                        <Text size="sm" fw={isActive ? 700 : 500} c={isActive ? 'dark' : 'dimmed'}>
+                          {item.label}
+                        </Text>
+                      }
+                      leftSection={
+                        <ThemeIcon
+                          variant={isActive ? 'gradient' : 'light'}
+                          gradient={isActive ? { from: item.color, to: 'cyan', deg: 135 } : undefined}
+                          color={item.color}
+                          size="md"
+                          radius="md"
+                        >
+                          <item.icon size={18} stroke={2} />
+                        </ThemeIcon>
+                      }
+                      rightSection={
+                        isActive && <IconChevronRight size={14} style={{ opacity: 0.5 }} />
+                      }
+                      onClick={() => {
+                        router.push(item.link);
+                        toggle();
+                      }}
+                      active={isActive}
+                      className="sidebar-nav-item"
+                      mb={4}
+                      py={10}
+                    />
+                  );
+                })}
+              </Box>
+            ))}
           </Box>
 
           <Box mt="xl">

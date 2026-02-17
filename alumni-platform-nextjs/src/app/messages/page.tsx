@@ -92,16 +92,22 @@ export default function MessagesPage() {
             </Center>
           ) : (
             <Stack gap="md">
-              {conversations.map((conv) => (
+              {conversations.map((conv, index) => (
                 <Card
                   key={conv.id}
                   shadow="sm"
                   padding="lg"
                   radius="md"
                   withBorder
-                  className="hover-translate-y"
-                  style={{ cursor: 'pointer' }}
+                  className="hover-translate-y glass-card-soft animate-list-item"
+                  style={{
+                    cursor: 'pointer',
+                    animationDelay: `${Math.min(index, 9) * 0.05}s`,
+                  }}
+                  tabIndex={0}
+                  role="link"
                   onClick={() => router.push(`/messages/${conv.id}`)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/messages/${conv.id}`); } }}
                 >
                   <Group gap="md">
                     <Avatar

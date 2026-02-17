@@ -86,6 +86,15 @@ const statusOptions = [
   { value: 'cancelled', label: '已取消' },
 ];
 
+// A5: 無封面圖時的多樣漸層背景
+const COVER_GRADIENTS = [
+  'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',  // warm peach
+  'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)',  // soft blue
+  'linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)',  // fresh green
+  'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)',  // magic pink-blue
+  'linear-gradient(135deg, #ffd89b 0%, #19547b 100%)',  // sunset teal
+];
+
 const formatDateTime = (
   value?: string,
   options: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeStyle: 'short' }
@@ -350,7 +359,7 @@ export default function EventsPage() {
                 </Group>
 
                 <Grid>
-                  {events.map((event) => {
+                  {events.map((event, index) => {
                     const status = resolveEventStatus(event);
                     const categoryColor = event.category_id ? categoryColorMap.get(event.category_id) : undefined;
 
@@ -361,40 +370,66 @@ export default function EventsPage() {
                           padding="lg"
                           radius="md"
                           withBorder
-                          className="hover-translate-y gradient-border-top"
-                          style={{ cursor: 'pointer', height: '100%', position: 'relative', overflow: 'hidden' }}
+                          className="hover-translate-y gradient-border-top glass-card-soft animate-list-item"
+                          style={{
+                            cursor: 'pointer',
+                            height: '100%',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            animationDelay: `${Math.min(index, 9) * 0.05}s`,
+                          }}
+                          tabIndex={0}
+                          role="link"
                           onClick={() => router.push(`/events/${event.id}`)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/events/${event.id}`); } }}
                         >
                           <Stack gap="md">
-                            {/* 活動封面圖片 */}
-                            {(event.cover_image_url || event.image_url) && (
-                              <div style={{
-                                position: 'relative',
-                                width: '100%',
-                                height: '200px',
-                                borderRadius: 'var(--mantine-radius-md)',
-                                marginBottom: '0.5rem',
-                                overflow: 'hidden',
-                              }}>
-                                <Image
-                                  src={event.cover_image_url || event.image_url || ''}
-                                  alt={event.title}
-                                  fill
-                                  style={{ objectFit: 'cover' }}
-                                  unoptimized={(event.cover_image_url || event.image_url || '').startsWith('http://localhost')}
-                                />
-                                {/* 漸層遮罩 */}
+                            {/* 活動封面圖片 / 漸層佔位 */}
+                            <div style={{
+                              position: 'relative',
+                              width: '100%',
+                              height: '200px',
+                              borderRadius: 'var(--mantine-radius-md)',
+                              marginBottom: '0.5rem',
+                              overflow: 'hidden',
+                              background: (event.cover_image_url || event.image_url)
+                                ? undefined
+                                : COVER_GRADIENTS[event.id % COVER_GRADIENTS.length],
+                            }}>
+                              {(event.cover_image_url || event.image_url) ? (
+                                <>
+                                  <Image
+                                    src={event.cover_image_url || event.image_url || ''}
+                                    alt={event.title}
+                                    fill
+                                    style={{ objectFit: 'cover' }}
+                                    unoptimized={(event.cover_image_url || event.image_url || '').startsWith('http://localhost')}
+                                  />
+                                  {/* 漸層遮罩 */}
+                                  <div style={{
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '60%',
+                                    background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)',
+                                    pointerEvents: 'none',
+                                  }} />
+                                </>
+                              ) : (
                                 <div style={{
                                   position: 'absolute',
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  height: '60%',
-                                  background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)',
-                                  pointerEvents: 'none',
-                                }} />
-                              </div>
-                            )}
+                                  bottom: 12,
+                                  left: 16,
+                                  color: 'rgba(255,255,255,0.85)',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  textShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                                }}>
+                                  {event.category_name || '活動'}
+                                </div>
+                              )}
+                            </div>
 
                             <Group justify="space-between" align="flex-start">
                               <Stack gap={6} style={{ flex: 1 }}>

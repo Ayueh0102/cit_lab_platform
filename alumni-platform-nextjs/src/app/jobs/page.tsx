@@ -213,7 +213,7 @@ export default function JobsPage() {
                     padding="lg"
                     radius="md"
                     withBorder
-                    className="hover-translate-y gradient-border-top glass-card-lite animate-list-item"
+                    className="hover-translate-y gradient-border-top glass-card-soft animate-list-item"
                     style={{
                       cursor: 'pointer',
                       position: 'relative',

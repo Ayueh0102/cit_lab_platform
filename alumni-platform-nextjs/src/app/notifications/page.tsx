@@ -24,6 +24,9 @@ import {
   IconCheck,
   IconTrash,
   IconSettings,
+  IconUserPlus,
+  IconUserCheck,
+  IconUserX,
 } from '@tabler/icons-react';
 import { SidebarLayout } from '@/components/layout/SidebarLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -33,18 +36,23 @@ import { useRouter } from 'next/navigation';
 
 interface Notification {
   id: number;
-  notification_type: 'job' | 'event' | 'bulletin' | 'message' | 'system';
+  notification_type: 'job' | 'event' | 'bulletin' | 'message' | 'system' | 'user_registration_request' | 'user_registration_approved' | 'user_registration_rejected' | 'job_request' | 'job_request_approved' | 'job_request_rejected';
   title: string;
   content: string;
+  message?: string;
   status: 'unread' | 'read' | 'archived';
   created_at: string;
   read_at?: string;
   link_url?: string;
+  action_url?: string;
 }
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
     case 'job':
+    case 'job_request':
+    case 'job_request_approved':
+    case 'job_request_rejected':
       return <IconBriefcase size={20} color="blue" />;
     case 'event':
       return <IconCalendarEvent size={20} color="green" />;
@@ -52,6 +60,12 @@ const getNotificationIcon = (type: string) => {
       return <IconBell size={20} color="orange" />;
     case 'message':
       return <IconUsers size={20} color="purple" />;
+    case 'user_registration_request':
+      return <IconUserPlus size={20} color="teal" />;
+    case 'user_registration_approved':
+      return <IconUserCheck size={20} color="green" />;
+    case 'user_registration_rejected':
+      return <IconUserX size={20} color="red" />;
     default:
       return <IconSettings size={20} color="gray" />;
   }
@@ -60,6 +74,9 @@ const getNotificationIcon = (type: string) => {
 const getNotificationColor = (type: string) => {
   switch (type) {
     case 'job':
+    case 'job_request':
+    case 'job_request_approved':
+    case 'job_request_rejected':
       return 'blue';
     case 'event':
       return 'green';
@@ -67,6 +84,12 @@ const getNotificationColor = (type: string) => {
       return 'orange';
     case 'message':
       return 'purple';
+    case 'user_registration_request':
+      return 'teal';
+    case 'user_registration_approved':
+      return 'green';
+    case 'user_registration_rejected':
+      return 'red';
     default:
       return 'gray';
   }
@@ -288,15 +311,17 @@ export default function NotificationsPage() {
 
             <Stack gap="md">
               {filteredNotifications.length > 0 ? (
-                filteredNotifications.map((notification) => (
+                filteredNotifications.map((notification, index) => (
                   <Card
                     key={notification.id}
                     shadow="sm"
                     padding="lg"
                     radius="md"
                     withBorder
+                    className="glass-card-soft animate-list-item"
                     style={{
-                      backgroundColor: notification.status === 'unread' ? 'rgba(66, 153, 225, 0.05)' : undefined,
+                      backgroundColor: notification.status === 'unread' ? 'rgba(66, 153, 225, 0.08)' : undefined,
+                      animationDelay: `${Math.min(index, 9) * 0.05}s`,
                     }}
                   >
                     <Group justify="space-between" wrap="nowrap">
@@ -316,14 +341,20 @@ export default function NotificationsPage() {
                               variant="light"
                             >
                               {notification.notification_type === 'job' && '職缺'}
+                              {notification.notification_type === 'job_request' && '職缺交流'}
+                              {notification.notification_type === 'job_request_approved' && '職缺交流通過'}
+                              {notification.notification_type === 'job_request_rejected' && '職缺交流拒絕'}
                               {notification.notification_type === 'event' && '活動'}
                               {notification.notification_type === 'bulletin' && '公告'}
                               {notification.notification_type === 'message' && '訊息'}
                               {notification.notification_type === 'system' && '系統'}
+                              {notification.notification_type === 'user_registration_request' && '會員申請'}
+                              {notification.notification_type === 'user_registration_approved' && '申請通過'}
+                              {notification.notification_type === 'user_registration_rejected' && '申請拒絕'}
                             </Badge>
                           </Group>
                           <Text size="sm" c="dimmed" mb="xs">
-                            {notification.content}
+                            {notification.message || notification.content}
                           </Text>
                           <Text size="xs" c="dimmed">
                             {new Date(notification.created_at).toLocaleString('zh-TW')}
