@@ -59,9 +59,6 @@ export function AdminImportModal({ opened, onClose, onImportSuccess }: AdminImpo
       case 'jobs':
         exampleRow = '軟體工程師,台積電,新竹市,負責系統開發,3年以上經驗,80K-120K,full_time,hr@example.com';
         break;
-      case 'events':
-        exampleRow = '校友聚餐,年度校友聚餐活動,2026-06-15 18:00,2026-06-15 21:00,台北市信義區,50,false,reunion';
-        break;
       case 'bulletins':
         exampleRow = '系統公告,這是一則系統公告的內容,announcement,一般,false';
         break;
@@ -118,9 +115,6 @@ export function AdminImportModal({ opened, onClose, onImportSuccess }: AdminImpo
           break;
         case 'jobs':
           result = await api.csv.importJobs(importFile, token);
-          break;
-        case 'events':
-          result = await api.csv.importEvents(importFile, token);
           break;
         case 'bulletins':
           result = await api.csv.importBulletins(importFile, token);
@@ -191,7 +185,6 @@ export function AdminImportModal({ opened, onClose, onImportSuccess }: AdminImpo
           data={[
             { value: 'users', label: '使用者資料' },
             { value: 'jobs', label: '職缺資料' },
-            { value: 'events', label: '活動資料' },
             { value: 'bulletins', label: '公告資料' },
           ]}
           value={importType}
@@ -237,7 +230,7 @@ export function AdminImportModal({ opened, onClose, onImportSuccess }: AdminImpo
           onClick={() => handleDownloadTemplate(importType)}
           size="sm"
         >
-          下載 CSV 範本（{importType === 'users' ? '使用者' : importType === 'jobs' ? '職缺' : importType === 'events' ? '活動' : '公告'}）
+          下載 CSV 範本（{importType === 'users' ? '使用者' : importType === 'jobs' ? '職缺' : '公告'}）
         </Button>
 
         <FileInput

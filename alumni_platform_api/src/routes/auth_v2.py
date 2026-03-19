@@ -513,9 +513,12 @@ def change_password(current_user):
         if not current_user.check_password(data['current_password']):
             return jsonify({'message': 'Current password is incorrect'}), 401
 
-        # 檢查新密碼強度
-        if len(data['new_password']) < 6:
-            return jsonify({'message': 'New password must be at least 6 characters'}), 400
+        # 檢查新密碼強度（與註冊相同策略）
+        new_password = data['new_password']
+        if len(new_password) < 8:
+            return jsonify({'message': '密碼長度至少需要 8 個字元'}), 400
+        if not re.search(r'[A-Za-z]', new_password) or not re.search(r'[0-9]', new_password):
+            return jsonify({'message': '密碼需包含英文字母和數字'}), 400
 
         # 設定新密碼
         current_user.set_password(data['new_password'])

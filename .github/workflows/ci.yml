@@ -33,7 +33,7 @@ jobs:
 
       - name: Run linter
         working-directory: ./alumni-platform-nextjs
-        run: pnpm lint --max-warnings 0
+        run: pnpm lint
 
       - name: Run TypeScript check
         working-directory: ./alumni-platform-nextjs

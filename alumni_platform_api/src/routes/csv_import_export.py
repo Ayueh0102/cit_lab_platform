@@ -19,6 +19,7 @@ csv_bp = Blueprint('csv', __name__)
 
 @csv_bp.route('/api/csv/export/users', methods=['GET'])
 @token_required
+@admin_required
 def export_users(current_user):
     """匯出系友帳號清單為 CSV"""
     try:
@@ -37,6 +38,7 @@ def export_users(current_user):
 
 @csv_bp.route('/api/csv/export/jobs', methods=['GET'])
 @token_required
+@admin_required
 def export_jobs(current_user):
     """匯出職缺發布清單為 CSV"""
     try:
@@ -80,6 +82,7 @@ def export_jobs(current_user):
 
 @csv_bp.route('/api/csv/export/events', methods=['GET'])
 @token_required
+@admin_required
 def export_events(current_user):
     """匯出活動清單為 CSV"""
     try:
@@ -129,6 +132,7 @@ def export_events(current_user):
 
 @csv_bp.route('/api/csv/export/bulletins', methods=['GET'])
 @token_required
+@admin_required
 def export_bulletins(current_user):
     """匯出公告發布清單為 CSV"""
     try:
@@ -173,6 +177,7 @@ def export_bulletins(current_user):
 
 @csv_bp.route('/api/csv/import/users', methods=['POST'])
 @token_required
+@admin_required
 def import_users(current_user):
     """從 CSV 匯入系友帳號"""
     try:
@@ -281,6 +286,7 @@ def import_users(current_user):
 
 @csv_bp.route('/api/csv/import/jobs', methods=['POST'])
 @token_required
+@admin_required
 def import_jobs(current_user):
     """從 CSV 匯入職缺"""
     try:
@@ -352,6 +358,7 @@ def import_jobs(current_user):
 
 @csv_bp.route('/api/csv/import/bulletins', methods=['POST'])
 @token_required
+@admin_required
 def import_bulletins(current_user):
     """從 CSV 匯入公告"""
     try:
@@ -424,6 +431,7 @@ def import_bulletins(current_user):
 
 @csv_bp.route('/api/csv/export/all', methods=['GET'])
 @token_required
+@admin_required
 def export_all(current_user):
     """批次匯出所有資料為 ZIP"""
     try:

@@ -79,6 +79,10 @@ CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
 
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB
 
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({'error': '檔案大小超過限制', 'message': '上傳檔案不得超過 10MB'}), 413
+
 # Register blueprints - v2 routes
 app.register_blueprint(auth_v2_bp)          # /api/v2/auth/*
 app.register_blueprint(jobs_v2_bp)          # /api/v2/jobs/*

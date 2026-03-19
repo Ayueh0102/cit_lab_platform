@@ -79,11 +79,6 @@ export const CSV_FIELD_DESCRIPTIONS: Record<string, { fields: string[]; required
     required: ['title', 'company'],
     description: '匯入職缺資料。job_type 可選值：full_time, part_time, internship, contract。',
   },
-  events: {
-    fields: ['title', 'description', 'start_time', 'end_time', 'location', 'max_participants', 'is_online', 'event_type'],
-    required: ['title', 'start_time'],
-    description: '匯入活動資料。時間格式為 YYYY-MM-DD HH:mm。is_online 填 true 或 false。',
-  },
   bulletins: {
     fields: ['title', 'content', 'bulletin_type', 'category', 'is_pinned'],
     required: ['title', 'content'],
