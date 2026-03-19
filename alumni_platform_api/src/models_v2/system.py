@@ -4,7 +4,7 @@
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, JSON, Index
 from sqlalchemy.orm import relationship
 import enum
 from .base import BaseModel, db, enum_type
@@ -56,6 +56,9 @@ class LogLevel(enum.Enum):
 class Notification(BaseModel):
     """通知"""
     __tablename__ = 'notifications_v2'
+    __table_args__ = (
+        Index('idx_notification_user_status', 'user_id', 'status'),
+    )
 
     # 接收者
     user_id = Column(Integer, ForeignKey('users_v2.id', ondelete='CASCADE'),

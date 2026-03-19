@@ -4,7 +4,7 @@
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, Index
 from sqlalchemy.orm import relationship
 import enum
 from .base import BaseModel, db, enum_type
@@ -120,6 +120,10 @@ class JobCategory(BaseModel):
 class Job(BaseModel):
     """職缺資訊"""
     __tablename__ = 'jobs_v2'
+    __table_args__ = (
+        Index('idx_job_status', 'status'),
+        Index('idx_job_user_id', 'user_id'),
+    )
 
     # 基本資訊
     user_id = Column(Integer, ForeignKey('users_v2.id', ondelete='CASCADE'),

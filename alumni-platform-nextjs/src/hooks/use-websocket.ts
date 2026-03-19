@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { getToken } from '@/lib/auth';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5001';
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
 interface UseWebSocketOptions {
   onNotification?: (data: any) => void;
@@ -45,8 +45,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
     // 連接成功
     socket.on('connect', () => {
-      console.log('WebSocket connected');
-      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('WebSocket connected');
+      }
+
       // 訂閱通知
       socket.emit('subscribe_notifications');
     });
@@ -70,36 +72,48 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
     // 訂閱成功
     socket.on('subscribed', (data) => {
-      console.log('Subscribed to:', data.room);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Subscribed to:', data.room);
+      }
     });
 
     // 接收新通知
     socket.on('new_notification', (data) => {
-      console.log('New notification:', data);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('New notification:', data);
+      }
       onNotification?.(data);
     });
 
     // 接收通知數量更新
     socket.on('notification_count_update', (data) => {
-      console.log('Notification count update:', data.unread_count);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Notification count update:', data.unread_count);
+      }
       onNotificationCountUpdate?.(data.unread_count);
     });
 
     // 接收新訊息
     socket.on('new_message', (data) => {
-      console.log('New message:', data);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('New message:', data);
+      }
       onNewMessage?.(data);
     });
 
     // 接收對話更新
     socket.on('conversation_update', (data) => {
-      console.log('Conversation update:', data);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Conversation update:', data);
+      }
       onConversationUpdate?.(data);
     });
 
     // 斷開連接
     socket.on('disconnect', () => {
-      console.log('WebSocket disconnected');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('WebSocket disconnected');
+      }
     });
 
     // 清理函數

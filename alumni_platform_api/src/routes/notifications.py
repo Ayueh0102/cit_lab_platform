@@ -9,6 +9,9 @@ from src.routes.auth_v2 import token_required, admin_required
 from datetime import datetime
 from sqlalchemy import or_
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 notifications_bp = Blueprint('notifications', __name__)
 
@@ -24,6 +27,7 @@ def get_notifications(current_user):
     notification_type = request.args.get('type')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     query = Notification.query.filter_by(user_id=current_user.id)
 
@@ -283,6 +287,7 @@ def get_user_activities(current_user):
     activity_type = request.args.get('type')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     # 只有自己或管理員可以查看
     if user_id != current_user.id and current_user.role != 'admin':
@@ -349,6 +354,7 @@ def get_file_uploads(current_user):
     related_type = request.args.get('related_type')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     # 只有自己或管理員可以查看
     if user_id != current_user.id and current_user.role != 'admin':
@@ -418,7 +424,7 @@ def get_notification_preferences(current_user):
         if profile.notification_preferences:
             try:
                 preferences = json.loads(profile.notification_preferences)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 preferences = {
                     'emailNotifications': True,
                     'jobAlerts': True,
@@ -454,7 +460,7 @@ def update_notification_preferences(current_user):
         if current_user.profile.notification_preferences:
             try:
                 current_preferences = json.loads(current_user.profile.notification_preferences)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
         
         # 更新設定
@@ -585,5 +591,5 @@ def create_notification(user_id, notification_type, title, message, related_type
 
     except Exception as e:
         db.session.rollback()
-        print(f"Failed to create notification: {str(e)}")
+        logger.error(f"Failed to create notification: {str(e)}")
         return None

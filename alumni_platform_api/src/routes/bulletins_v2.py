@@ -56,6 +56,7 @@ def get_bulletins():
     search = request.args.get('search')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     query = Bulletin.query
 
@@ -229,6 +230,7 @@ def get_my_bulletins(current_user):
     status = request.args.get('status')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     query = Bulletin.query.filter_by(author_id=current_user.id)
 

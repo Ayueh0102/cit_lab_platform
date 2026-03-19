@@ -36,11 +36,15 @@ export function useCardTilt(intensity = 6) {
   const onMouseMove = useCallback((e: React.MouseEvent) => {
     const el = ref.current;
     if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    el.style.transform =
-      `perspective(800px) rotateY(${x * intensity}deg) rotateX(${-y * intensity}deg) translateY(-4px)`;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      const x = (clientX - rect.left) / rect.width - 0.5;
+      const y = (clientY - rect.top) / rect.height - 0.5;
+      el.style.transform =
+        `perspective(800px) rotateY(${x * intensity}deg) rotateX(${-y * intensity}deg) translateY(-4px)`;
+    });
   }, [intensity]);
 
   const onMouseLeave = useCallback(() => {
@@ -65,9 +69,13 @@ export function useCardTilt(intensity = 6) {
 export function useCursorGlow() {
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
     const el = e.currentTarget;
-    const rect = el.getBoundingClientRect();
-    el.style.setProperty('--glow-x', `${e.clientX - rect.left}px`);
-    el.style.setProperty('--glow-y', `${e.clientY - rect.top}px`);
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      el.style.setProperty('--glow-x', `${clientX - rect.left}px`);
+      el.style.setProperty('--glow-y', `${clientY - rect.top}px`);
+    });
   }, []);
 
   return { onMouseMove };

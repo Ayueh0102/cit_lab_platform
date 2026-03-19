@@ -45,14 +45,6 @@ start_frontend() {
 start_backend() {
   local log="$LOG_DIR/backend.log"
 
-  # Ensure venv
-  if [ ! -d "$BE_DIR/venv" ]; then
-    (cd "$BE_DIR" && python3 -m venv venv)
-  fi
-
-  # Ensure deps (best-effort)
-  (cd "$BE_DIR" && ./venv/bin/pip install -r requirements.txt >/dev/null 2>&1 || true)
-
   # Start Flask app (using conda environment)
   (cd "$BE_DIR" && eval "$(conda shell.bash hook)" && conda activate alumni-platform && nohup python src/main_v2.py >"$log" 2>&1 & echo "BACKEND=$!" >> "$PID_FILE")
   echo "Backend:  http://127.0.0.1:5001 (logs: $log)"

@@ -7,6 +7,9 @@ from flask import current_app
 from src.models_v2 import db, Notification, Message, Conversation
 from functools import wraps
 import jwt
+import logging
+
+logger = logging.getLogger(__name__)
 
 socketio = SocketIO(async_mode='threading')
 
@@ -59,7 +62,7 @@ def handle_connect(auth):
             emit('connected', {'message': 'Connected successfully', 'user_id': user_id})
             return True
     except Exception as e:
-        print(f"WebSocket connection error: {e}")
+        logger.error(f"WebSocket connection error: {e}")
         return False
 
 

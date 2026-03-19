@@ -294,7 +294,7 @@ export default function JobsPage() {
                     tabIndex={0}
                     role="link"
                     onClick={() => router.push(`/jobs/${job.id}`)}
-                    onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--glow-x', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--glow-y', `${e.clientY - r.top}px`); }}
+                    onMouseMove={(e) => { const target = e.currentTarget; const clientX = e.clientX; const clientY = e.clientY; requestAnimationFrame(() => { const r = target.getBoundingClientRect(); target.style.setProperty('--glow-x', `${clientX - r.left}px`); target.style.setProperty('--glow-y', `${clientY - r.top}px`); }); }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/jobs/${job.id}`); } }}
                   >
                     <Stack gap="md">

@@ -24,6 +24,7 @@ def get_articles(current_user):
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
+        per_page = min(max(per_page, 1), 100)
         status = request.args.get('status')
         search = request.args.get('search', '').strip()
         

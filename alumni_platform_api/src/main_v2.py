@@ -49,6 +49,16 @@ from src.config.database import get_database_config
 # Import WebSocket
 from src.routes.websocket import socketio
 
+# Configure logging
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
 # 設置 static_folder 為 src/static 目錄
 static_folder_path = os.path.join(os.path.dirname(__file__), 'static')
 app = Flask(__name__, static_folder=static_folder_path)
@@ -73,6 +83,8 @@ else:
 # CORS 設定 - 限制允許的來源
 ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
 CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
+
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB
 
 # Register blueprints - v2 routes
 app.register_blueprint(auth_v2_bp)          # /api/v2/auth/*
@@ -452,12 +464,14 @@ if __name__ == '__main__':
     init_database()
 
     # 啟動 Flask 應用程式
+    port = int(os.environ.get('PORT', 5001))
+
     print("\n" + "="*50)
     print("🚀 Starting Alumni Platform API v2")
     print("="*50)
     print(f"📊 Database: app_v2.db")
-    print(f"🌐 Server: http://localhost:5001")
-    print(f"📚 API Docs: http://localhost:5001/")
+    print(f"🌐 Server: http://localhost:{port}")
+    print(f"📚 API Docs: http://localhost:{port}/")
     print("="*50 + "\n")
 
-    socketio.run(app, host='0.0.0.0', port=5001, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=port, debug=not IS_PRODUCTION, allow_unsafe_werkzeug=True)

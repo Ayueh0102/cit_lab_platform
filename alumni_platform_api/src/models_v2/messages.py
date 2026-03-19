@@ -4,7 +4,7 @@
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, Index
 from sqlalchemy.orm import relationship
 import enum
 from .base import BaseModel, db, enum_type
@@ -33,6 +33,10 @@ class ConversationType(enum.Enum):
 class Conversation(BaseModel):
     """對話管理"""
     __tablename__ = 'conversations_v2'
+    __table_args__ = (
+        Index('idx_conversation_users', 'user1_id', 'user2_id'),
+        Index('idx_conversation_updated_at', 'updated_at'),
+    )
 
     # 參與者
     user1_id = Column(Integer, ForeignKey('users_v2.id', ondelete='CASCADE'),
@@ -216,6 +220,10 @@ class Conversation(BaseModel):
 class Message(BaseModel):
     """訊息內容"""
     __tablename__ = 'messages_v2'
+    __table_args__ = (
+        Index('idx_message_conversation_id', 'conversation_id'),
+        Index('idx_message_conversation_created', 'conversation_id', 'created_at'),
+    )
 
     conversation_id = Column(Integer, ForeignKey('conversations_v2.id', ondelete='CASCADE'),
                             nullable=False, comment='對話ID')

@@ -184,6 +184,9 @@ def import_users(current_user):
         if file.filename == '':
             return {'error': '請選擇檔案'}, 400
 
+        if not file.filename.lower().endswith('.csv'):
+            return {'error': '只接受 CSV 檔案格式'}, 400
+
         # 讀取 CSV
         stream = io.StringIO(file.stream.read().decode('utf-8-sig'))
         reader = csv.DictReader(stream)
@@ -285,6 +288,12 @@ def import_jobs(current_user):
             return {'error': '請選擇檔案'}, 400
 
         file = request.files['file']
+        if file.filename == '':
+            return {'error': '請選擇檔案'}, 400
+
+        if not file.filename.lower().endswith('.csv'):
+            return {'error': '只接受 CSV 檔案格式'}, 400
+
         stream = io.StringIO(file.stream.read().decode('utf-8-sig'))
         reader = csv.DictReader(stream)
 
@@ -350,6 +359,12 @@ def import_bulletins(current_user):
             return {'error': '請選擇檔案'}, 400
 
         file = request.files['file']
+        if file.filename == '':
+            return {'error': '請選擇檔案'}, 400
+
+        if not file.filename.lower().endswith('.csv'):
+            return {'error': '只接受 CSV 檔案格式'}, 400
+
         stream = io.StringIO(file.stream.read().decode('utf-8-sig'))
         reader = csv.DictReader(stream)
 

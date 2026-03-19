@@ -8,7 +8,11 @@ from src.models_v2 import db, User, UserProfile, Job, Event, Bulletin, Notificat
 from src.models_v2.jobs import JobStatus
 from src.models_v2.content import ContentStatus
 from src.routes.auth_v2 import token_required, admin_required
+from sqlalchemy import func, case
 from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger(__name__)
 
 admin_v2_bp = Blueprint('admin_v2', __name__)
 
@@ -22,69 +26,70 @@ admin_v2_bp = Blueprint('admin_v2', __name__)
 def get_statistics(current_user):
     """取得系統統計數據"""
     try:
-        # 用戶統計
-        total_users = User.query.count()
-        active_users = User.query.filter_by(status='active').count()
-        pending_users = User.query.filter_by(status='pending').count()
-        
-        # 最近 30 天活躍用戶
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        active_users_30d = User.query.filter(
-            User.last_login_at >= thirty_days_ago
-        ).count()
-        
-        # 職缺統計
-        total_jobs = Job.query.count()
-        active_jobs = Job.query.filter(Job.status == JobStatus.ACTIVE).count()
-        draft_jobs = Job.query.filter(Job.status == JobStatus.DRAFT).count()
-        
-        # 活動統計
-        total_events = Event.query.count()
-        upcoming_events = Event.query.filter(
-            Event.start_time > datetime.utcnow()
-        ).count()
-        
-        # 公告統計
-        total_bulletins = Bulletin.query.count()
-        published_bulletins = Bulletin.query.filter(Bulletin.status == ContentStatus.PUBLISHED).count()
-        
-        # 本月新增統計
-        this_month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        jobs_this_month = Job.query.filter(Job.created_at >= this_month_start).count()
-        events_this_month = Event.query.filter(Event.created_at >= this_month_start).count()
-        bulletins_this_month = Bulletin.query.filter(Bulletin.created_at >= this_month_start).count()
-        users_this_month = User.query.filter(User.created_at >= this_month_start).count()
-        
-        # 本週新增統計
-        week_start = datetime.utcnow() - timedelta(days=datetime.utcnow().weekday())
-        week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
-        bulletins_this_week = Bulletin.query.filter(Bulletin.created_at >= week_start).count()
-        
+        now = datetime.utcnow()
+        thirty_days_ago = now - timedelta(days=30)
+        this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        week_start = (now - timedelta(days=now.weekday())).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
+        # 用戶統計 — 單一查詢取得所有計數
+        user_stats = db.session.query(
+            func.count().label('total'),
+            func.count(case((User.status == 'active', 1))).label('active'),
+            func.count(case((User.status == 'pending', 1))).label('pending'),
+            func.count(case((User.last_login_at >= thirty_days_ago, 1))).label('active_30d'),
+            func.count(case((User.created_at >= this_month_start, 1))).label('new_this_month'),
+        ).select_from(User).first()
+
+        # 職缺統計 — 單一查詢
+        job_stats = db.session.query(
+            func.count().label('total'),
+            func.count(case((Job.status == JobStatus.ACTIVE, 1))).label('active'),
+            func.count(case((Job.status == JobStatus.DRAFT, 1))).label('draft'),
+            func.count(case((Job.created_at >= this_month_start, 1))).label('new_this_month'),
+        ).select_from(Job).first()
+
+        # 活動統計 — 單一查詢
+        event_stats = db.session.query(
+            func.count().label('total'),
+            func.count(case((Event.start_time > now, 1))).label('upcoming'),
+            func.count(case((Event.created_at >= this_month_start, 1))).label('new_this_month'),
+        ).select_from(Event).first()
+
+        # 公告統計 — 單一查詢
+        bulletin_stats = db.session.query(
+            func.count().label('total'),
+            func.count(case((Bulletin.status == ContentStatus.PUBLISHED, 1))).label('published'),
+            func.count(case((Bulletin.created_at >= this_month_start, 1))).label('new_this_month'),
+            func.count(case((Bulletin.created_at >= week_start, 1))).label('new_this_week'),
+        ).select_from(Bulletin).first()
+
         return jsonify({
             'statistics': {
                 'users': {
-                    'total': total_users,
-                    'active': active_users,
-                    'pending': pending_users,
-                    'active_30d': active_users_30d,
-                    'new_this_month': users_this_month,
+                    'total': user_stats.total,
+                    'active': user_stats.active,
+                    'pending': user_stats.pending,
+                    'active_30d': user_stats.active_30d,
+                    'new_this_month': user_stats.new_this_month,
                 },
                 'jobs': {
-                    'total': total_jobs,
-                    'active': active_jobs,
-                    'draft': draft_jobs,
-                    'new_this_month': jobs_this_month,
+                    'total': job_stats.total,
+                    'active': job_stats.active,
+                    'draft': job_stats.draft,
+                    'new_this_month': job_stats.new_this_month,
                 },
                 'events': {
-                    'total': total_events,
-                    'upcoming': upcoming_events,
-                    'new_this_month': events_this_month,
+                    'total': event_stats.total,
+                    'upcoming': event_stats.upcoming,
+                    'new_this_month': event_stats.new_this_month,
                 },
                 'bulletins': {
-                    'total': total_bulletins,
-                    'published': published_bulletins,
-                    'new_this_month': bulletins_this_month,
-                    'new_this_week': bulletins_this_week,
+                    'total': bulletin_stats.total,
+                    'published': bulletin_stats.published,
+                    'new_this_month': bulletin_stats.new_this_month,
+                    'new_this_week': bulletin_stats.new_this_week,
                 },
             }
         }), 200
@@ -105,13 +110,11 @@ def get_users_admin(current_user):
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
+        per_page = min(max(per_page, 1), 100)
         search = request.args.get('search', '').strip()
         role = request.args.get('role', '').strip()
         status = request.args.get('status', '').strip()
-        
-        if per_page > 100:
-            per_page = 100
-        
+
         query = User.query
         
         # 搜尋過濾
@@ -326,10 +329,8 @@ def get_pending_users(current_user):
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
-        
-        if per_page > 100:
-            per_page = 100
-        
+        per_page = min(max(per_page, 1), 100)
+
         query = User.query.filter_by(status='pending')
         query = query.order_by(User.created_at.desc())
         
@@ -408,15 +409,15 @@ def approve_user(current_user, user_id):
             send_approval_notification(user_data, approved=True)
             
         except Exception as email_error:
-            print(f"Email notification failed: {str(email_error)}")
-        
+            logger.warning(f"Email notification failed: {str(email_error)}")
+
         # 發送站內通知給用戶
         try:
             from src.routes.notification_helper import create_user_registration_approved_notification
             create_user_registration_approved_notification(user_id)
         except Exception as notification_error:
-            print(f"User notification failed: {str(notification_error)}")
-        
+            logger.warning(f"User notification failed: {str(notification_error)}")
+
         return jsonify({
             'message': 'User approved successfully',
             'user': {
@@ -463,14 +464,14 @@ def reject_user(current_user, user_id):
             send_approval_notification(user_data, approved=False, reason=reason)
             
         except Exception as email_error:
-            print(f"Email notification failed: {str(email_error)}")
-        
+            logger.warning(f"Email notification failed: {str(email_error)}")
+
         # 發送站內通知給用戶
         try:
             from src.routes.notification_helper import create_user_registration_rejected_notification
             create_user_registration_rejected_notification(user_id, reason)
         except Exception as notification_error:
-            print(f"User notification failed: {str(notification_error)}")
+            logger.warning(f"User notification failed: {str(notification_error)}")
         
         return jsonify({
             'message': 'User rejected successfully',

@@ -4,7 +4,7 @@
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime, Index
 from sqlalchemy.orm import relationship
 import enum
 from .base import BaseModel, db, enum_type
@@ -122,6 +122,10 @@ class EventCategory(BaseModel):
 class Event(BaseModel):
     """活動資訊"""
     __tablename__ = 'events_v2'
+    __table_args__ = (
+        Index('idx_event_status', 'status'),
+        Index('idx_event_organizer_id', 'organizer_id'),
+    )
 
     # 基本資訊
     organizer_id = Column(Integer, ForeignKey('users_v2.id', ondelete='CASCADE'),

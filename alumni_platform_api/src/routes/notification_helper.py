@@ -6,6 +6,9 @@ from src.models_v2 import db, Notification, NotificationType, NotificationStatus
 from src.models_v2.events import RegistrationStatus
 from src.routes.websocket import emit_notification
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def create_notification(
@@ -59,7 +62,7 @@ def create_notification(
         return notification
     except Exception as e:
         db.session.rollback()
-        print(f"Failed to create notification: {str(e)}")
+        logger.error(f"Failed to create notification: {str(e)}")
         return None
 
 

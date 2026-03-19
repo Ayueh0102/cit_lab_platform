@@ -100,18 +100,25 @@ export default function HomePage() {
       setLoading(true);
       const token = getToken();
 
-      // 並行載入所有數據
-      const [jobsRes, eventsRes, bulletinsRes, usersRes] = await Promise.all([
+      // 並行載入所有數據，使用 allSettled 實現優雅降級
+      const [jobsResult, eventsResult, bulletinsResult, usersResult] = await Promise.allSettled([
         api.jobs.getAll(token || undefined),
         api.events.getAll(token || undefined),
         api.bulletins.getAll(token || undefined),
         api.profile.getUsers(token || undefined, { page: 1, per_page: 1 }), // 只獲取第一頁來取得總數
       ]);
 
-      const jobs = jobsRes.jobs || [];
-      const events = eventsRes.events || [];
-      const bulletins = bulletinsRes.bulletins || [];
-      const totalAlumni = usersRes.total || 0; // 從 API 獲取活躍系友總數
+      // 個別處理每個結果，失敗的 API 不影響其他區塊
+      const jobs = jobsResult.status === 'fulfilled' ? (jobsResult.value.jobs || []) : [];
+      const events = eventsResult.status === 'fulfilled' ? (eventsResult.value.events || []) : [];
+      const bulletins = bulletinsResult.status === 'fulfilled' ? (bulletinsResult.value.bulletins || []) : [];
+      const totalAlumni = usersResult.status === 'fulfilled' ? (usersResult.value.total || 0) : 0;
+
+      // 記錄失敗的 API 以便除錯
+      if (jobsResult.status === 'rejected') console.error('載入職缺失敗:', jobsResult.reason);
+      if (eventsResult.status === 'rejected') console.error('載入活動失敗:', eventsResult.reason);
+      if (bulletinsResult.status === 'rejected') console.error('載入公告失敗:', bulletinsResult.reason);
+      if (usersResult.status === 'rejected') console.error('載入系友資料失敗:', usersResult.reason);
 
       // 設定統計數據
       setStats({
@@ -132,16 +139,6 @@ export default function HomePage() {
       setRecentBulletins(bulletins.slice(0, 3));
     } catch (error) {
       console.error('載入儀表板數據失敗:', error);
-      // 設定空數據以避免頁面崩潰
-      setStats({
-        totalJobs: 0,
-        totalEvents: 0,
-        totalAlumni: 0,
-        newThisWeek: 0,
-      });
-      setRecentJobs([]);
-      setRecentEvents([]);
-      setRecentBulletins([]);
     } finally {
       setLoading(false);
     }
@@ -235,7 +232,7 @@ export default function HomePage() {
               h="100%"
               onClick={() => router.push('/jobs')}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push('/jobs'); } }}
-              onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--glow-x', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--glow-y', `${e.clientY - r.top}px`); }}
+              onMouseMove={(e) => { const target = e.currentTarget; const clientX = e.clientX; const clientY = e.clientY; requestAnimationFrame(() => { const r = target.getBoundingClientRect(); target.style.setProperty('--glow-x', `${clientX - r.left}px`); target.style.setProperty('--glow-y', `${clientY - r.top}px`); }); }}
               tabIndex={0}
               role="link"
               style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
@@ -277,7 +274,7 @@ export default function HomePage() {
               h="100%"
               onClick={() => router.push('/events')}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push('/events'); } }}
-              onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--glow-x', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--glow-y', `${e.clientY - r.top}px`); }}
+              onMouseMove={(e) => { const target = e.currentTarget; const clientX = e.clientX; const clientY = e.clientY; requestAnimationFrame(() => { const r = target.getBoundingClientRect(); target.style.setProperty('--glow-x', `${clientX - r.left}px`); target.style.setProperty('--glow-y', `${clientY - r.top}px`); }); }}
               tabIndex={0}
               role="link"
               style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}

@@ -6,9 +6,13 @@
 from flask import Blueprint, request, jsonify, current_app
 from src.models_v2 import db, User, UserProfile, UserSession
 import jwt
+import logging
 from datetime import datetime, timedelta
 from functools import wraps
 import secrets
+import re
+
+logger = logging.getLogger(__name__)
 
 auth_v2_bp = Blueprint('auth_v2', __name__)
 
@@ -109,12 +113,16 @@ def register():
                 return jsonify({'message': f'{field} is required'}), 400
 
         # 檢查 email 格式
-        if '@' not in data['email']:
-            return jsonify({'message': 'Invalid email format'}), 400
+        email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+        if not email_pattern.match(data['email']):
+            return jsonify({'message': '請輸入有效的電子郵件地址'}), 400
 
         # 檢查密碼強度
-        if len(data['password']) < 6:
-            return jsonify({'message': 'Password must be at least 6 characters'}), 400
+        password = data['password']
+        if len(password) < 8:
+            return jsonify({'message': '密碼長度至少需要 8 個字元'}), 400
+        if not re.search(r'[A-Za-z]', password) or not re.search(r'[0-9]', password):
+            return jsonify({'message': '密碼需包含英文字母和數字'}), 400
 
         # 檢查使用者是否已存在
         existing_user = User.query.filter_by(email=data['email']).first()
@@ -184,7 +192,7 @@ def register():
                     send_registration_notification_to_admin(user_data)
                     send_registration_confirmation_to_applicant(data['email'], data.get('name'))
                 except Exception as e:
-                    print(f"Email notification error: {e}")
+                    logger.warning(f"Email notification error: {e}")
                 
                 # 發送站內通知給管理員
                 try:
@@ -195,8 +203,8 @@ def register():
                         user_id=existing_user.id
                     )
                 except Exception as notification_error:
-                    print(f"Admin notification failed: {str(notification_error)}")
-                
+                    logger.warning(f"Admin notification failed: {str(notification_error)}")
+
                 return jsonify({
                     'message': '重新申請成功！請等待管理員審核。',
                     'user': {
@@ -268,7 +276,7 @@ def register():
             
         except Exception as email_error:
             # 郵件發送失敗不影響註冊流程
-            print(f"Email notification failed: {str(email_error)}")
+            logger.warning(f"Email notification failed: {str(email_error)}")
 
         # 發送站內通知給管理員
         try:
@@ -279,7 +287,7 @@ def register():
                 user_id=user.id
             )
         except Exception as notification_error:
-            print(f"Admin notification failed: {str(notification_error)}")
+            logger.warning(f"Admin notification failed: {str(notification_error)}")
 
         # 註冊成功，但不發放 Token（因為需要等待審核）
         return jsonify({
@@ -349,9 +357,7 @@ def login():
 
     except Exception as e:
         db.session.rollback()
-        import traceback
-        print(f"Login error: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(f"Login error: {str(e)}", exc_info=True)
         return jsonify({'message': f'Login failed: {str(e)}'}), 500
 
 
@@ -607,11 +613,8 @@ def get_users():
         industry = request.args.get('industry', '').strip()
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
-        
-        # 限制每頁數量
-        if per_page > 100:
-            per_page = 100
-        
+        per_page = min(max(per_page, 1), 100)
+
         # 基本查詢：只返回活躍用戶
         query = User.query.filter_by(status='active')
         

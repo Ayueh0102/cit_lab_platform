@@ -75,6 +75,7 @@ def get_events():
     search = request.args.get('search')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     query = Event.query
 
@@ -328,6 +329,7 @@ def get_my_events(current_user):
     status = request.args.get('status')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     query = Event.query.filter_by(organizer_id=current_user.id)
 
@@ -458,6 +460,7 @@ def get_my_registrations(current_user):
     status = request.args.get('status')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     query = EventRegistration.query.filter_by(user_id=current_user.id)
 
@@ -492,6 +495,7 @@ def get_event_registrations(current_user, event_id):
     status = request.args.get('status')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     query = EventRegistration.query.filter_by(event_id=event_id)
 

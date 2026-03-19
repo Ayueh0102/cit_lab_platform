@@ -32,6 +32,11 @@ const nextConfig: NextConfig = {
         port: '5001',
         pathname: '/static/**',
       },
+      // Production: Railway 部署域名
+      {
+        protocol: 'https',
+        hostname: '*.up.railway.app',
+      },
     ],
     unoptimized: process.env.NODE_ENV === 'development', // 開發環境不使用優化
   },

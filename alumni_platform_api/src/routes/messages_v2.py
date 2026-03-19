@@ -10,6 +10,7 @@ from src.routes.notification_helper import create_new_message_notification
 from src.routes.websocket import emit_message, emit_conversation_update
 from datetime import datetime
 from sqlalchemy import or_, and_
+from sqlalchemy.orm import joinedload
 
 messages_v2_bp = Blueprint('messages_v2', __name__)
 
@@ -23,8 +24,13 @@ def get_conversations(current_user):
     """取得對話列表"""
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
-    query = Conversation.query.filter(
+    query = Conversation.query.options(
+        joinedload(Conversation.user1).joinedload(User.profile),
+        joinedload(Conversation.user2).joinedload(User.profile),
+        joinedload(Conversation.job),
+    ).filter(
         or_(
             Conversation.user1_id == current_user.id,
             Conversation.user2_id == current_user.id
@@ -47,7 +53,11 @@ def get_conversations(current_user):
 @token_required
 def get_conversation(current_user, conversation_id):
     """取得單一對話"""
-    conversation = Conversation.query.get(conversation_id)
+    conversation = Conversation.query.options(
+        joinedload(Conversation.user1).joinedload(User.profile),
+        joinedload(Conversation.user2).joinedload(User.profile),
+        joinedload(Conversation.job),
+    ).get(conversation_id)
 
     if not conversation:
         return jsonify({'message': 'Conversation not found'}), 404
@@ -73,7 +83,11 @@ def create_or_get_conversation(current_user, user_id):
             return jsonify({'message': 'User not found'}), 404
 
         # 檢查是否已存在對話
-        conversation = Conversation.query.filter(
+        conversation = Conversation.query.options(
+            joinedload(Conversation.user1).joinedload(User.profile),
+            joinedload(Conversation.user2).joinedload(User.profile),
+            joinedload(Conversation.job),
+        ).filter(
             or_(
                 and_(Conversation.user1_id == current_user.id, Conversation.user2_id == user_id),
                 and_(Conversation.user1_id == user_id, Conversation.user2_id == current_user.id)
@@ -122,6 +136,7 @@ def get_messages(current_user, conversation_id):
 
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     query = Message.query.filter_by(conversation_id=conversation_id)
 
@@ -326,6 +341,7 @@ def search_messages(current_user):
         conversation_id = request.args.get('conversation_id', type=int)
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
+        per_page = min(max(per_page, 1), 100)
 
         if not search_term:
             return jsonify({'message': 'Search term is required'}), 400

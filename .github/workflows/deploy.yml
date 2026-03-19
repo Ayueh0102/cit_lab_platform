@@ -49,18 +49,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
-      # 部署步驟（根據實際部署平台調整）
+      # 部署步驟
       - name: Deploy to server
-        run: |
-          echo "Deployment steps would go here"
-          # 例如：
-          # - 複製檔案到伺服器
-          # - 重啟服務
-          # - 執行資料庫遷移
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        if: ${{ secrets.DEPLOY_HOST != '' }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            cd /opt/alumni-platform
+            git pull origin main
+            cd alumni_platform_api && pip install -r requirements.txt
+            sudo systemctl restart alumni-platform-api
+            cd ../alumni-platform-nextjs && pnpm install && pnpm build
+            sudo systemctl restart alumni-platform-frontend
 
       # 健康檢查
       - name: Health check
@@ -78,13 +81,13 @@ jobs:
       
       # 或者部署到 Docker
       - name: Build Docker image
-        if: false  # 暫時禁用，等待 Docker 設置
+        if: ${{ secrets.DOCKER_REGISTRY != '' }}
         run: |
           docker build -t alumni-platform:latest .
           docker tag alumni-platform:latest ${{ secrets.DOCKER_REGISTRY }}/alumni-platform:${{ github.sha }}
-      
+
       - name: Push Docker image
-        if: false  # 暫時禁用
+        if: ${{ secrets.DOCKER_REGISTRY != '' }}
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           docker push ${{ secrets.DOCKER_REGISTRY }}/alumni-platform:${{ github.sha }}

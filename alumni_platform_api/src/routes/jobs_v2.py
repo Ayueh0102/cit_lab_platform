@@ -76,6 +76,7 @@ def get_jobs():
     search = request.args.get('search')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     query = Job.query
 
@@ -87,7 +88,7 @@ def get_jobs():
         try:
             job_type_enum = JobType[job_type.upper().replace('-', '_')]
             query = query.filter_by(job_type=job_type_enum)
-        except:
+        except (KeyError, ValueError):
             pass
     if location:
         query = query.filter(Job.location.like(f'%{location}%'))
@@ -96,7 +97,7 @@ def get_jobs():
         try:
             status_enum = JobStatus[status.upper()]
             query = query.filter_by(status=status_enum)
-        except:
+        except (KeyError, ValueError):
             pass
     if search:
         query = query.filter(
@@ -247,7 +248,7 @@ def update_job(current_user, job_id):
             if '年' in exp_str:
                 try:
                     job.experience_years_min = int(exp_str.split('年')[0])
-                except:
+                except (ValueError, IndexError):
                     pass
         
         # 處理 education_required -> education_level
@@ -330,6 +331,7 @@ def get_my_jobs(current_user):
     status = request.args.get('status')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     query = Job.query.filter_by(user_id=current_user.id)
 
@@ -337,7 +339,7 @@ def get_my_jobs(current_user):
         try:
             status_enum = JobStatus[status.upper()]
             query = query.filter(Job.status == status_enum)
-        except:
+        except (KeyError, ValueError):
             pass
 
     pagination = query.order_by(Job.created_at.desc())\
@@ -418,6 +420,7 @@ def get_received_requests(current_user):
     status = request.args.get('status')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     # 通過 job.user_id 找到發送給當前用戶的請求
     query = JobRequest.query.join(Job).filter(Job.user_id == current_user.id)
@@ -426,7 +429,7 @@ def get_received_requests(current_user):
         try:
             status_enum = RequestStatus[status.upper()]
             query = query.filter(JobRequest.status == status_enum)
-        except:
+        except (KeyError, ValueError):
             pass
 
     pagination = query.order_by(JobRequest.created_at.desc())\
@@ -448,6 +451,7 @@ def get_sent_requests(current_user):
     status = request.args.get('status')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
 
     query = JobRequest.query.filter_by(requester_id=current_user.id)
 

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader, Center } from '@mantine/core';
+import { Loader, Center, Container, Stack, Text, Button, ThemeIcon } from '@mantine/core';
+import { IconLock } from '@tabler/icons-react';
 import { isAuthenticated } from '@/lib/auth';
 
 interface ProtectedRouteProps {
@@ -49,13 +50,41 @@ export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteP
     );
   }
 
-  // 權限檢查失敗時返回 null
+  // 權限檢查失敗：顯示友善的無權限提示
   if (requireAuth && !isAuth) {
-    return null;
+    return (
+      <Center h="100vh">
+        <Container size={420}>
+          <Stack align="center" gap="lg">
+            <ThemeIcon size={80} radius="xl" variant="light" color="red">
+              <IconLock size={40} />
+            </ThemeIcon>
+            <Text size="xl" fw={700} ta="center">
+              您沒有權限存取此頁面
+            </Text>
+            <Text size="sm" c="dimmed" ta="center">
+              請先登入或確認您擁有足夠的權限
+            </Text>
+            <Button
+              variant="light"
+              radius="xl"
+              size="md"
+              onClick={() => router.push('/')}
+            >
+              返回首頁
+            </Button>
+          </Stack>
+        </Container>
+      </Center>
+    );
   }
 
   if (!requireAuth && isAuth) {
-    return null;
+    return (
+      <Center h="100vh">
+        <Loader size="xl" />
+      </Center>
+    );
   }
 
   return <>{children}</>;

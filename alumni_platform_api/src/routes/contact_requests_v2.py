@@ -122,9 +122,7 @@ def get_sent_requests(current_user):
         status = request.args.get('status', '').strip()
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
-
-        if per_page > 100:
-            per_page = 100
+        per_page = min(max(per_page, 1), 100)
 
         query = ContactRequest.query.filter_by(requester_id=current_user.id)
 
@@ -167,9 +165,7 @@ def get_received_requests(current_user):
         status = request.args.get('status', '').strip()
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
-
-        if per_page > 100:
-            per_page = 100
+        per_page = min(max(per_page, 1), 100)
 
         query = ContactRequest.query.filter_by(target_id=current_user.id)
 
@@ -308,9 +304,7 @@ def get_contacts(current_user):
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
-
-        if per_page > 100:
-            per_page = 100
+        per_page = min(max(per_page, 1), 100)
 
         # 雙向查詢：我是 requester 或 target，且狀態為 accepted
         query = ContactRequest.query.filter(

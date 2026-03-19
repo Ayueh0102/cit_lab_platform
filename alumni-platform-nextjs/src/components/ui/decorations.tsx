@@ -1,10 +1,12 @@
 'use client';
 
+import { useId } from 'react';
 import { Box, BoxProps } from '@mantine/core';
 
 // 1. 光譜波形裝飾 (Spectral Waves)
 // 模擬光波的流動線條
 export function SpectralWaves({ style, className, ...props }: BoxProps) {
+  const id = useId();
   const combinedClassName = ['spectral-waves', className].filter(Boolean).join(' ');
 
   return (
@@ -28,15 +30,15 @@ export function SpectralWaves({ style, className, ...props }: BoxProps) {
         className="spectral-wave spectral-wave-primary"
       >
         <defs>
-          <linearGradient id="spectral-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id={`${id}-spectral-gradient`} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="rgba(255, 107, 107, 0.3)" />
             <stop offset="33%" stopColor="rgba(78, 205, 196, 0.3)" />
             <stop offset="66%" stopColor="rgba(79, 172, 254, 0.3)" />
             <stop offset="100%" stopColor="rgba(161, 140, 209, 0.3)" />
           </linearGradient>
         </defs>
-        <path 
-          fill="url(#spectral-gradient)" 
+        <path
+          fill={`url(#${id}-spectral-gradient)`} 
           fillOpacity="1" 
           d="M0,160L48,176C96,192,192,224,288,224C384,224,480,192,576,165.3C672,139,768,117,864,128C960,139,1056,181,1152,197.3C1248,213,1344,203,1392,197.3L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
         ></path>
@@ -48,14 +50,14 @@ export function SpectralWaves({ style, className, ...props }: BoxProps) {
         className="spectral-wave spectral-wave-secondary"
       >
         <defs>
-          <linearGradient id="spectral-gradient-secondary" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id={`${id}-spectral-gradient-secondary`} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="rgba(255, 255, 255, 0.2)" />
             <stop offset="50%" stopColor="rgba(0, 242, 254, 0.25)" />
             <stop offset="100%" stopColor="rgba(161, 140, 209, 0.25)" />
           </linearGradient>
         </defs>
         <path
-          fill="url(#spectral-gradient-secondary)"
+          fill={`url(#${id}-spectral-gradient-secondary)`}
           fillOpacity="1"
           d="M0,224L48,213.3C96,203,192,181,288,165.3C384,149,480,139,576,149.3C672,160,768,192,864,186.7C960,181,1056,139,1152,106.7C1248,75,1344,53,1392,42.7L1440,32L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z"
         ></path>
@@ -68,6 +70,7 @@ export function SpectralWaves({ style, className, ...props }: BoxProps) {
 // 2. CIE 1931 色度圖輪廓 (CIE Plot Outline)
 // 作為背景浮水印
 export function CIEPlotDecoration({ style, ...props }: BoxProps) {
+  const id = useId();
   return (
     <Box
       style={{
@@ -87,14 +90,14 @@ export function CIEPlotDecoration({ style, ...props }: BoxProps) {
       {...props}
     >
       <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1">
-        <path d="M15,85 Q20,5 50,5 Q80,5 85,85 Z" stroke="url(#cie-gradient)" fill="url(#cie-fill)" strokeWidth="1" />
+        <path d="M15,85 Q20,5 50,5 Q80,5 85,85 Z" stroke={`url(#${id}-cie-gradient)`} fill={`url(#${id}-cie-fill)`} strokeWidth="1" />
         <defs>
-          <linearGradient id="cie-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`${id}-cie-gradient`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#4ECDC4" />
             <stop offset="50%" stopColor="#556270" />
             <stop offset="100%" stopColor="#FF6B6B" />
           </linearGradient>
-          <radialGradient id="cie-fill" cx="50%" cy="50%" r="50%">
+          <radialGradient id={`${id}-cie-fill`} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="rgba(255,255,255,0.8)" />
             <stop offset="100%" stopColor="rgba(255,255,255,0)" />
           </radialGradient>
@@ -110,6 +113,7 @@ export function CIEPlotDecoration({ style, ...props }: BoxProps) {
 // 3. 稜鏡分光幾何 (Prism Geometry)
 // 用於卡片裝飾
 export function PrismDecoration({ style, ...props }: BoxProps) {
+  const id = useId();
   return (
     <Box
       style={{
@@ -127,15 +131,15 @@ export function PrismDecoration({ style, ...props }: BoxProps) {
     >
       <svg viewBox="0 0 100 100">
         <defs>
-          <linearGradient id="prism-face" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`${id}-prism-face`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
             <stop offset="100%" stopColor="rgba(79,172,254,0.4)" />
           </linearGradient>
         </defs>
-        
+
         {/* 稜鏡三角形 - 輕微浮動 */}
         <g style={{ animation: 'prism-float 6s ease-in-out infinite' }}>
-          <path d="M50,20 L80,80 L20,80 Z" fill="url(#prism-face)" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" />
+          <path d="M50,20 L80,80 L20,80 Z" fill={`url(#${id}-prism-face)`} stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" />
         </g>
 
         {/* 入射光 - 穩定但微動 */}

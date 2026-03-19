@@ -25,6 +25,7 @@ def global_search(current_user):
         search_type = request.args.get('type', 'all')  # all, jobs, events, bulletins, articles, users
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
+        per_page = min(max(per_page, 1), 100)
 
         if not query:
             return jsonify({
