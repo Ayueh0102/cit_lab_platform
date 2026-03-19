@@ -4,6 +4,7 @@
 """
 from flask import Blueprint, request, jsonify
 from src.routes.auth_v2 import token_required
+from src.extensions import limiter
 from src.models_v2 import (
     db, Job, Event, Bulletin, Article, UserProfile, Message, Conversation, User
 )
@@ -14,6 +15,7 @@ search_bp = Blueprint('search', __name__)
 
 
 @search_bp.route('/api/v2/search', methods=['GET'])
+@limiter.limit("20 per minute")
 @token_required
 def global_search(current_user):
     """

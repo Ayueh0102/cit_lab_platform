@@ -5,6 +5,7 @@
 
 from flask import Blueprint, request, jsonify, current_app
 from src.models_v2 import db, User, UserProfile, UserSession
+from src.extensions import limiter
 import jwt
 import logging
 from datetime import datetime, timedelta
@@ -98,6 +99,7 @@ def admin_required(f):
 # 註冊
 # ========================================
 @auth_v2_bp.route('/api/v2/auth/register', methods=['POST'])
+@limiter.limit("3 per minute")
 def register():
     """
     使用者註冊
@@ -306,6 +308,7 @@ def register():
 # 登入
 # ========================================
 @auth_v2_bp.route('/api/v2/auth/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     """使用者登入"""
     try:
@@ -506,6 +509,7 @@ def update_profile(current_user):
 # 修改密碼
 # ========================================
 @auth_v2_bp.route('/api/v2/auth/change-password', methods=['POST'])
+@limiter.limit("5 per minute")
 @token_required
 def change_password(current_user):
     """修改密碼"""

@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate
+from src.extensions import limiter
 
 # Import models_v2
 from src.models_v2 import db, User, UserProfile, WorkExperience, Education, Skill, UserSkill
@@ -76,6 +77,11 @@ else:
 # CORS 設定 - 限制允許的來源
 ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
 CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
+
+# 初始化 Rate Limiter（測試環境停用）
+limiter.init_app(app)
+if app.config.get('TESTING'):
+    limiter.enabled = False
 
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB
 

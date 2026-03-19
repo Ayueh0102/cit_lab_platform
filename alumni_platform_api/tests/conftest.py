@@ -29,6 +29,10 @@ def app():
     符合 pytest-flask 最佳實踐
     """
     from src.main_v2 import app as flask_app
+    from src.extensions import limiter
+
+    # 測試環境停用 rate limiter
+    limiter.enabled = False
 
     # 測試環境配置
     flask_app.config.update({

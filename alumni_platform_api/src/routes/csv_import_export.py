@@ -10,6 +10,7 @@ import secrets
 from datetime import datetime
 from src.models_v2 import db, User, UserProfile, Job, Event, Bulletin, EventRegistration, JobRequest
 from src.routes.auth_v2 import token_required, admin_required  # 使用統一的認證裝飾器
+from src.extensions import limiter
 import logging
 
 logger = logging.getLogger(__name__)
@@ -191,6 +192,7 @@ def export_bulletins(current_user):
 # ========================================
 
 @csv_bp.route('/api/csv/import/users', methods=['POST'])
+@limiter.limit("5 per minute")
 @token_required
 @admin_required
 def import_users(current_user):
@@ -302,6 +304,7 @@ def import_users(current_user):
 
 
 @csv_bp.route('/api/csv/import/jobs', methods=['POST'])
+@limiter.limit("5 per minute")
 @token_required
 @admin_required
 def import_jobs(current_user):
@@ -376,6 +379,7 @@ def import_jobs(current_user):
 
 
 @csv_bp.route('/api/csv/import/bulletins', methods=['POST'])
+@limiter.limit("5 per minute")
 @token_required
 @admin_required
 def import_bulletins(current_user):
