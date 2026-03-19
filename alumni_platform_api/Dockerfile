@@ -1,9 +1,9 @@
 FROM python:3.10-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends gcc libpq-dev && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt .
+COPY alumni_platform_api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn eventlet
-COPY . .
+COPY alumni_platform_api/ .
 RUN mkdir -p src/database src/static/uploads
 EXPOSE 5001
 ENV FLASK_ENV=production
