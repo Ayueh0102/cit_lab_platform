@@ -123,27 +123,22 @@ socketio.init_app(app, cors_allowed_origins=ALLOWED_ORIGINS)
 # ========================================
 def init_database():
     """初始化資料庫並填入測試資料"""
-    import os
-    db_path = os.path.join(os.path.dirname(__file__), 'database', 'app_v2.db')
-    db_exists = os.path.exists(db_path)
-    
     with app.app_context():
         # 建立所有資料表（如果不存在）
         db.create_all()
-        
-        if db_exists:
-            print(f"✅ Database found at: {db_path}")
-        else:
-            print(f"⚠️  Database created at: {db_path}")
-        
+        logging.info("✅ Database tables ensured")
+
         # 檢查是否需要填入測試資料
-        user_count = User.query.count()
-        if user_count == 0:
-            print("📊 Database is empty, seeding initial data...")
-            seed_data()
-            print("✅ Initial data seeded successfully")
-        else:
-            print(f"ℹ️  Database contains {user_count} users, skipping seed")
+        try:
+            user_count = User.query.count()
+            if user_count == 0:
+                logging.info("📊 Database is empty, seeding initial data...")
+                seed_data()
+                logging.info("✅ Initial data seeded successfully")
+            else:
+                logging.info(f"ℹ️  Database contains {user_count} users, skipping seed")
+        except Exception as e:
+            logging.error(f"Database init error: {e}")
 
 
 def seed_data():
@@ -456,9 +451,10 @@ def serve_static(path):
 # ========================================
 # Main Entry Point
 # ========================================
+# 在模組載入時初始化資料庫（gunicorn 不會跑 __main__）
+init_database()
+
 if __name__ == '__main__':
-    # 初始化資料庫
-    init_database()
 
     # 啟動 Flask 應用程式
     port = int(os.environ.get('PORT', 5001))
