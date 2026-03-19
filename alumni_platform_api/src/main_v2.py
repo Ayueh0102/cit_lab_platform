@@ -34,13 +34,6 @@ from src.routes.cms_v2 import cms_v2_bp
 from src.routes.search_v2 import search_bp
 from src.routes.contact_requests_v2 import contact_requests_v2_bp
 
-# 保留相容舊版的 routes (暫時) - 已註釋以避免模型衝突
-# from src.routes.user import user_bp
-# from src.routes.jobs import jobs_bp
-# from src.routes.events import events_bp
-# from src.routes.bulletins import bulletins_bp
-# from src.routes.messages import messages_bp
-
 from datetime import datetime, timedelta
 
 # Import database configuration
@@ -99,12 +92,6 @@ app.register_blueprint(admin_v2_bp)          # /api/v2/admin/*
 app.register_blueprint(cms_v2_bp)           # /api/v2/cms/*
 app.register_blueprint(search_bp)            # /api/v2/search/*
 app.register_blueprint(contact_requests_v2_bp)  # /api/v2/contact-requests/*, /api/v2/contacts/*
-
-# Register blueprints - v1 routes (backward compatibility) - 已註釋以避免模型衝突
-# app.register_blueprint(user_bp, url_prefix='/api')
-# app.register_blueprint(jobs_bp, url_prefix='/api')
-# app.register_blueprint(events_bp, url_prefix='/api')
-# app.register_blueprint(bulletins_bp, url_prefix='/api')
 # app.register_blueprint(messages_bp, url_prefix='/api')
 
 # Database configuration - 支援 SQLite (開發) 和 PostgreSQL (生產)

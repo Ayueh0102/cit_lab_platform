@@ -613,13 +613,6 @@ body {
 }
 
 /* === 實用工具類 === */
-.bg-mesh {
-  background-color: hsla(0, 0%, 100%, 1);
-  background-image:
-    radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 0.3) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.3) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, hsla(340, 100%, 76%, 0.3) 0px, transparent 50%);
-}
 
 .sidebar-nav-item {
   position: relative;
