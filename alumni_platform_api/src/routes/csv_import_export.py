@@ -10,7 +10,18 @@ import secrets
 from datetime import datetime
 from src.models_v2 import db, User, UserProfile, Job, Event, Bulletin, EventRegistration, JobRequest
 from src.routes.auth_v2 import token_required, admin_required  # 使用統一的認證裝飾器
+import logging
+
+logger = logging.getLogger(__name__)
+
 csv_bp = Blueprint('csv', __name__)
+
+
+def _truncate(value, max_len=500):
+    """Truncate string to max length for safety."""
+    if value and isinstance(value, str):
+        return value[:max_len]
+    return value
 
 
 # ========================================
@@ -33,7 +44,8 @@ def export_users(current_user):
         )
 
     except Exception as e:
-        return {'error': f'匯出失敗: {str(e)}'}, 500
+        logger.error(f"匯出失敗: {str(e)}")
+        return {'error': '匯出失敗，請稍後再試'}, 500
 
 
 @csv_bp.route('/api/csv/export/jobs', methods=['GET'])
@@ -77,7 +89,8 @@ def export_jobs(current_user):
         )
 
     except Exception as e:
-        return {'error': f'匯出失敗: {str(e)}'}, 500
+        logger.error(f"匯出失敗: {str(e)}")
+        return {'error': '匯出失敗，請稍後再試'}, 500
 
 
 @csv_bp.route('/api/csv/export/events', methods=['GET'])
@@ -127,7 +140,8 @@ def export_events(current_user):
         )
 
     except Exception as e:
-        return {'error': f'匯出失敗: {str(e)}'}, 500
+        logger.error(f"匯出失敗: {str(e)}")
+        return {'error': '匯出失敗，請稍後再試'}, 500
 
 
 @csv_bp.route('/api/csv/export/bulletins', methods=['GET'])
@@ -168,7 +182,8 @@ def export_bulletins(current_user):
         )
 
     except Exception as e:
-        return {'error': f'匯出失敗: {str(e)}'}, 500
+        logger.error(f"匯出失敗: {str(e)}")
+        return {'error': '匯出失敗，請稍後再試'}, 500
 
 
 # ========================================
@@ -213,26 +228,26 @@ def import_users(current_user):
                 if user:
                     # 更新現有使用者的 Profile (User 模型不含 name 等欄位)
                     if user.profile:
-                        user.profile.full_name = row.get('姓名') or user.profile.full_name
-                        user.profile.display_name = row.get('顯示名稱') or user.profile.display_name
+                        user.profile.full_name = _truncate(row.get('姓名'), 100) or user.profile.full_name
+                        user.profile.display_name = _truncate(row.get('顯示名稱'), 100) or user.profile.display_name
                         user.profile.graduation_year = int(row.get('畢業年份', 0)) or user.profile.graduation_year
                         user.profile.class_year = int(row.get('屆數', 0)) or user.profile.class_year
-                        user.profile.current_company = row.get('目前公司') or user.profile.current_company
-                        user.profile.current_position = row.get('職位') or user.profile.current_position
-                        user.profile.personal_website = row.get('個人網站') or user.profile.personal_website
-                        user.profile.linkedin_url = row.get('LinkedIn') or user.profile.linkedin_url
+                        user.profile.current_company = _truncate(row.get('目前公司'), 200) or user.profile.current_company
+                        user.profile.current_position = _truncate(row.get('職位'), 200) or user.profile.current_position
+                        user.profile.personal_website = _truncate(row.get('個人網站'), 500) or user.profile.personal_website
+                        user.profile.linkedin_url = _truncate(row.get('LinkedIn'), 500) or user.profile.linkedin_url
                     else:
                         # 建立 Profile
                         profile = UserProfile(
                             user_id=user.id,
-                            full_name=row.get('姓名'),
-                            display_name=row.get('顯示名稱'),
+                            full_name=_truncate(row.get('姓名'), 100),
+                            display_name=_truncate(row.get('顯示名稱'), 100),
                             graduation_year=int(row.get('畢業年份', 0)) or None,
                             class_year=int(row.get('屆數', 0)) or None,
-                            current_company=row.get('目前公司'),
-                            current_position=row.get('職位'),
-                            personal_website=row.get('個人網站'),
-                            linkedin_url=row.get('LinkedIn')
+                            current_company=_truncate(row.get('目前公司'), 200),
+                            current_position=_truncate(row.get('職位'), 200),
+                            personal_website=_truncate(row.get('個人網站'), 500),
+                            linkedin_url=_truncate(row.get('LinkedIn'), 500)
                         )
                         db.session.add(profile)
 
@@ -252,14 +267,14 @@ def import_users(current_user):
                     # 建立 Profile (使用正確的欄位名稱)
                     profile = UserProfile(
                         user_id=user.id,
-                        full_name=row.get('姓名'),
-                        display_name=row.get('顯示名稱') or row.get('姓名'),
+                        full_name=_truncate(row.get('姓名'), 100),
+                        display_name=_truncate(row.get('顯示名稱') or row.get('姓名'), 100),
                         graduation_year=int(row.get('畢業年份', 0)) or None,
                         class_year=int(row.get('屆數', 0)) or None,
-                        current_company=row.get('目前公司'),
-                        current_position=row.get('職位'),
-                        personal_website=row.get('個人網站'),
-                        linkedin_url=row.get('LinkedIn')
+                        current_company=_truncate(row.get('目前公司'), 200),
+                        current_position=_truncate(row.get('職位'), 200),
+                        personal_website=_truncate(row.get('個人網站'), 500),
+                        linkedin_url=_truncate(row.get('LinkedIn'), 500)
                     )
                     db.session.add(profile)
 
@@ -270,7 +285,8 @@ def import_users(current_user):
 
             except Exception as e:
                 db.session.rollback()
-                errors.append(f"第 {row_num} 行: {str(e)}")
+                logger.error(f"匯入使用者第 {row_num} 行失敗: {str(e)}")
+                errors.append(f"第 {row_num} 行: 資料處理失敗")
 
         return {
             'success': True,
@@ -281,7 +297,8 @@ def import_users(current_user):
         }, 200
 
     except Exception as e:
-        return {'error': f'匯入失敗: {str(e)}'}, 500
+        logger.error(f"匯入失敗: {str(e)}")
+        return {'error': '匯入失敗，請稍後再試'}, 500
 
 
 @csv_bp.route('/api/csv/import/jobs', methods=['POST'])
@@ -315,11 +332,11 @@ def import_jobs(current_user):
                     # 更新現有職缺
                     job = Job.query.get(int(job_id))
                     if job:
-                        job.title = row.get('職缺標題', job.title)
-                        job.company = row.get('公司名稱', job.company)
-                        job.location = row.get('地點', job.location)
-                        job.salary_range = row.get('薪資範圍') or None
-                        job.description = row.get('職缺描述') or job.description
+                        job.title = _truncate(row.get('職缺標題'), 200) or job.title
+                        job.company = _truncate(row.get('公司名稱'), 200) or job.company
+                        job.location = _truncate(row.get('地點'), 200) or job.location
+                        job.salary_range = _truncate(row.get('薪資範圍'), 200) or None
+                        job.description = _truncate(row.get('職缺描述'), 2000) or job.description
                         updated_count += 1
                     else:
                         errors.append(f"第 {row_num} 行: 找不到 ID={job_id} 的職缺")
@@ -329,11 +346,11 @@ def import_jobs(current_user):
                     # 這裡使用當前使用者作為發布者
                     job = Job(
                         user_id=current_user.id,
-                        title=row.get('職缺標題', ''),
-                        company=row.get('公司名稱', ''),
-                        location=row.get('地點', ''),
-                        salary_range=row.get('薪資範圍') or None,
-                        description=row.get('職缺描述') or ''
+                        title=_truncate(row.get('職缺標題', ''), 200),
+                        company=_truncate(row.get('公司名稱', ''), 200),
+                        location=_truncate(row.get('地點', ''), 200),
+                        salary_range=_truncate(row.get('薪資範圍'), 200) or None,
+                        description=_truncate(row.get('職缺描述', ''), 2000)
                     )
                     db.session.add(job)
                     imported_count += 1
@@ -342,7 +359,8 @@ def import_jobs(current_user):
 
             except Exception as e:
                 db.session.rollback()
-                errors.append(f"第 {row_num} 行: {str(e)}")
+                logger.error(f"匯入職缺第 {row_num} 行失敗: {str(e)}")
+                errors.append(f"第 {row_num} 行: 資料處理失敗")
 
         return {
             'success': True,
@@ -353,7 +371,8 @@ def import_jobs(current_user):
         }, 200
 
     except Exception as e:
-        return {'error': f'匯入失敗: {str(e)}'}, 500
+        logger.error(f"匯入失敗: {str(e)}")
+        return {'error': '匯入失敗，請稍後再試'}, 500
 
 
 @csv_bp.route('/api/csv/import/bulletins', methods=['POST'])
@@ -387,9 +406,9 @@ def import_bulletins(current_user):
                     # 更新現有公告
                     bulletin = Bulletin.query.get(int(bulletin_id))
                     if bulletin:
-                        bulletin.title = row.get('公告標題', bulletin.title)
-                        bulletin.category = row.get('分類', bulletin.category)
-                        bulletin.content = row.get('內容摘要', bulletin.content)
+                        bulletin.title = _truncate(row.get('公告標題'), 200) or bulletin.title
+                        bulletin.category = _truncate(row.get('分類'), 100) or bulletin.category
+                        bulletin.content = _truncate(row.get('內容摘要'), 2000) or bulletin.content
                         bulletin.is_pinned = (row.get('是否置頂', '否') == '是')
                         updated_count += 1
                     else:
@@ -399,9 +418,9 @@ def import_bulletins(current_user):
                     # 建立新公告
                     bulletin = Bulletin(
                         author_id=current_user.id,
-                        title=row.get('公告標題', ''),
-                        category=row.get('分類', '系友會公告'),
-                        content=row.get('內容摘要', ''),
+                        title=_truncate(row.get('公告標題', ''), 200),
+                        category=_truncate(row.get('分類', '系友會公告'), 100),
+                        content=_truncate(row.get('內容摘要', ''), 2000),
                         is_pinned=(row.get('是否置頂', '否') == '是')
                     )
                     db.session.add(bulletin)
@@ -411,7 +430,8 @@ def import_bulletins(current_user):
 
             except Exception as e:
                 db.session.rollback()
-                errors.append(f"第 {row_num} 行: {str(e)}")
+                logger.error(f"匯入公告第 {row_num} 行失敗: {str(e)}")
+                errors.append(f"第 {row_num} 行: 資料處理失敗")
 
         return {
             'success': True,
@@ -422,7 +442,8 @@ def import_bulletins(current_user):
         }, 200
 
     except Exception as e:
-        return {'error': f'匯入失敗: {str(e)}'}, 500
+        logger.error(f"匯入失敗: {str(e)}")
+        return {'error': '匯入失敗，請稍後再試'}, 500
 
 
 # ========================================
@@ -463,7 +484,8 @@ def export_all(current_user):
         )
 
     except Exception as e:
-        return {'error': f'批次匯出失敗: {str(e)}'}, 500
+        logger.error(f"批次匯出失敗: {str(e)}")
+        return {'error': '批次匯出失敗，請稍後再試'}, 500
 
 
 # Helper 函數 (生成 CSV 內容字串)

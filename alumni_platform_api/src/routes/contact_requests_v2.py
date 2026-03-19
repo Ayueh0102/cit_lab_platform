@@ -9,6 +9,9 @@ from src.models_v2 import db, User, ContactRequest, NotificationType
 from src.routes.auth_v2 import token_required
 from src.routes.notification_helper import create_notification
 from sqlalchemy import or_
+import logging
+
+logger = logging.getLogger(__name__)
 
 contact_requests_v2_bp = Blueprint('contact_requests_v2', __name__)
 
@@ -101,7 +104,8 @@ def create_contact_request(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'發送聯絡申請失敗: {str(e)}'}), 500
+        logger.error(f"發送聯絡申請失敗: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -144,7 +148,8 @@ def get_sent_requests(current_user):
         }), 200
 
     except Exception as e:
-        return jsonify({'message': f'取得發出的申請列表失敗: {str(e)}'}), 500
+        logger.error(f"取得發出的申請列表失敗: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -187,7 +192,8 @@ def get_received_requests(current_user):
         }), 200
 
     except Exception as e:
-        return jsonify({'message': f'取得收到的申請列表失敗: {str(e)}'}), 500
+        logger.error(f"取得收到的申請列表失敗: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -236,7 +242,8 @@ def accept_contact_request(current_user, request_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'接受申請失敗: {str(e)}'}), 500
+        logger.error(f"接受申請失敗: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -285,7 +292,8 @@ def reject_contact_request(current_user, request_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'拒絕申請失敗: {str(e)}'}), 500
+        logger.error(f"拒絕申請失敗: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -363,7 +371,8 @@ def get_contacts(current_user):
         }), 200
 
     except Exception as e:
-        return jsonify({'message': f'取得聯絡人清單失敗: {str(e)}'}), 500
+        logger.error(f"取得聯絡人清單失敗: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -423,4 +432,5 @@ def get_contact_status(current_user, user_id):
         }), 200
 
     except Exception as e:
-        return jsonify({'message': f'查詢聯絡狀態失敗: {str(e)}'}), 500
+        logger.error(f"查詢聯絡狀態失敗: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500

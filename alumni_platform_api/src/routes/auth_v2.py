@@ -298,7 +298,8 @@ def register():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Registration failed: {str(e)}'}), 500
+        logger.error(f"Registration failed: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -358,7 +359,7 @@ def login():
     except Exception as e:
         db.session.rollback()
         logger.error(f"Login error: {str(e)}", exc_info=True)
-        return jsonify({'message': f'Login failed: {str(e)}'}), 500
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -369,7 +370,10 @@ def login():
 def logout(current_user):
     """使用者登出"""
     try:
-        token = request.headers.get('Authorization').split(" ")[1]
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({'message': '無效的認證標頭'}), 401
+        token = auth_header.split(' ')[1]
 
         # 將當前 Session 標記為登出
         session = UserSession.query.filter_by(
@@ -385,7 +389,8 @@ def logout(current_user):
         return jsonify({'message': 'Logged out successfully'}), 200
 
     except Exception as e:
-        return jsonify({'message': f'Logout failed: {str(e)}'}), 500
+        logger.error(f"Logout failed: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -493,7 +498,8 @@ def update_profile(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Profile update failed: {str(e)}'}), 500
+        logger.error(f"Profile update failed: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -528,7 +534,8 @@ def change_password(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Password change failed: {str(e)}'}), 500
+        logger.error(f"Password change failed: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -571,7 +578,8 @@ def revoke_session(current_user, session_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Session revoke failed: {str(e)}'}), 500
+        logger.error(f"Session revoke failed: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -702,7 +710,7 @@ def get_users():
         
     except Exception as e:
         current_app.logger.error(f'Get users failed: {str(e)}')
-        return jsonify({'message': f'Failed to get users: {str(e)}'}), 500
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @auth_v2_bp.route('/api/v2/users/<int:user_id>', methods=['GET'])
@@ -754,4 +762,4 @@ def get_user_by_id(user_id):
         
     except Exception as e:
         current_app.logger.error(f'Get user failed: {str(e)}')
-        return jsonify({'message': f'Failed to get user: {str(e)}'}), 500
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500

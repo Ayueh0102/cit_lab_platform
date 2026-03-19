@@ -15,6 +15,9 @@ from src.routes.notification_helper import (
 )
 from datetime import datetime
 from sqlalchemy import or_
+import logging
+
+logger = logging.getLogger(__name__)
 
 events_v2_bp = Blueprint('events_v2', __name__)
 
@@ -60,7 +63,8 @@ def create_event_category(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to create category: {str(e)}'}), 500
+        logger.error(f"Failed to create category: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -215,7 +219,8 @@ def create_event(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to create event: {str(e)}'}), 500
+        logger.error(f"Failed to create event: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @events_v2_bp.route('/api/v2/events/<int:event_id>', methods=['PUT'])
@@ -261,7 +266,8 @@ def update_event(current_user, event_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to update event: {str(e)}'}), 500
+        logger.error(f"Failed to update event: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @events_v2_bp.route('/api/v2/events/<int:event_id>', methods=['DELETE'])
@@ -285,7 +291,8 @@ def delete_event(current_user, event_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to delete event: {str(e)}'}), 500
+        logger.error(f"Failed to delete event: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @events_v2_bp.route('/api/v2/events/<int:event_id>/cancel', methods=['POST'])
@@ -319,7 +326,8 @@ def cancel_event(current_user, event_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to cancel event: {str(e)}'}), 500
+        logger.error(f"Failed to cancel event: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @events_v2_bp.route('/api/v2/my-events', methods=['GET'])
@@ -419,7 +427,8 @@ def register_event(current_user, event_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to register: {str(e)}'}), 500
+        logger.error(f"Failed to register: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @events_v2_bp.route('/api/v2/events/<int:event_id>/unregister', methods=['POST'])
@@ -450,7 +459,8 @@ def unregister_event(current_user, event_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to cancel registration: {str(e)}'}), 500
+        logger.error(f"Failed to cancel registration: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @events_v2_bp.route('/api/v2/my-registrations', methods=['GET'])
@@ -537,4 +547,5 @@ def check_in_registration(current_user, registration_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to check in: {str(e)}'}), 500
+        logger.error(f"Failed to check in: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500

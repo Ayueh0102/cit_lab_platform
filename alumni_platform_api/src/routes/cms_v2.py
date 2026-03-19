@@ -10,6 +10,9 @@ from src.models_v2.article_comment import ArticleComment, CommentStatus
 from src.routes.auth_v2 import token_required, admin_required
 from datetime import datetime
 from sqlalchemy import or_
+import logging
+
+logger = logging.getLogger(__name__)
 
 cms_v2_bp = Blueprint('cms_v2', __name__)
 
@@ -79,7 +82,8 @@ def get_articles(current_user):
         }), 200
         
     except Exception as e:
-        return jsonify({'message': f'Failed to get articles: {str(e)}'}), 500
+        logger.error(f"Failed to get articles: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/articles/<int:article_id>', methods=['GET'])
@@ -103,7 +107,8 @@ def get_article(current_user, article_id):
         return jsonify(article.to_dict(include_private=(current_user.role == 'admin'))), 200
         
     except Exception as e:
-        return jsonify({'message': f'Failed to get article: {str(e)}'}), 500
+        logger.error(f"Failed to get article: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/articles', methods=['POST'])
@@ -158,7 +163,8 @@ def create_article(current_user):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to create article: {str(e)}'}), 500
+        logger.error(f"Failed to create article: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/articles/<int:article_id>', methods=['PUT'])
@@ -218,7 +224,8 @@ def update_article(current_user, article_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to update article: {str(e)}'}), 500
+        logger.error(f"Failed to update article: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/articles/<int:article_id>', methods=['DELETE'])
@@ -239,7 +246,8 @@ def delete_article(current_user, article_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to delete article: {str(e)}'}), 500
+        logger.error(f"Failed to delete article: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/articles/<int:article_id>/publish', methods=['POST'])
@@ -262,7 +270,8 @@ def publish_article(current_user, article_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to publish article: {str(e)}'}), 500
+        logger.error(f"Failed to publish article: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/articles/<int:article_id>/archive', methods=['POST'])
@@ -287,7 +296,8 @@ def archive_article(current_user, article_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to archive article: {str(e)}'}), 500
+        logger.error(f"Failed to archive article: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/articles/<int:article_id>/like', methods=['POST'])
@@ -309,7 +319,8 @@ def like_article(current_user, article_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to like article: {str(e)}'}), 500
+        logger.error(f"Failed to like article: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -327,7 +338,8 @@ def get_article_categories(current_user):
             'categories': [cat.to_dict() for cat in categories]
         }), 200
     except Exception as e:
-        return jsonify({'message': f'Failed to get categories: {str(e)}'}), 500
+        logger.error(f"Failed to get categories: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/article-categories', methods=['POST'])
@@ -366,7 +378,8 @@ def create_article_category(current_user):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to create category: {str(e)}'}), 500
+        logger.error(f"Failed to create category: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/article-categories/<int:category_id>', methods=['PUT'])
@@ -414,7 +427,8 @@ def update_article_category(current_user, category_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to update category: {str(e)}'}), 500
+        logger.error(f"Failed to update category: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/article-categories/<int:category_id>', methods=['DELETE'])
@@ -441,7 +455,8 @@ def delete_article_category(current_user, category_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to delete category: {str(e)}'}), 500
+        logger.error(f"Failed to delete category: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -463,7 +478,7 @@ def get_article_comments(article_id):
                 from flask import current_app
                 import jwt
                 token = auth_header.split(' ')[1]
-                data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+                data = jwt.decode(token, current_app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
                 current_user = User.query.get(data['user_id'])
             except Exception:
                 pass
@@ -486,7 +501,8 @@ def get_article_comments(article_id):
         }), 200
 
     except Exception as e:
-        return jsonify({'message': f'Failed to get comments: {str(e)}'}), 500
+        logger.error(f"Failed to get comments: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/articles/<int:article_id>/comments', methods=['POST'])
@@ -527,7 +543,8 @@ def create_article_comment(current_user, article_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to create comment: {str(e)}'}), 500
+        logger.error(f"Failed to create comment: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/comments/<int:comment_id>', methods=['DELETE'])
@@ -557,7 +574,8 @@ def delete_article_comment(current_user, comment_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to delete comment: {str(e)}'}), 500
+        logger.error(f"Failed to delete comment: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/comments/<int:comment_id>/approve', methods=['PUT'])
@@ -581,7 +599,8 @@ def approve_comment(current_user, comment_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to approve comment: {str(e)}'}), 500
+        logger.error(f"Failed to approve comment: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @cms_v2_bp.route('/api/v2/cms/comments/<int:comment_id>/reject', methods=['PUT'])
@@ -605,5 +624,6 @@ def reject_comment(current_user, comment_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to reject comment: {str(e)}'}), 500
+        logger.error(f"Failed to reject comment: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 

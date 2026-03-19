@@ -15,6 +15,9 @@ from src.routes.notification_helper import (
 )
 from datetime import datetime
 from sqlalchemy import or_, and_
+import logging
+
+logger = logging.getLogger(__name__)
 
 jobs_v2_bp = Blueprint('jobs_v2', __name__)
 
@@ -60,7 +63,8 @@ def create_job_category(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to create category: {str(e)}'}), 500
+        logger.error(f"Failed to create category: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -206,7 +210,8 @@ def create_job(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to create job: {str(e)}'}), 500
+        logger.error(f"Failed to create job: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @jobs_v2_bp.route('/api/v2/jobs/<int:job_id>', methods=['PUT'])
@@ -272,7 +277,8 @@ def update_job(current_user, job_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to update job: {str(e)}'}), 500
+        logger.error(f"Failed to update job: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @jobs_v2_bp.route('/api/v2/jobs/<int:job_id>', methods=['DELETE'])
@@ -296,7 +302,8 @@ def delete_job(current_user, job_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to delete job: {str(e)}'}), 500
+        logger.error(f"Failed to delete job: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @jobs_v2_bp.route('/api/v2/jobs/<int:job_id>/close', methods=['POST'])
@@ -321,7 +328,8 @@ def close_job(current_user, job_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to close job: {str(e)}'}), 500
+        logger.error(f"Failed to close job: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @jobs_v2_bp.route('/api/v2/my-jobs', methods=['GET'])
@@ -410,7 +418,8 @@ def create_job_request(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to create job request: {str(e)}'}), 500
+        logger.error(f"Failed to create job request: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @jobs_v2_bp.route('/api/v2/job-requests/received', methods=['GET'])
@@ -527,7 +536,8 @@ def accept_job_request(current_user, request_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to accept request: {str(e)}'}), 500
+        logger.error(f"Failed to accept request: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @jobs_v2_bp.route('/api/v2/job-requests/<int:request_id>/reject', methods=['POST'])
@@ -564,4 +574,5 @@ def reject_job_request(current_user, request_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to reject request: {str(e)}'}), 500
+        logger.error(f"Failed to reject request: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500

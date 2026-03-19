@@ -15,7 +15,7 @@ export function sanitizeHtml(dirty: string): string {
     ],
     ALLOWED_ATTR: [
       'href', 'target', 'rel', 'src', 'alt', 'width', 'height',
-      'class', 'style', 'colspan', 'rowspan',
+      'class', 'colspan', 'rowspan',
     ],
     ALLOW_DATA_ATTR: false,
   });

@@ -83,7 +83,8 @@ def mark_notification_as_read(current_user, notif_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to mark notification as read: {str(e)}'}), 500
+        logger.error(f"Failed to mark notification as read: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @notifications_bp.route('/api/notifications/mark-all-read', methods=['POST'])
@@ -105,7 +106,8 @@ def mark_all_as_read(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to mark all as read: {str(e)}'}), 500
+        logger.error(f"Failed to mark all as read: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @notifications_bp.route('/api/notifications/<int:notif_id>/archive', methods=['POST'])
@@ -127,7 +129,8 @@ def archive_notification(current_user, notif_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to archive notification: {str(e)}'}), 500
+        logger.error(f"Failed to archive notification: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @notifications_bp.route('/api/notifications/<int:notif_id>', methods=['DELETE'])
@@ -150,7 +153,8 @@ def delete_notification(current_user, notif_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to delete notification: {str(e)}'}), 500
+        logger.error(f"Failed to delete notification: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -232,7 +236,8 @@ def update_system_setting(current_user, setting_key):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to update setting: {str(e)}'}), 500
+        logger.error(f"Failed to update setting: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @notifications_bp.route('/api/system/settings', methods=['POST'])
@@ -273,7 +278,8 @@ def create_system_setting(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to create setting: {str(e)}'}), 500
+        logger.error(f"Failed to create setting: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -340,7 +346,8 @@ def create_user_activity(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to record activity: {str(e)}'}), 500
+        logger.error(f"Failed to record activity: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -397,7 +404,8 @@ def delete_file_upload(current_user, file_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to delete file: {str(e)}'}), 500
+        logger.error(f"Failed to delete file: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -442,7 +450,8 @@ def get_notification_preferences(current_user):
         return jsonify({'preferences': preferences}), 200
         
     except Exception as e:
-        return jsonify({'message': f'Failed to get preferences: {str(e)}'}), 500
+        logger.error(f"Failed to get preferences: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @notifications_bp.route('/api/user/notification-preferences', methods=['PUT'])
@@ -482,7 +491,8 @@ def update_notification_preferences(current_user):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to update preferences: {str(e)}'}), 500
+        logger.error(f"Failed to update preferences: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -565,7 +575,8 @@ def upload_file(current_user):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to upload file: {str(e)}'}), 500
+        logger.error(f"Failed to upload file: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================

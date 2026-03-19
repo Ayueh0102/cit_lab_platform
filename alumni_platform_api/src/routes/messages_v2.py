@@ -11,6 +11,9 @@ from src.routes.websocket import emit_message, emit_conversation_update
 from datetime import datetime
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
+import logging
+
+logger = logging.getLogger(__name__)
 
 messages_v2_bp = Blueprint('messages_v2', __name__)
 
@@ -115,7 +118,8 @@ def create_or_get_conversation(current_user, user_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to create conversation: {str(e)}'}), 500
+        logger.error(f"Failed to create conversation: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 # ========================================
@@ -219,7 +223,8 @@ def send_message(current_user, conversation_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to send message: {str(e)}'}), 500
+        logger.error(f"Failed to send message: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @messages_v2_bp.route('/api/v2/messages/<int:message_id>', methods=['DELETE'])
@@ -243,7 +248,8 @@ def delete_message(current_user, message_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to delete message: {str(e)}'}), 500
+        logger.error(f"Failed to delete message: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @messages_v2_bp.route('/api/v2/conversations/<int:conversation_id>/mark-read', methods=['POST'])
@@ -279,7 +285,8 @@ def mark_conversation_as_read(current_user, conversation_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to mark as read: {str(e)}'}), 500
+        logger.error(f"Failed to mark as read: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @messages_v2_bp.route('/api/v2/messages/unread-count', methods=['GET'])
@@ -329,7 +336,8 @@ def delete_conversation(current_user, conversation_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Failed to delete conversation: {str(e)}'}), 500
+        logger.error(f"Failed to delete conversation: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
 
 
 @messages_v2_bp.route('/api/v2/messages/search', methods=['GET'])
@@ -384,4 +392,5 @@ def search_messages(current_user):
         }), 200
 
     except Exception as e:
-        return jsonify({'message': f'Failed to search messages: {str(e)}'}), 500
+        logger.error(f"Failed to search messages: {str(e)}")
+        return jsonify({'message': '伺服器內部錯誤，請稍後再試'}), 500
